@@ -1,0 +1,2274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Forge — Architecture &amp; Flows</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --charcoal-900:#0F131C; --charcoal-800:#1A1F2B; --charcoal-700:#222836;
+    --iron-600:#3A4150; --iron-500:#4A5560; --iron-400:#6B7280; --iron-300:#9AA3B1;
+    --iron-200:#CDD2DB; --iron-100:#E5E8ED;
+    --cream-100:#F5F2EE; --cream-50:#FBFAF7; --white:#FFFFFF;
+    --ember-700:#B84812; --ember-600:#E8631A; --ember-500:#FF8A3D; --ember-300:#FFB068; --ember-100:#FCE7D3;
+    --success:#2E8B57; --success-light:#D5EBD9;
+    --warn:#C77800; --warn-light:#FFF1D6;
+    --danger:#C0392B; --danger-light:#FADBD8;
+    --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px; --s-7:32px; --s-8:40px; --s-9:48px; --s-10:64px; --s-11:80px;
+    --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:20px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,'Inter','Helvetica Neue',Arial,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--cream-50);color:var(--charcoal-800);font-family:var(--font);line-height:1.55;-webkit-font-smoothing:antialiased}
+  html{scroll-behavior:smooth}
+  a{color:var(--ember-600);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--font-mono);font-size:.9em;background:var(--cream-100);padding:1px 6px;border-radius:var(--r-sm)}
+
+  /* Top nav */
+  .nav{position:sticky;top:0;background:rgba(255,255,255,.94);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--iron-100);padding:12px 28px;z-index:100;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .nav .brand{font-weight:900;letter-spacing:6px;font-size:16px;color:var(--charcoal-800)}
+  .nav .brand .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ember-600);margin:0 6px}
+  .nav .crumb{font-size:12px;color:var(--iron-400);letter-spacing:1px;text-transform:uppercase}
+
+  /* Layout */
+  .wrap{display:grid;grid-template-columns:240px 1fr;gap:32px;max-width:1320px;margin:0 auto;padding:32px 28px}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}.toc{display:none}}
+  .toc{position:sticky;top:60px;align-self:start;max-height:calc(100vh - 80px);overflow-y:auto;padding:12px 4px;font-size:13px}
+  .toc h6{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--iron-400);margin:14px 0 6px;font-weight:700}
+  .toc a{display:block;padding:6px 10px;color:var(--iron-500);border-radius:var(--r-sm);border-left:2px solid transparent;font-weight:500}
+  .toc a:hover{color:var(--ember-600);background:var(--ember-100);text-decoration:none;border-left-color:var(--ember-600)}
+
+  main{min-width:0}
+  section{margin-bottom:72px;scroll-margin-top:72px}
+  h1{font-size:48px;font-weight:900;letter-spacing:-1px;margin:0 0 8px;color:var(--charcoal-800)}
+  h2.kicker{font-size:12px;letter-spacing:6px;text-transform:uppercase;color:var(--ember-600);font-weight:700;margin:0 0 4px}
+  h3{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0 0 16px;color:var(--charcoal-800)}
+  h4{font-size:20px;font-weight:700;margin:32px 0 12px;color:var(--charcoal-800)}
+  h5{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--iron-400);font-weight:700;margin:24px 0 8px}
+  p{font-size:15px;color:var(--iron-500);max-width:780px}
+  hr{border:none;border-top:1px solid var(--iron-100);margin:48px 0}
+
+  /* Hero */
+  .hero{background:var(--charcoal-800);color:var(--cream-100);padding:64px 28px;border-radius:var(--r-xl);margin-bottom:48px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-80px;bottom:-80px;width:360px;height:360px;background:radial-gradient(circle,rgba(232,99,26,.22),transparent 60%);pointer-events:none}
+  .hero .label{color:var(--ember-300);font-size:12px;letter-spacing:6px;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+  .hero h1{color:var(--white);font-size:52px;letter-spacing:-1.5px;margin:0 0 14px}
+  .hero p{color:var(--iron-300);font-size:17px;max-width:780px;margin:0}
+  .hero-flex{display:flex;gap:32px;align-items:center;flex-wrap:wrap}
+  .hero-mark{width:120px;height:120px;flex-shrink:0}
+
+  /* Cards */
+  .card{background:var(--white);border-radius:var(--r-lg);border:1px solid var(--iron-100);padding:24px;margin-bottom:16px}
+  .card-dark{background:var(--charcoal-800);color:var(--cream-100);border-radius:var(--r-lg);padding:24px;margin-bottom:16px}
+  .card-dark h4{color:var(--white)}
+  .card-dark p{color:var(--iron-300)}
+  .grid{display:grid;gap:16px}
+  .grid-2{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+  .grid-4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:780px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;background:var(--white);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--iron-100);font-size:14px;margin:16px 0}
+  th{background:var(--charcoal-800);color:var(--cream-100);font-weight:700;font-size:12px;letter-spacing:.5px;text-transform:uppercase;text-align:left;padding:12px 16px}
+  td{padding:11px 16px;border-top:1px solid var(--iron-100);color:var(--charcoal-800);vertical-align:top}
+  tr:nth-child(even) td{background:var(--cream-50)}
+  td code{font-size:.85em}
+
+  /* Badges */
+  .badge{display:inline-block;padding:2px 9px;border-radius:var(--r-pill);font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+  .badge.must{background:var(--ember-100);color:var(--ember-700)}
+  .badge.should{background:var(--warn-light);color:var(--warn)}
+  .badge.could{background:var(--iron-100);color:var(--iron-500)}
+  .badge.v1{background:var(--success-light);color:var(--success)}
+  .badge.v2{background:var(--warn-light);color:var(--warn)}
+  .badge.v3{background:var(--iron-100);color:var(--iron-500)}
+  .badge.pillar{background:var(--cream-100);color:var(--iron-600);border:1px solid var(--iron-100)}
+
+  /* Epic card */
+  .epic{background:var(--white);border:1px solid var(--iron-100);border-radius:var(--r-lg);padding:20px 22px;margin-bottom:18px;position:relative}
+  .epic .head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .epic .id{font-family:var(--font-mono);font-size:12px;color:var(--ember-600);font-weight:700;letter-spacing:1px}
+  .epic h4{margin:0;font-size:18px}
+  .epic .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .epic ul{padding-left:18px;color:var(--iron-500);font-size:14px;margin:8px 0}
+  .epic li{margin:3px 0}
+  .epic .ac{background:var(--cream-50);border-left:3px solid var(--ember-600);padding:10px 14px;border-radius:0 var(--r-sm) var(--r-sm) 0;font-size:13px;color:var(--iron-600);margin-top:8px}
+  .epic .ac b{color:var(--charcoal-800)}
+
+  /* Mermaid block */
+  .mermaid-wrap{background:var(--white);border:1px solid var(--iron-100);border-radius:var(--r-lg);padding:20px;margin:16px 0;overflow-x:auto;position:relative;cursor:zoom-in;transition:border-color .15s,box-shadow .15s}
+  .mermaid-wrap:hover{border-color:var(--ember-300);box-shadow:0 6px 18px rgba(20,30,50,.06)}
+  .mermaid-wrap .cap{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--iron-400);font-weight:700;margin-bottom:10px;display:flex;gap:10px;align-items:center}
+  .mermaid-wrap .cap .id{font-family:var(--font-mono);background:var(--ember-100);color:var(--ember-700);padding:2px 8px;border-radius:var(--r-sm);font-size:11px}
+  .mermaid-wrap .zoom-hint{position:absolute;top:14px;right:16px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--iron-400);font-weight:700;background:var(--cream-50);border:1px solid var(--iron-100);padding:4px 9px;border-radius:var(--r-pill);display:flex;gap:5px;align-items:center;pointer-events:none;opacity:0;transition:opacity .15s}
+  .mermaid-wrap:hover .zoom-hint{opacity:1}
+  .mermaid-wrap .zoom-hint::before{content:"\2922";font-size:13px;color:var(--ember-600)}
+  pre.mermaid{margin:0;background:transparent;font-family:var(--font-mono);font-size:14px;text-align:center;min-height:60px;overflow-x:auto}
+  pre.mermaid svg{height:auto !important;max-width:none !important;font-family:var(--font) !important;display:block;margin:0 auto}
+  pre.mermaid svg .nodeLabel,pre.mermaid svg .edgeLabel,pre.mermaid svg .actor,pre.mermaid svg .messageText,pre.mermaid svg .loopText,pre.mermaid svg .noteText,pre.mermaid svg .titleText,pre.mermaid svg text{font-family:var(--font) !important;font-size:16px !important;font-weight:500}
+  pre.mermaid svg .edgeLabel rect{fill:var(--cream-50) !important}
+  pre.mermaid svg .edgePath .path{stroke-width:2px !important}
+  /* Mindmap-specific tightening for clarity */
+  pre.mermaid svg g.mindmap-node text,pre.mermaid svg .mindmap-node .nodeLabel{font-size:17px !important;font-weight:600}
+  pre.mermaid svg .section-root text{font-size:22px !important;font-weight:800 !important}
+  pre.mermaid svg .edge{stroke-width:2.2px !important}
+
+  /* Zoom modal */
+  .zoom-overlay{position:fixed;inset:0;background:rgba(15,19,28,.92);z-index:9999;display:none;flex-direction:column;backdrop-filter:blur(4px)}
+  .zoom-overlay.open{display:flex}
+  .zoom-bar{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;background:var(--charcoal-800);border-bottom:1px solid var(--charcoal-700);color:var(--cream-100);gap:14px;flex-wrap:wrap}
+  .zoom-bar .title{display:flex;gap:12px;align-items:center;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:var(--iron-300)}
+  .zoom-bar .title .id{font-family:var(--font-mono);background:var(--ember-100);color:var(--ember-700);padding:3px 9px;border-radius:var(--r-sm);font-size:11px}
+  .zoom-bar .title .name{color:var(--white)}
+  .zoom-bar .controls{display:flex;gap:8px;align-items:center}
+  .zoom-btn{background:var(--charcoal-700);color:var(--cream-100);border:1px solid var(--iron-600);padding:8px 14px;border-radius:var(--r-md);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s;min-width:40px}
+  .zoom-btn:hover{background:var(--ember-700);border-color:var(--ember-600)}
+  .zoom-btn.primary{background:var(--ember-600);border-color:var(--ember-600)}
+  .zoom-btn.primary:hover{background:var(--ember-700)}
+  .zoom-level{font-family:var(--font-mono);font-size:12px;color:var(--iron-300);min-width:60px;text-align:center}
+  .zoom-stage{flex:1;overflow:hidden;position:relative;cursor:grab;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#0F131C 0 12px,#13182199 12px 24px)}
+  .zoom-stage.grabbing{cursor:grabbing}
+  .zoom-stage .inner{transform-origin:center center;transition:transform .08s ease-out;will-change:transform}
+  .zoom-stage .inner svg{background:var(--white);border-radius:var(--r-lg);padding:24px;box-shadow:0 24px 60px rgba(0,0,0,.5);max-width:none !important;height:auto;font-family:var(--font) !important}
+  .zoom-stage .inner svg text{font-family:var(--font) !important;font-size:15px !important}
+  .zoom-help{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(26,31,43,.85);color:var(--iron-300);font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:var(--r-pill);font-weight:600;pointer-events:none;border:1px solid var(--iron-600)}
+  body.zoom-open{overflow:hidden}
+
+  /* Glossary list */
+  .gloss{display:grid;grid-template-columns:160px 1fr;gap:6px 18px;font-size:14px;align-items:start;background:var(--white);border:1px solid var(--iron-100);border-radius:var(--r-lg);padding:20px}
+  .gloss dt{color:var(--ember-700);font-weight:700;padding:6px 0;font-family:var(--font-mono);font-size:13px}
+  .gloss dd{margin:0;padding:6px 0;border-bottom:1px solid var(--iron-100);color:var(--charcoal-800)}
+  .gloss dd:last-of-type{border-bottom:none}
+
+  /* Pillar grid */
+  .pillar-card{background:var(--white);border:1px solid var(--iron-100);border-radius:var(--r-lg);padding:20px;border-top:4px solid var(--ember-600)}
+  .pillar-card .num{font-family:var(--font-mono);font-size:11px;color:var(--ember-600);letter-spacing:1px;font-weight:700}
+  .pillar-card h4{margin:6px 0 8px;font-size:17px}
+  .pillar-card p{font-size:13px;margin:0}
+
+  /* Footer */
+  footer{background:var(--charcoal-900);color:var(--iron-300);padding:32px 28px;text-align:center;font-size:13px;letter-spacing:1px;margin-top:64px}
+  footer .em{color:var(--ember-500);font-weight:700;letter-spacing:4px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="brand">FORGE<span class="dot"></span>ARCHITECTURE</span>
+  <span class="crumb">v1.0 · Engineering reference</span>
+  <span style="flex:1"></span>
+  <a href="#hero">Top</a>
+  <a href="#vision">Vision</a>
+  <a href="#personas">Personas</a>
+  <a href="#pillars">Pillars</a>
+  <a href="#journeys">Journeys</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#data-model">Data</a>
+  <a href="#runtime">Runtime</a>
+  <a href="#lifecycles">Lifecycles</a>
+  <a href="#epics">Epics</a>
+  <a href="#roadmap">Roadmap</a>
+  <a href="#money">Money</a>
+  <a href="#nfr">NFR</a>
+  <a href="#compliance">Compliance</a>
+  <a href="#glossary">Glossary</a>
+</nav>
+
+<div class="wrap">
+
+<aside class="toc">
+  <h6>Foundation</h6>
+  <a href="#vision">01 · Vision &amp; Strategy</a>
+  <a href="#personas">02 · Personas &amp; Permissions</a>
+  <a href="#pillars">03 · Product Pillars</a>
+  <h6>Behaviour</h6>
+  <a href="#journeys">04 · User Journeys</a>
+  <a href="#architecture">05 · System Architecture</a>
+  <a href="#data-model">06 · Data Model</a>
+  <a href="#runtime">07 · Runtime Flows</a>
+  <a href="#lifecycles">08 · Lifecycles</a>
+  <h6>Build</h6>
+  <a href="#epics">09 · Epics &amp; Features</a>
+  <a href="#roadmap">10 · Phased Roadmap</a>
+  <a href="#money">11 · Monetization</a>
+  <a href="#nfr">12 · NFR</a>
+  <a href="#compliance">13 · Compliance &amp; Risk</a>
+  <a href="#glossary">14 · Glossary</a>
+</aside>
+
+<main>
+
+<!-- ================= HERO ================= -->
+<section id="hero">
+<div class="hero">
+  <div class="hero-flex">
+    <svg class="hero-mark" viewBox="0 0 256 256" aria-label="Forge mark">
+      <defs>
+        <linearGradient id="ember" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFB068"/>
+          <stop offset="45%" stop-color="#FF8A3D"/>
+          <stop offset="100%" stop-color="#E8631A"/>
+        </linearGradient>
+        <linearGradient id="emberCore" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFD9A8"/>
+          <stop offset="100%" stop-color="#FF8A3D"/>
+        </linearGradient>
+      </defs>
+      <rect width="256" height="256" rx="60" fill="#0F131C"/>
+      <ellipse cx="128" cy="168" rx="80" ry="54" fill="#E8631A" opacity="0.22"/>
+      <path d="M 128 44 C 96 96, 60 130, 60 174 C 60 226, 102 252, 128 252 C 154 252, 196 226, 196 174 C 196 142, 176 120, 164 100 C 160 122, 148 132, 134 130 C 134 100, 144 80, 128 44 Z" fill="url(#ember)"/>
+      <path d="M 124 116 C 112 142, 96 162, 96 190 C 96 222, 116 238, 128 238 C 144 238, 160 222, 160 196 C 160 174, 148 160, 142 148 C 138 162, 132 164, 128 160 C 128 146, 132 132, 124 116 Z" fill="url(#emberCore)" opacity="0.9"/>
+    </svg>
+    <div>
+      <div class="label">Architecture &amp; Flows · v1.0</div>
+      <h1>How Forge is built.</h1>
+      <p>The engineering companion to the brand, design system, and specification. Every persona, pillar, epic, entity, runtime flow, lifecycle state, and roadmap milestone — drawn out as 51 diagrams. Open this once before you write the first line of code, and again every time you forget how the pieces fit.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ================= VISION ================= -->
+<section id="vision">
+  <h2 class="kicker">Section 01</h2>
+  <h3>Vision &amp; Strategy</h3>
+  <p>Forge is a cross-platform mobile and web product that helps independent personal trainers, multi-coach studios, and their clients run training as a real business. The brand promise: <i>you are not just training, you are forging yourself</i>. The PT side handles programming, scheduling, billing, and client communication. The client side handles workout logging, progress, nutrition, and motivation. A management layer (v3) lets a head coach oversee other PTs working under their brand, with revenue tracking and check-in/check-out billing.</p>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <h5>Launch geography</h5>
+      <p><b>Lebanon first</b>, then UAE. Two single-timezone countries. USD in v1, AED in v2. Stripe is unavailable to Lebanese businesses, so v1 payments run on <b>Whish</b> (mobile wallet) and <b>Areeba</b> (cards). Stripe Connect arrives in v2 alongside the UAE expansion.</p>
+    </div>
+    <div class="card">
+      <h5>Operating thesis</h5>
+      <p>PT-first, not consumer-first. The hardest market to win is solo trainers running their business on WhatsApp and Excel. If Forge saves them admin hours, they bring their clients with them — a much cheaper acquisition curve than competing with consumer fitness apps.</p>
+    </div>
+    <div class="card">
+      <h5>The three bets</h5>
+      <p>1. Logging must be faster than a notebook (≤2 taps, sub-second, offline).<br>2. Billing must just work — failed cards, refunds, no-shows, packs.<br>3. AI must save time in week one — drafts programs and recaps, never adds a task.</p>
+    </div>
+  </div>
+
+  <h4>What v1 deliberately does NOT ship</h4>
+  <div class="card">
+    <ul style="color:var(--iron-500);margin:0;padding-left:20px">
+      <li><b>AI Avatar Trainer</b> — real-time CV form-correction is a v2 problem; v1 stays with text-prompted AI drafts.</li>
+      <li><b>Wearables</b> (Apple Health, Garmin, Whoop, Oura) — deferred to v3. In-person PT-led use case doesn't need them day one.</li>
+      <li><b>1:1 messaging &amp; video calls</b> — deferred to v2. v1 ships <b>announcements only</b> (one-way, ≤500 chars, multi-recipient).</li>
+      <li><b>Multi-coach studios</b> — deferred to v3. Lebanon supply is dominated by solo PTs; multi-coach matters after UAE.</li>
+      <li><b>Tax handling</b> — explicitly out of scope. Receipts show price only; PTs handle their own tax obligations.</li>
+      <li><b>Stripe Connect</b> — v2 only. Lebanon launches on Whish + Areeba.</li>
+      <li><b>Group classes &amp; marketplace discovery</b> — v2 / v3.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= PERSONAS ================= -->
+<section id="personas">
+  <h2 class="kicker">Section 02</h2>
+  <h3>Personas &amp; Permissions</h3>
+  <p>Six roles drive permissions, billing, and UX choices throughout the spec. <b>Solo PT</b> and <b>Client</b> are the only v1 personas with a heavy footprint; Owner / Sub / Studio Admin / Platform Admin are sketched in v1 and grown in v3.</p>
+
+  <div class="grid grid-3">
+    <div class="card"><h4>Solo PT</h4><p>Independent contractor, 5-30 clients. Trains in commercial gym, outdoors, or online. Pain: invoicing, no-shows, programming time, retention. Wants: one app for clients, programs, and money in/out.</p></div>
+    <div class="card"><h4>Owner / Studio Owner</h4><p>Owns the brand and contracts. Employs or sub-contracts 2-15 coaches. Pain: tracking who did how many sessions, paying coaches, splitting revenue. Wants: P&amp;L per coach, automated payouts, central client list. <span class="badge v3">v3</span></p></div>
+    <div class="card"><h4>Sub-Coach / Junior PT</h4><p>Works under an Owner. May not own the client relationship. Pain: visibility into own pipeline and earnings. Wants: clean schedule, fast logging, transparent commission. <span class="badge v3">v3</span></p></div>
+    <div class="card"><h4>Client</h4><p>Trains 1-5×/week. Mix of in-person and online. Pain: motivation gaps, unclear progress, scheduling friction. Wants: clear next workout, visible progress, easy payments.</p></div>
+    <div class="card"><h4>Studio Admin</h4><p>Front desk / operations. Books sessions, reconciles payments, no programming features. <span class="badge v3">v3</span></p></div>
+    <div class="card"><h4>Platform Admin</h4><p>Forge-internal support, fraud, operations. Read-only by default; write access gated by permission.</p></div>
+  </div>
+
+  <h4>Permission matrix</h4>
+  <table>
+    <thead><tr><th>Capability</th><th>Solo</th><th>Owner</th><th>Sub</th><th>Client</th><th>Admin</th></tr></thead>
+    <tbody>
+      <tr><td>Manage own profile</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td></tr>
+      <tr><td>Manage other coaches</td><td>—</td><td>Y</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Build programs</td><td>Y</td><td>Y</td><td>Y</td><td>—</td><td>—</td></tr>
+      <tr><td>Log a session</td><td>Y</td><td>Y</td><td>Y</td><td>Y (self)</td><td>—</td></tr>
+      <tr><td>Take payment</td><td>Y</td><td>Y</td><td>Y (if enabled)</td><td>—</td><td>Y</td></tr>
+      <tr><td>See revenue split</td><td>self</td><td>all</td><td>self</td><td>—</td><td>—</td></tr>
+      <tr><td>Edit billing settings</td><td>Y</td><td>Y</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Schedule sessions</td><td>Y</td><td>Y</td><td>Y</td><td>request</td><td>Y</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= PILLARS ================= -->
+<section id="pillars">
+  <h2 class="kicker">Section 03</h2>
+  <h3>Product Pillars</h3>
+  <p>Every feature in the spec maps to one of six pillars. They are how product decisions are framed, prioritized, and measured.</p>
+
+  <div class="grid grid-3">
+    <div class="pillar-card"><div class="num">P1</div><h4>Logging &amp; Tracking</h4><p>The fastest, most reliable way in the world to record what happened in a workout. Sub-second log-a-set, offline-first, voice-friendly.</p></div>
+    <div class="pillar-card"><div class="num">P2</div><h4>Programming &amp; Nutrition</h4><p>Build a 4-, 8-, or 12-week training plan in minutes. Pair it with a meal plan that respects macros and dietary constraints.</p></div>
+    <div class="pillar-card"><div class="num">P3</div><h4>Coaching &amp; Communication</h4><p>Announcements in v1; messaging, video, and form-check video review in v2. Automated nudges, a real relationship loop.</p></div>
+    <div class="pillar-card"><div class="num">P4</div><h4>Business &amp; Billing</h4><p>Schedules, check-in / check-out, packages, recurring memberships, no-show fees, multi-coach payouts (v3), tax-free exports.</p></div>
+    <div class="pillar-card"><div class="num">P5</div><h4>Insights &amp; AI</h4><p>Charts and reports the client and PT actually open. AI that drafts work, summarizes work, and flags risk — not a chatbot novelty.</p></div>
+    <div class="pillar-card"><div class="num">P6</div><h4>Marketplace &amp; Growth</h4><p>Discovery for clients to find coaches (v3). Branded portals so coaches market their own brand. Referral rewards, community challenges, Forge Shop.</p></div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D1</span> Pillar map · Forge core &rarr; 6 pillars</div>
+<pre class="mermaid">
+flowchart TB
+  F(("<b>FORGE</b><br/><span style='font-size:13px;font-weight:400;color:#FFB068'>forge yourself</span>")):::root
+  F --> P1["<b>P1 &middot; Logging</b><br/>Sub-second log-a-set<br/>Offline-first &middot; Voice<br/>Live mirror &middot; PRs"]:::p
+  F --> P2["<b>P2 &middot; Programming</b><br/>Exercise library 2k+<br/>Drag-drop builder<br/>Templates &middot; Macros"]:::p
+  F --> P3["<b>P3 &middot; Coaching</b><br/>Announcements v1<br/>Messaging + video v2<br/>Form-check &middot; Nudges"]:::p
+  F --> P4["<b>P4 &middot; Business</b><br/>Calendar + bookings<br/>Check-in / check-out<br/>Whish + Areeba v1"]:::p
+  F --> P5["<b>P5 &middot; Insights</b><br/>Charts + reports<br/>Adherence score<br/>AI drafts + recap"]:::p
+  F --> P6["<b>P6 &middot; Growth</b><br/>Discovery v3<br/>Branded portals<br/>Streaks &middot; Forge Shop"]:::p
+
+  classDef root fill:#1A1F2B,stroke:#E8631A,stroke-width:4px,color:#F5F2EE
+  classDef p fill:#FBFAF7,stroke:#E8631A,stroke-width:2px,color:#1A1F2B
+</pre>
+  </div>
+</section>
+
+<!-- ================= JOURNEYS ================= -->
+<section id="journeys">
+  <h2 class="kicker">Section 04</h2>
+  <h3>User Journeys</h3>
+  <p>End-to-end paths for each persona. Each flowchart compresses signup → activation → recurring value. v1 paths in <span class="badge v1">v1</span>, deferred paths labelled.</p>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D2</span> Solo PT journey · v1</div>
+<pre class="mermaid">
+flowchart LR
+  A[Signup email or Apple or Google] --> B[Verify email]
+  B --> C[Role select: Solo PT]
+  C --> D[KYC: Whish merchant + Areeba account]
+  D --> E[Build PT profile bio certs rates]
+  E --> F[Invite first client via link]
+  F --> G[Build first 4-week program]
+  G --> H[Schedule first session]
+  H --> I[Run session: PT-led logging]
+  I --> J[Client checks out: receipt issued]
+  J --> K[First payment received Whish or card or cash]
+  K --> L[Buy AI credit pack]
+  L --> M[Generate AI recap of client month]
+  M --> N{Retention loop}
+  N --> O[Adherence score visible]
+  N --> P[Nudges fire]
+  N --> G
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D3</span> Owner PT journey · v3</div>
+<pre class="mermaid">
+flowchart LR
+  A[Owner signs up] --> B[Create studio brand]
+  B --> C[Invite Sub-Coach by email]
+  C --> D[Sub accepts invite within 7 days]
+  D --> E[Set commission policy percent or flat or hybrid]
+  E --> F[Assign clients to coaches]
+  F --> G[Sub runs sessions: logs revenue accrues]
+  G --> H[Owner sees P&amp;L per coach]
+  H --> I[Trigger payout cycle]
+  I --> J[Transfer funds with split detail]
+  J --> K{Transfer client?}
+  K -->|yes| L[Reassign client preserve history audit log]
+  K -->|no| H
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D4</span> Sub-Coach journey · v3</div>
+<pre class="mermaid">
+flowchart LR
+  A[Receive invite email] --> B[Accept and onboard]
+  B --> C[See own pipeline only RBAC]
+  C --> D[View assigned clients today]
+  D --> E[Run session log sets]
+  E --> F[Session completes]
+  F --> G[Commission accrues per policy]
+  G --> H[See own earnings dashboard]
+  H --> I[Payout arrives at cycle close]
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D5</span> Client journey · v1</div>
+<pre class="mermaid">
+flowchart LR
+  A[Receive PT invite link] --> B[Install app sign up]
+  B --> C[Complete intake PAR-Q goals history]
+  C --> D[E-sign liability waiver]
+  D --> E[See today programmed session]
+  E --> F[Arrive at gym]
+  F --> G[Scan QR check-in]
+  G --> H[PT logs sets: live mirror shows on phone]
+  H --> I[Session ends one-tap rating]
+  I --> J[Pay via Whish card or mark cash]
+  J --> K[See progress chart updated]
+  K --> L{Engagement loop}
+  L --> M[Streak badge earned]
+  L --> N[Body metric weekly]
+  L --> O[Photo progression]
+  L --> E
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D6</span> Studio Admin journey · v3</div>
+<pre class="mermaid">
+flowchart LR
+  A[Sign in as Admin] --> B[View calendar all coaches]
+  B --> C[Manual check-in walk-in]
+  C --> D[Process payment]
+  D --> E[Reconcile day Whish + Areeba + cash]
+  E --> F[Export daily settlement CSV]
+  F --> G[No programming features hidden]
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D7</span> Platform Admin journey</div>
+<pre class="mermaid">
+flowchart LR
+  A[Sign in admin back-office] --> B[Search user by email]
+  B --> C[View account billing audit log]
+  C --> D{Action}
+  D --> E[Quarantine suspected fraud]
+  D --> F[Process GDPR export &lt;= 24h]
+  D --> G[Process account deletion hard &lt;= 30d]
+  D --> H[Review risk flag from EP-14]
+  E --> I[All actions audit-logged with reason code]
+  F --> I
+  G --> I
+  H --> I
+</pre>
+  </div>
+</section>
+
+<!-- ================= ARCHITECTURE ================= -->
+<section id="architecture">
+  <h2 class="kicker">Section 05</h2>
+  <h3>System Architecture</h3>
+  <p>Three clients fan into a single API. Stateless app tier with PostgreSQL primary and Redis for cache/queues. Object store for media. Payments and video are managed services. AI is brokered through a service that scrubs PII before calling the LLM. Multi-AZ from day one.</p>
+
+  <div class="card">
+    <h5>Recommended stack</h5>
+    <table style="margin:0">
+      <tbody>
+        <tr><td><b>Mobile</b></td><td>React Native (Expo bare workflow)</td></tr>
+        <tr><td><b>Web</b></td><td>Next.js 14+ (App Router), React, TypeScript, shared types with API</td></tr>
+        <tr><td><b>API</b></td><td>Node.js + TypeScript (NestJS or Fastify), tRPC or GraphQL</td></tr>
+        <tr><td><b>DB / Cache / Object</b></td><td>PostgreSQL · Redis · S3-compatible object store</td></tr>
+        <tr><td><b>Realtime</b></td><td>Managed WebSocket (Pusher, Ably, Centrifugo)</td></tr>
+        <tr><td><b>Video (v2)</b></td><td>LiveKit or Daily — do not roll your own SFU</td></tr>
+        <tr><td><b>Payments</b></td><td>v1 Whish + Areeba; v2 Stripe Connect Express</td></tr>
+        <tr><td><b>AI</b></td><td>Anthropic Claude (managed). Pose (v2): MediaPipe / MoveNet on-device</td></tr>
+        <tr><td><b>Auth</b></td><td>Auth0, Clerk, or self-hosted Keycloak. Argon2id. JWT short-lived + rotating refresh</td></tr>
+        <tr><td><b>Push</b></td><td>APNs + FCM via abstraction (Expo Notifications or OneSignal)</td></tr>
+        <tr><td><b>Infra</b></td><td>AWS (ECS/Fargate or EKS), Terraform, GitHub Actions, multi-AZ</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D8</span> System architecture</div>
+<pre class="mermaid">
+graph TD
+  iOS[iOS app RN]:::client
+  AND[Android app RN]:::client
+  WEB[Web app Next.js]:::client
+  GW[API Gateway]:::edge
+  API[App tier stateless Node + TS]:::app
+  PG[(PostgreSQL primary)]:::data
+  RD[(Redis cache + queues)]:::data
+  S3[(S3 object store)]:::data
+  AUTH[Auth0 / Clerk]:::ext
+  RT[Managed WebSocket]:::ext
+  WHISH[Whish Money v1]:::v1
+  AREEBA[Areeba cards v1]:::v1
+  STRIPE[Stripe Connect v2]:::v2
+  LIVE[LiveKit or Daily v2]:::v2
+  LLM[LLM Anthropic]:::ext
+  POSE[Pose on-device v2]:::v2
+  OTEL[OpenTelemetry Datadog Honeycomb]:::obs
+  PUSH[APNs + FCM]:::ext
+
+  iOS --> GW
+  AND --> GW
+  WEB --> GW
+  GW --> API
+  API --> PG
+  API --> RD
+  API --> S3
+  API --> AUTH
+  API --> RT
+  API --> WHISH
+  API --> AREEBA
+  API --> STRIPE
+  API --> LIVE
+  API --> LLM
+  iOS -.uses.-> POSE
+  AND -.uses.-> POSE
+  API --> PUSH
+  API --> OTEL
+
+  classDef client fill:#1A1F2B,stroke:#E8631A,color:#F5F2EE
+  classDef edge fill:#222836,stroke:#E8631A,color:#F5F2EE
+  classDef app fill:#E8631A,stroke:#1A1F2B,color:#fff
+  classDef data fill:#FCE7D3,stroke:#B84812,color:#1A1F2B
+  classDef ext fill:#FBFAF7,stroke:#4A5560,color:#1A1F2B
+  classDef v1 fill:#D5EBD9,stroke:#2E8B57,color:#1A1F2B
+  classDef v2 fill:#FFF1D6,stroke:#C77800,color:#1A1F2B
+  classDef obs fill:#E5E8ED,stroke:#4A5560,color:#1A1F2B
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D9</span> Environments &amp; CI/CD</div>
+<pre class="mermaid">
+graph LR
+  DEV[Local Docker Compose] --> CI{GitHub Actions}
+  CI --> TC[typecheck]
+  CI --> LT[lint]
+  CI --> UT[unit]
+  CI --> IT[integration]
+  CI --> E2E[e2e critical paths]
+  CI --> SEC[SCA + SAST scan]
+  TC --> DEPLOY{Branch?}
+  LT --> DEPLOY
+  UT --> DEPLOY
+  IT --> DEPLOY
+  E2E --> DEPLOY
+  SEC --> DEPLOY
+  DEPLOY -->|main| STG[Staging mirrors prod no PII]
+  STG --> PROD[Production multi-AZ]
+  DEPLOY -->|mobile weekly| TF[TestFlight + Play internal]
+  TF -->|monthly| STORES[App Store + Play public]
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D10</span> Offline-first logging architecture</div>
+<pre class="mermaid">
+graph TD
+  UI[PT taps log set] --> LS[Local store SQLite or IndexedDB]
+  LS --> ULID[Assign client-side ULID monotonic]
+  ULID --> OPT[Optimistic UI update]
+  ULID --> Q[Outbound queue]
+  Q --> NET{Network?}
+  NET -->|online| SYNC[Sync engine batch]
+  NET -->|offline| WAIT[Wait persist across app kill]
+  WAIT -->|reconnect| SYNC
+  SYNC --> API[API write idempotent on ULID]
+  API --> DB[(Postgres)]
+  DB --> RT[Realtime push]
+  RT --> CLIENT[Client device live mirror]
+  DB -->|on conflict| MERGE[Conflict-free merge ULID order]
+  MERGE --> AUDIT[Audit capture conflicts]
+</pre>
+  </div>
+</section>
+
+<!-- ================= DATA MODEL ================= -->
+<section id="data-model">
+  <h2 class="kicker">Section 06</h2>
+  <h3>Data Model</h3>
+  <p>Thirty-plus entities organized across coaching, programming, logging, business, marketplace, and compliance domains. The master ERD below shows every entity and its primary relations; the four focused diagrams that follow zoom into the working subgraphs an engineer will touch most.</p>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D11</span> Master ERD · all entities</div>
+<pre class="mermaid">
+erDiagram
+  User ||--o{ CoachMembership : "has"
+  Studio ||--o{ CoachMembership : "employs"
+  User ||--o{ Client : "coaches"
+  Client ||--o{ IntakeForm : "fills"
+  User ||--o{ Program : "authors"
+  Program ||--o{ Week : "contains"
+  Week ||--o{ Day : "contains"
+  Day ||--o{ Block : "contains"
+  Block ||--o{ Exercise : "uses"
+  Client ||--o{ WorkoutSession : "logs"
+  WorkoutSession ||--o{ Set : "contains"
+  Client ||--o{ BodyMetric : "records"
+  Client ||--o{ ProgressPhoto : "records"
+  Client ||--o{ MealPlan : "follows"
+  Client ||--o{ FoodLog : "logs"
+  User ||--o{ Schedule : "owns"
+  Schedule ||--o{ Booking : "produces"
+  Booking ||--o| CheckIn : "starts"
+  Class ||--o{ Booking : "has"
+  Client ||--o{ Pack : "purchases"
+  Client ||--o{ Subscription : "holds"
+  Pack ||--o{ Charge : "pays via"
+  Subscription ||--o{ Charge : "renews via"
+  CheckIn ||--o| Charge : "triggers"
+  Charge ||--o| Payout : "settles to"
+  User ||--o{ Message : "sends"
+  Booking ||--o| VideoSession : "may have"
+  User ||--o{ Notification : "receives"
+  User ||--o{ AuditLog : "writes"
+  Product ||--o{ Inventory : "has"
+  Order ||--o{ OrderItem : "lists"
+  Product ||--o{ OrderItem : "appears in"
+  User ||--o{ Order : "places"
+  User ||--o{ Address : "owns"
+  Order ||--|| Address : "ships to"
+  Block ||--o{ ProductRecommendation : "tags"
+  ProductRecommendation }o--|| Product : "points to"
+  ProductRecommendation }o--|| User : "attributed to PT"
+  Order ||--o| ShopCommission : "accrues"
+  ShopCommission }o--|| User : "credits PT"
+</pre>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D12</span> Coaching subgraph</div>
+<pre class="mermaid">
+erDiagram
+  User ||--o{ CoachMembership : "has"
+  Studio ||--o{ CoachMembership : "employs"
+  CoachMembership {
+    enum role "Owner Sub"
+    string commissionPolicy
+    date joinedAt
+  }
+  User ||--o{ Client : "coaches"
+  Client ||--o{ IntakeForm : "fills"
+  Client ||--o{ Program : "assigned"
+  IntakeForm {
+    json parq
+    json goals
+    bool waiverSigned
+    string version
+  }
+</pre>
+    </div>
+
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D13</span> Logging subgraph</div>
+<pre class="mermaid">
+erDiagram
+  Booking ||--o| CheckIn : "starts"
+  CheckIn ||--|| WorkoutSession : "opens"
+  WorkoutSession ||--o{ Set : "records"
+  Set {
+    ulid id
+    int reps
+    decimal weight
+    int rpe
+    string notes
+    bool synced
+  }
+  Client ||--o{ BodyMetric : "logs"
+  Client ||--o{ ProgressPhoto : "logs"
+  Client ||--o{ FoodLog : "logs"
+  BodyMetric {
+    decimal weight
+    decimal bodyFat
+    json circumferences
+    date measuredAt
+  }
+</pre>
+    </div>
+
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D14</span> Billing subgraph</div>
+<pre class="mermaid">
+erDiagram
+  User ||--o{ Subscription : "holds"
+  Subscription ||--o{ Charge : "renews"
+  Client ||--o{ Pack : "buys"
+  Pack ||--o{ Charge : "creates"
+  CheckIn ||--o| Charge : "may trigger"
+  Charge {
+    string method "whish areeba stripe cash"
+    decimal amount
+    string currency "USD AED"
+    enum status
+    string processorRef
+  }
+  Charge ||--o| Payout : "settles"
+  ShopCommission }o--|| Subscription : "credits next renewal"
+</pre>
+    </div>
+
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D15</span> Marketplace subgraph</div>
+<pre class="mermaid">
+erDiagram
+  Product ||--o{ Inventory : "has"
+  Product {
+    string sku
+    string name
+    decimal price
+    int stock
+    string[] photos
+  }
+  Order ||--o{ OrderItem : "lists"
+  OrderItem }o--|| Product : "of"
+  User ||--o{ Order : "places"
+  Order ||--|| Address : "ships to"
+  Block ||--o{ ProductRecommendation : "tags"
+  ProductRecommendation }o--|| Product : "points to"
+  ProductRecommendation }o--|| User : "PT attribution"
+  Order ||--o| ShopCommission : "accrues 10 percent"
+</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RUNTIME ================= -->
+<section id="runtime">
+  <h2 class="kicker">Section 07</h2>
+  <h3>Runtime Flows</h3>
+  <p>Seventeen sequence diagrams covering the hottest paths in the product: logging, payment, AI metering, scheduling, broadcasting, video review, the Forge Shop, and compliance plumbing. Read these before touching the API.</p>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D16</span> Log-a-set · online</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT as PT
+  participant App as PT App
+  participant Store as Local store
+  participant API as API
+  participant DB as Postgres
+  participant RT as Realtime hub
+  participant Client as Client device
+  PT->>App: Tap +1 set Bench 100x8
+  App->>Store: Persist Set with ULID
+  App-->>PT: Optimistic UI update
+  Store->>API: POST /sets idempotency-key=ULID
+  API->>DB: INSERT set if not exists
+  DB-->>API: ok
+  API->>RT: publish session updated
+  RT-->>Client: ws push
+  Client-->>Client: Live mirror updates &lt;= 3s
+  API-->>App: 201 created
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D17</span> Log-a-set · offline + sync</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT
+  participant App
+  participant Store as Local store
+  participant Q as Outbound queue
+  participant API
+  participant DB
+  participant Client as Client device
+  PT->>App: Tap +1 set offline
+  App->>Store: Persist Set ULID
+  App-->>PT: Optimistic UI ok
+  Note over App,Q: queue persisted across kill/reboot
+  App->>Q: Enqueue write
+  Note right of Q: device kills app
+  Note right of Q: app reopens hours later
+  App->>App: Network restored
+  App->>API: POST /sets batch idempotency keys
+  API->>DB: upsert by ULID
+  DB-->>API: ok
+  API->>Client: live mirror catch-up
+  API-->>App: 200 batch ack
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D18</span> Voice log-a-set</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT
+  participant Mic as Device mic
+  participant ASR as On-device ASR
+  participant App
+  participant API
+  PT->>Mic: bench 100 by 8
+  Mic->>ASR: audio buffer
+  ASR->>App: text + confidence
+  App->>App: Parse pattern lift weight reps
+  App-->>PT: Confirmation chip
+  PT->>App: Tap confirm
+  App->>API: POST /sets
+  API-->>App: 201
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D19</span> Client check-in via QR</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Client
+  participant Studio as Studio display QR
+  participant App as Client app
+  participant API
+  participant DB
+  participant PT as PT device
+  Studio-->>Client: QR shown at desk
+  Client->>App: Scan QR
+  App->>API: POST /checkins token
+  API->>DB: create CheckIn link Booking
+  API->>DB: mark Booking in_progress
+  alt has pack
+    API->>DB: Pack decrement atomic
+  end
+  API->>DB: emit billing event
+  API-->>PT: push CheckIn arrived
+  API-->>App: 200 ok
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D20</span> Whish payment for session</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Client
+  participant App
+  participant API
+  participant Whish as Whish hosted
+  participant DB
+  participant PT
+  Client->>App: Pay session Whish
+  App->>API: POST /charges intent
+  API->>Whish: Create charge intent
+  Whish-->>API: hosted page url
+  API-->>App: redirect url
+  App->>Whish: Open hosted page
+  Client->>Whish: Confirm in Whish app
+  Whish-->>API: webhook payment.succeeded
+  API->>DB: Charge persist status=succeeded
+  API->>DB: Receipt generate
+  API-->>PT: push payment received
+  API-->>Client: push receipt + email
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D21</span> Areeba card payment · PCI SAQ-A</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Client
+  participant App
+  participant API
+  participant Areeba as Areeba hosted
+  participant DB
+  Client->>App: Pay card
+  App->>API: POST /charges intent type=card
+  API->>Areeba: Create payment session
+  Areeba-->>API: hosted page
+  API-->>App: redirect url
+  App->>Areeba: Card on hosted page never touches Forge
+  Areeba-->>API: webhook authorized + captured
+  API->>DB: Charge persist
+  API-->>App: push receipt
+  Note over App,Areeba: PCI scope SAQ-A no PAN data on Forge servers
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D22</span> Cash payment recorded by PT</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT
+  participant App
+  participant API
+  participant DB
+  PT->>App: Mark session paid in cash
+  App->>API: POST /charges method=cash amount
+  API->>DB: Charge persist method=cash
+  API->>DB: AuditLog event=cash_recorded
+  API->>DB: Receipt generate
+  API-->>PT: 201 + receipt link
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D23</span> AI program draft with credit deduction</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT
+  participant App
+  participant API
+  participant Credits as Credit ledger
+  participant Broker as AI broker
+  participant LLM as Anthropic
+  participant DB
+  PT->>App: Draft 4-week program goal equipment level
+  App->>API: POST /ai/program-draft
+  API->>Credits: Check balance
+  alt balance > 0
+    Credits-->>API: ok
+    API->>Broker: Build prompt scrub PII
+    Broker->>LLM: completion
+    LLM-->>Broker: result
+    Broker-->>API: structured plan
+    API->>Credits: Decrement atomic
+    API->>DB: Log generation id no PII
+    API-->>App: draft program editable
+    PT->>App: Edit and save
+    App->>API: POST /programs
+  else balance = 0
+    Credits-->>API: zero
+    API-->>App: upsell prompt
+    App-->>PT: Buy credit pack
+  end
+  alt LLM failure
+    Broker-->>API: error
+    API->>Credits: Refund credit
+    API-->>App: try again
+  end
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D24</span> Credit pack purchase · mobile IAP</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT
+  participant App
+  participant Store as Apple or Google IAP
+  participant API
+  participant Credits
+  PT->>App: Buy Standard pack 40 credits
+  App->>Store: requestPurchase product id
+  Store-->>App: receipt signed
+  App->>API: POST /iap/verify receipt
+  API->>Store: verify receipt server-side
+  Store-->>API: valid
+  API->>Credits: Add 40 credits
+  Credits-->>API: new balance
+  API-->>App: balance updated
+  Note over App,Store: Apple Google fee 15-30 percent
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D25</span> Credit pack purchase · web checkout</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT
+  participant Web
+  participant API
+  participant Pay as Stripe or Areeba
+  participant Credits
+  PT->>Web: Buy pack on web
+  Web->>API: POST /checkout/credit-pack
+  API->>Pay: Create checkout session
+  Pay-->>API: url
+  Web->>Pay: Redirect to hosted
+  PT->>Pay: Pay
+  Pay-->>API: webhook succeeded
+  API->>Credits: Add credits
+  API-->>Web: success page
+  Note over Web,Pay: No 15-30 percent store fee
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D26</span> Booking + recurring + DST edge</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Client
+  participant App
+  participant API
+  participant DB
+  Client->>App: Pick weekly slot Tue 18:00 Asia/Beirut
+  App->>API: POST /bookings rrule weekly
+  API->>DB: store UTC + originating zone Asia/Beirut
+  API->>DB: persist RRULE
+  loop next occurrences
+    API->>API: compute next instance device-local
+    Note right of API: Lebanon DST last Sun March October handled
+    API->>DB: write Booking instance
+  end
+  API-->>App: bookings list device-local render
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D27</span> Announcement broadcast · v1</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT
+  participant App
+  participant API
+  participant Q as Fanout queue
+  participant Push as APNs/FCM
+  participant Client1 as Client A
+  participant Client2 as Client B
+  PT->>App: Write announcement &lt;= 500 chars
+  PT->>App: Multi-select recipients ad hoc
+  App->>API: POST /announcements
+  API->>Q: Fanout per recipient
+  Q->>Push: deliver A
+  Q->>Push: deliver B
+  Push-->>Client1: notification
+  Push-->>Client2: notification
+  Client1-->>API: read receipt
+  Client2-->>API: read receipt
+  Note over PT,API: PT can edit/delete &lt;= 5 min then immutable
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D28</span> Form-check video review</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Client
+  participant App
+  participant API
+  participant S3 as Encrypted S3
+  participant PT
+  Client->>App: Upload squat clip 30s
+  App->>API: POST /uploads init resumable
+  API-->>App: upload url
+  App->>S3: chunked upload &lt;= 200MB
+  S3-->>API: complete
+  API-->>PT: notify clip ready
+  PT->>App: Scrub timeline drop comments
+  PT->>API: POST /comments timestamp ms drawings
+  Note over S3,API: drawings stored separately from source immutable original
+  API-->>Client: comments visible
+  Client->>API: reply at timestamp
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D29</span> Forge Shop order · v2</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Client
+  participant App
+  participant API
+  participant DB
+  participant Pay as Whish or COD
+  participant Owner as Owner dashboard
+  participant Wakk as Wakkilni
+  Client->>App: Add SKU to cart
+  Client->>App: Checkout enter address
+  App->>API: POST /orders
+  API->>DB: Stock decrement atomic
+  alt Whish
+    API->>Pay: Create intent
+    Pay-->>API: paid webhook
+  else COD
+    API->>DB: order status=confirmed COD
+  end
+  API->>Owner: Order appears in dashboard
+  Owner->>API: Daily export CSV
+  API-->>Owner: download
+  Owner->>Wakk: Hand-off package
+  Wakk-->>Owner: tracking
+  loop status updates
+    Owner->>API: status: out_for_delivery, delivered
+  end
+  API-->>Client: status push
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D30</span> PT shop commission accrual · v2.5</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor PT
+  participant App
+  participant API
+  participant DB
+  actor Client
+  participant Order
+  PT->>App: Tag Product in Program block
+  App->>API: POST /recommendation
+  API->>DB: ProductRecommendation persist attribution=PT
+  Client->>App: See suggested product one-tap order
+  App->>API: POST /orders ref=recommendation
+  API->>DB: Order linked to recommendation
+  Order->>DB: status=delivered
+  DB->>API: trigger ShopCommission default 10 percent
+  API->>DB: ShopCommission credit PT
+  Note over API,DB: paid as platform credit only no cash payout
+  API-->>PT: balance shown applies to next subscription renewal
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D31</span> GDPR export / delete</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor User
+  participant App
+  participant API
+  participant Job as Async job
+  participant S3
+  participant Email
+  User->>App: Request export OR delete
+  App->>API: POST /privacy/export OR /privacy/delete
+  API->>Job: enqueue
+  alt export
+    Job->>S3: Bundle user data JSON + media
+    Job->>Email: send signed link
+    Email-->>User: download &lt;= 24h SLA
+  else delete
+    Job->>API: hard-delete &lt;= 30 days
+    Job->>API: retain legally required artifacts
+  end
+  Job->>API: AuditLog event reason code
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D32</span> Auth + MFA</div>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor User
+  participant App
+  participant API
+  participant Auth as Auth0/Clerk
+  participant DB
+  User->>App: Email + password OR Apple/Google
+  App->>Auth: signup
+  Auth->>Auth: Argon2id hash never logged
+  Auth->>DB: user create
+  Auth-->>App: email verify link
+  User->>Auth: verify
+  opt MFA enroll
+    User->>Auth: TOTP or SMS enroll
+  end
+  User->>App: Sign in
+  App->>Auth: credentials
+  alt &gt; 10 failed in 15 min
+    Auth-->>App: lockout + CAPTCHA on web
+  else ok
+    Auth-->>App: short-lived JWT + rotating refresh
+    App->>API: requests with JWT
+    API->>DB: AuditLog account event
+  end
+</pre>
+  </div>
+</section>
+
+<!-- ================= LIFECYCLES ================= -->
+<section id="lifecycles">
+  <h2 class="kicker">Section 08</h2>
+  <h3>Lifecycles</h3>
+  <p>Seven state machines for the entities that change shape over time: Booking, Subscription, Pack, AI credit balance, Order, WorkoutSession, IntakeForm. Each state diagram is the authoritative reference for transitions and the events that drive them.</p>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D33</span> Booking lifecycle</div>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> scheduled
+  scheduled --> reminder_sent : T-24h and T-1h
+  reminder_sent --> checked_in : QR scan or manual
+  scheduled --> cancelled : within policy window
+  scheduled --> late_cancel_fee : outside window
+  scheduled --> no_show : grace expired
+  scheduled --> waitlisted : class full
+  waitlisted --> promoted : seat opens
+  promoted --> scheduled
+  checked_in --> in_progress
+  in_progress --> checked_out : feedback + tip prompt
+  checked_out --> completed : receipt issued
+  late_cancel_fee --> [*]
+  no_show --> [*]
+  cancelled --> [*]
+  completed --> [*]
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D34</span> Subscription lifecycle · PT</div>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> trial : 14 days no card
+  trial --> active : add payment method
+  trial --> [*] : trial ended no upgrade
+  active --> past_due : renewal failed
+  past_due --> active : dunning retry success
+  past_due --> cancelled : dunning exhausted
+  active --> cancelled : user cancel
+  cancelled --> reactivated : user returns
+  reactivated --> active
+  active --> active : monthly renewal
+  note right of active
+    Founding member discount
+    50 percent off Pro 12 months
+  end note
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D35</span> Pack lifecycle</div>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> purchased
+  purchased --> active : credits=n
+  active --> decrementing : session checked-in atomic
+  decrementing --> active : credits &gt; 0
+  decrementing --> exhausted : credits=0
+  active --> refunded : refund issued
+  exhausted --> [*]
+  refunded --> [*]
+  note right of active
+    Packs do not expire by default
+  end note
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D36</span> AI credit balance</div>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> zero
+  zero --> topped_up : pack purchased
+  topped_up --> consumed : generation succeeded
+  consumed --> consumed : another generation
+  consumed --> refunded_on_failure : LLM error
+  refunded_on_failure --> consumed
+  consumed --> low_warn : balance &lt;= 3
+  low_warn --> upsell_prompt : balance=0
+  upsell_prompt --> topped_up : pack purchased
+  upsell_prompt --> zero : user dismisses
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D37</span> Forge Shop order lifecycle</div>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> cart
+  cart --> placed : checkout
+  placed --> confirmed : payment ok or COD selected
+  placed --> cancelled : payment failed
+  confirmed --> handed_to_courier : Wakkilni pickup
+  handed_to_courier --> out_for_delivery
+  out_for_delivery --> delivered
+  delivered --> returned : within 7 days damaged-on-arrival
+  returned --> refunded : credit on next purchase
+  delivered --> [*]
+  refunded --> [*]
+  cancelled --> [*]
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D38</span> WorkoutSession lifecycle</div>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> programmed : scheduled in program
+  programmed --> today : day of session
+  today --> in_progress : first set logged or check-in
+  in_progress --> completed : checkout
+  completed --> reviewed : PT or client added notes
+  reviewed --> [*]
+  completed --> [*]
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D39</span> IntakeForm lifecycle</div>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> pending : PT sends link
+  pending --> in_progress : client starts
+  in_progress --> in_progress : pause and resume across devices
+  in_progress --> completed
+  completed --> red_flag_review : PAR-Q flag detected
+  red_flag_review --> waiver_signed : PT reviews + client e-signs
+  completed --> waiver_signed : no flags
+  waiver_signed --> [*]
+</pre>
+  </div>
+</section>
+
+<!-- ================= EPICS ================= -->
+<section id="epics">
+  <h2 class="kicker">Section 09</h2>
+  <h3>Epics &amp; Features</h3>
+  <p>Twenty independently shippable epics, each mapped to pillar, phase, and priority. Eight have inline flowcharts for the core flow; the rest carry user stories and acceptance criteria only — keep this section scannable but complete.</p>
+
+  <!-- EP-01 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-01</span><h4>Authentication &amp; Account Management</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">All pillars</span></div>
+    </div>
+    <ul><li>Email + password, Apple, Google signup</li><li>MFA: TOTP or SMS</li><li>Password recovery via email</li><li>Switch between PT and Client modes</li></ul>
+    <div class="ac"><b>Acceptance:</b> Signup ≤30s mid-tier Android. Argon2id, passwords never logged. Lockout 10 fails / 15 min + CAPTCHA on web. Short-lived JWT + rotating refresh. Audit log records all account actions.</div>
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D40</span> EP-01 auth flow</div>
+<pre class="mermaid">
+flowchart LR
+  A[Land on signup] --> B{Method}
+  B --> C[Email + password]
+  B --> D[Apple]
+  B --> E[Google]
+  C --> F[Email verify]
+  D --> F
+  E --> F
+  F --> G{MFA enroll?}
+  G -->|yes| H[TOTP or SMS]
+  G -->|no| I[Role select]
+  H --> I
+  I --> J[Profile init]
+</pre>
+    </div>
+  </div>
+
+  <!-- EP-02 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-02</span><h4>PT Profile &amp; Multi-Coach Studio Management</h4></div>
+      <div class="badges"><span class="badge must">Must v1 profile</span><span class="badge should">Should v3 studio</span><span class="badge pillar">P4 Business</span></div>
+    </div>
+    <ul><li>v1: Solo PT profile (bio, certs, services, rates) in ≤5 minutes</li><li>v3: Studio with revenue split, payouts, client transfer, P&amp;L dashboard</li><li>v3: Owner invites Sub by email; commission % / flat / hybrid</li></ul>
+    <div class="ac"><b>Acceptance:</b> Profile complete ≤5 min with required fields. Account model future-proofed for v3. Invite expires 7 days. Commission changes apply to future sessions only. Transfers preserve history + audit log. RBAC tested.</div>
+  </div>
+
+  <!-- EP-03 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-03</span><h4>Client Onboarding &amp; Intake</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P3 Coaching</span></div>
+    </div>
+    <ul><li>PT sends intake link</li><li>Client completes ≤10 min: PAR-Q, goals, training history, anthropometrics, dietary restrictions</li><li>PT reviews on single screen with red-flag highlighting</li><li>Client e-signs liability waiver</li></ul>
+    <div class="ac"><b>Acceptance:</b> Text, single/multi-select, numeric, signature fields. PAR-Q flags trigger warning. Waiver PDF generated/stored/exportable. Intake pauses/resumes across devices.</div>
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D41</span> EP-03 intake flow</div>
+<pre class="mermaid">
+flowchart LR
+  A[PT sends link] --> B[Client opens]
+  B --> C[PAR-Q questions]
+  C --> D[Goals + history]
+  D --> E[Anthropometrics]
+  E --> F[Dietary restrictions]
+  F --> G{Pause?}
+  G -->|yes| H[Resume on any device]
+  H --> F
+  G -->|no| I[Submit]
+  I --> J{PAR-Q flag?}
+  J -->|yes| K[Red-flag review by PT]
+  J -->|no| L[Waiver e-sign]
+  K --> L
+  L --> M[PDF generated stored]
+</pre>
+    </div>
+  </div>
+
+  <!-- EP-04 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-04</span><h4>Exercise Library &amp; Program Builder</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P2 Programming</span></div>
+    </div>
+    <ul><li>2,000+ curated exercises searchable by muscle / equipment / pattern</li><li>Save custom exercises with video</li><li>Drag-and-drop into days, sets/reps/RPE/tempo</li><li>Save as template, apply to multiple clients</li><li>Periodization: linear, undulating, block; deload, AMRAP</li></ul>
+    <div class="ac"><b>Acceptance:</b> ≥2,000 exercises with name/muscle/equipment/demo/cues. Save 4-week program ≤1s. Template application copies — never mutates original.</div>
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D42</span> EP-04 program build flow</div>
+<pre class="mermaid">
+flowchart LR
+  A[New program] --> B[Choose template or blank]
+  B --> C[Set weeks duration]
+  C --> D[For each day]
+  D --> E[Search exercise]
+  E --> F[Drag into block]
+  F --> G[Set sets reps RPE tempo]
+  G --> H{More?}
+  H -->|yes| E
+  H -->|no| I[Clone week]
+  I --> J{Save as template?}
+  J -->|yes| K[Template saved reusable]
+  J -->|no| L[Assign to client]
+  K --> L
+</pre>
+    </div>
+  </div>
+
+  <!-- EP-05 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-05</span><h4>PT-Led Workout Session Logging</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P1 Logging</span></div>
+    </div>
+    <ul><li>PT opens today's session for specific client and logs immediately</li><li>iPad PT-console layout optimized for gym floor — bigger touch targets, at-arms-length operation</li><li>Multi-client switcher: today's bookings first, switch ≤300ms</li><li>Voice log: "bench 100 by 8"</li><li>Tag sets with RPE/notes/soreness, auto-start rest timer</li><li>Offline persists across app kill/reboot, conflict-free sync via ULID</li><li>Live mirror: Client device updates ≤3s when online</li><li>Client can self-log without PT but cannot overwrite PT data</li></ul>
+    <div class="ac"><b>Acceptance:</b> Log a set ≤2 taps + ≤800ms end-to-end on 2022 device. Voice recognizes weight/reps ≥95% on top 25 lifts. Rest timer survives screen lock with audio cues. Audit captures any client-side conflict.</div>
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D43</span> EP-05 PT-led logging flow</div>
+<pre class="mermaid">
+flowchart LR
+  A[PT opens today] --> B[Pick client from switcher]
+  B --> C[See programmed sets]
+  C --> D[Tap +1 set]
+  D --> E{Voice?}
+  E -->|yes| F[Speak weight reps]
+  E -->|no| G[Adjust weight reps]
+  F --> H[Confirm]
+  G --> H
+  H --> I[Persist ULID local]
+  I --> J{Online?}
+  J -->|yes| K[Sync + live mirror]
+  J -->|no| L[Queue offline]
+  L --> M[Reconnect batch sync]
+  M --> K
+  K --> N[Rest timer auto-start]
+  N --> D
+</pre>
+    </div>
+  </div>
+
+  <!-- EP-06 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-06</span><h4>Body Metrics &amp; Progress Photos</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P1 Logging</span></div>
+    </div>
+    <ul><li>Client logs weight, body fat %, circumferences weekly</li><li>Photo with on-screen pose guides; side-by-side compare</li><li>PT sees trend lines, plateau flag when 4 weekly weights variance &lt;0.5%</li></ul>
+    <div class="ac"><b>Acceptance:</b> Photos encrypted at rest. Thumbnail and full-image keys differ. E2E encryption by default. Sharing with PT requires opt-in. 4/12/26-week trend charts.</div>
+  </div>
+
+  <!-- EP-07 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-07</span><h4>Wearables &amp; Health Sync</h4></div>
+      <div class="badges"><span class="badge should">Should</span><span class="badge v3">v3 deferred</span><span class="badge pillar">P1 Logging</span></div>
+    </div>
+    <ul><li>Two-way sync with Apple Health, Google Fit, Garmin, Fitbit, Oura, Whoop</li><li><b>Not in v1.</b> Explicit deferral: in-person PT-led use case doesn't need wearables day one; API approvals take 4-8 weeks each</li></ul>
+  </div>
+
+  <!-- EP-08 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-08</span><h4>Nutrition &amp; Meal Planning</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P2 Programming</span></div>
+    </div>
+    <ul><li>PT sets macro targets per client</li><li>Meal plan: breakfast / lunch / dinner / snacks with swap options</li><li>Client scans barcode to log food</li><li>Dietary tags: veg, vegan, halal, kosher, GF, DF, nut-allergy</li></ul>
+    <div class="ac"><b>Acceptance:</b> Food DB ≥1M items, queries ≤500ms. Barcode accuracy ≥95% standard packaged goods US/EU.</div>
+  </div>
+
+  <!-- EP-09 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-09</span><h4>Scheduling, Bookings &amp; Group Classes</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P4 Business</span></div>
+    </div>
+    <ul><li>PT publishes availability per weekday</li><li>Client books open slot; PT notified; calendar updates</li><li>Recurring weekly sessions until cancelled</li><li>Group classes with capacity cap and waitlist (v2)</li></ul>
+    <div class="ac"><b>Acceptance:</b> Timezone per user. Bookings store UTC + originating zone. Recurring handles DST. Waitlist auto-promotes. .ics export. Two-way Google Calendar sync OAuth.</div>
+  </div>
+
+  <!-- EP-10 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-10</span><h4>Check-in / Check-out</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P4 Business</span></div>
+    </div>
+    <ul><li>Studio displays QR; client scans</li><li>PT can check-in manually if forgotten</li><li>Check-out: one-tap rating + tip + receipt prompt</li><li>Geofenced auto check-in v2 opt-in</li></ul>
+    <div class="ac"><b>Acceptance:</b> Check-in fires session-started event for billing. Receipts ≤60s of check-out.</div>
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D44</span> EP-10 check-in/out flow</div>
+<pre class="mermaid">
+flowchart LR
+  A[Booking scheduled] --> B[Arrive studio]
+  B --> C{Method}
+  C -->|QR| D[Client scans]
+  C -->|manual| E[PT taps check-in]
+  D --> F[CheckIn created]
+  E --> F
+  F --> G[Session in_progress]
+  G --> H[Workout]
+  H --> I[Check-out]
+  I --> J[One-tap rating tip]
+  J --> K[Receipt &lt;= 60s]
+  K --> L[Session completed]
+</pre>
+    </div>
+  </div>
+
+  <!-- EP-11 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-11</span><h4>Billing, Payments &amp; AI Credit Packs</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P4 Business</span></div>
+    </div>
+    <ul><li>Two flows: (1) Platform → PT subscription; (2) Client → PT for sessions</li><li>Whish + Areeba v1; Stripe v2; cash anytime</li><li>Platform earns from PT subscription only in v1 — no transaction fee, no payouts</li><li>Tax explicitly out of scope</li><li>PT subscribes in ≤3 min (card or Whish)</li><li>Sell 10-session pack with atomic decrement</li><li>No-show fee policy configurable</li><li>Mark cash paid + notes</li><li>AI credit packs purchased via IAP (mobile) or web checkout</li></ul>
+    <div class="ac"><b>Acceptance:</b> Card data never touches servers — Whish/Areeba handle PCI. Packs atomic/idempotent. Cash is first-class UI (one tap). Refunds ≤3 taps + audit logged. AI credit balance consistent across builders. Currency USD v1, AED v2. Receipt footer: "Forge does not collect or remit taxes."</div>
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D45</span> EP-11 billing flow</div>
+<pre class="mermaid">
+flowchart LR
+  A[Session checked out] --> B{Pay method}
+  B -->|Whish| C[Hosted page]
+  B -->|Areeba card| D[Hosted card page]
+  B -->|Cash| E[PT marks paid notes]
+  B -->|Pack credit| F[Atomic decrement]
+  C --> G[Webhook succeeded]
+  D --> G
+  G --> H[Charge persist receipt]
+  E --> H
+  F --> H
+  H --> I[Audit log]
+  I --> J[Notification PT and Client]
+</pre>
+    </div>
+  </div>
+
+  <!-- EP-12 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-12</span><h4>Broadcast Announcements (v1) → Full Messaging &amp; Video (v2)</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1 anno</span><span class="badge v2">v2 full</span><span class="badge pillar">P3 Coaching</span></div>
+    </div>
+    <ul><li><b>v1:</b> One-way announcements only (≤500 chars). No chat, no media, no threads.</li><li><b>v2:</b> Full 1:1 messaging, media, voice notes (≤5 min auto-transcribed), 1:1 video, group video up to 12.</li></ul>
+    <div class="ac"><b>Acceptance v1:</b> Announcement persists; read receipts captured. PT edit/delete ≤5 min then immutable. Ad-hoc multi-select (no saved groups). <b>v2:</b> Messages encrypted in transit/at rest. Video uses managed SFU (LiveKit/Daily) with quality indicator.</div>
+  </div>
+
+  <!-- EP-13 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-13</span><h4>Form-Check Video Review</h4></div>
+      <div class="badges"><span class="badge should">Should</span><span class="badge v1">v1</span><span class="badge pillar">P3 Coaching</span></div>
+    </div>
+    <ul><li>Client uploads 30s clip</li><li>PT scrubs timeline, drops comments at timestamps, draws on frames</li><li>Client sees comments anchored to timeline, can reply</li></ul>
+    <div class="ac"><b>Acceptance:</b> Upload ≤200MB resumable. Timestamps ±100ms. Drawings stored separately from source (immutable original).</div>
+  </div>
+
+  <!-- EP-14 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-14</span><h4>Reports, Analytics &amp; Adherence</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P5 Insights</span></div>
+    </div>
+    <ul><li>Client sees weekly volume, frequency, PR trends</li><li>PT sees adherence score per client (0-100) daily</li><li>Monthly PDF report one-click</li><li>Client monthly recap notification</li></ul>
+    <div class="ac"><b>Acceptance:</b> Adherence formula documented + visible in help. Charts virtualize for &gt;12 months. PDF generated server-side, stored, emailed.</div>
+  </div>
+
+  <!-- EP-15 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-15</span><h4>AI Suggestions · Credit-Metered</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P5 Insights</span></div>
+    </div>
+    <ul><li>AI drafts 4-week program (1 credit)</li><li>AI meal plan to hit macros within constraints (1 credit)</li><li>AI recap of last month from logged data (1 credit)</li><li>Credit balance in AI panel; in-app store when low</li><li>Client Premium gets suggested next workout (own credits)</li><li><b>No real-time computer vision in v1.</b></li></ul>
+    <div class="ac"><b>Acceptance:</b> All outputs editable before save/send. Program draft ≤12s. Recap ≤6s. AI never auto-publishes. Failed generations refund credit. Unique ID logged per generation with PII-scrubbed prompt/output. No surprise charges.</div>
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D46</span> EP-15 AI suggestion flow</div>
+<pre class="mermaid">
+flowchart LR
+  A[PT picks AI task] --> B[Form prompt goal equipment level]
+  B --> C{Balance &gt; 0?}
+  C -->|no| D[Upsell credit pack]
+  D --> E[IAP or web checkout]
+  E --> C
+  C -->|yes| F[Broker scrub PII]
+  F --> G[LLM call]
+  G --> H{Result ok?}
+  H -->|no| I[Refund credit auto]
+  I --> J[Try again]
+  H -->|yes| K[Decrement credit atomic]
+  K --> L[Show editable draft]
+  L --> M[PT edits saves]
+</pre>
+    </div>
+  </div>
+
+  <!-- EP-16 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-16</span><h4>AI Avatar Trainer</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v2">v2</span><span class="badge pillar">P5 Insights</span></div>
+    </div>
+    <ul><li>Real-time AI coach for online sessions: counts reps, flags form, voice cues, runs workout without human PT</li><li>Suggests load adjustments based on perceived exertion + prior sets</li><li>PT reviews session afterward and leaves notes</li></ul>
+    <div class="ac"><b>Acceptance:</b> Pose estimation on-device where possible (MoveNet/MediaPipe), server fallback. Rep count ≥95% on top 10 lifts (squat, deadlift, bench, OHP, row, pull-up, lunge, hinge, push-up, plank). Audio cues ≤600ms after detection. Video frames in-memory by default; not stored unless user opts in.</div>
+  </div>
+
+  <!-- EP-17 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-17</span><h4>Marketplace &amp; Discovery</h4></div>
+      <div class="badges"><span class="badge should">Should</span><span class="badge v3">v3</span><span class="badge pillar">P6 Growth</span></div>
+    </div>
+    <ul><li>Client searches PTs near with filters (price, modality, specialization, language)</li><li>Reads reviews tied to verified bookings, books free intro</li><li>PT publishes branded profile at <code>forge.app/coach/&lt;slug&gt;</code>; custom domain (premium)</li><li><b>Deferred to v3:</b> Lebanon-first supply-constrained, not demand-constrained</li></ul>
+    <div class="ac"><b>Acceptance:</b> Reviews tied to verified bookings. Search geo + free-text + filters p95 ≤600ms. Branded micro-site SEO-indexable.</div>
+  </div>
+
+  <!-- EP-18 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-18</span><h4>Notifications &amp; Engagement</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P5 Insights</span></div>
+    </div>
+    <ul><li>Push, email, SMS, in-app — right channel right time</li><li>Session reminder 24h + 1h before</li><li>PT notified when client checks in</li><li>Quiet hours, unsubscribe in one screen</li></ul>
+    <div class="ac"><b>Acceptance:</b> All notifications include deep-link. Quiet hours suppress push/SMS but allow critical billing. Unsubscribe one click + audit logged.</div>
+  </div>
+
+  <!-- EP-19 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-19</span><h4>Gamification &amp; Social</h4></div>
+      <div class="badges"><span class="badge should">Should</span><span class="badge v1">v1 / v1.5</span><span class="badge pillar">P6 Growth</span></div>
+    </div>
+    <ul><li>Streaks for consecutive logging days or macro hits</li><li>Badges: first PR, 30 sessions, 12 weeks</li><li>30-day challenges in small group</li><li>Share watermarked milestone image to own socials</li><li>No public social feed in v1</li></ul>
+    <div class="ac"><b>Acceptance:</b> Streak handles travel/illness via 1/week "freeze". Challenges time-boxed with clear pass/fail. Shared image server-side templated.</div>
+  </div>
+
+  <!-- EP-20 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-20</span><h4>Admin, Compliance &amp; Privacy</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">All pillars</span></div>
+    </div>
+    <ul><li>Platform Admin: search user, view account/billing/audit log</li><li>User data export (JSON + media) ≤30 days SLA</li><li>Account hard-delete ≤30 days excluding legally retained</li><li>Quarantine suspected fraud/abuse</li></ul>
+    <div class="ac"><b>Acceptance:</b> All admin actions audit-logged with reason codes. GDPR export job ≤24h SLA. PII encrypted at rest with KMS, rotation ≤90 days. Pen test passed before public launch.</div>
+  </div>
+
+  <!-- EP-21 -->
+  <div class="epic">
+    <div class="head">
+      <div><span class="id">EP-21</span><h4>Forge Shop · First-party Marketplace</h4></div>
+      <div class="badges"><span class="badge should">Should</span><span class="badge v2">v2</span><span class="badge pillar">P6 Growth</span></div>
+    </div>
+    <ul><li><b>v2.0:</b> 5-30 SKU catalog (bands, gloves, towels, bottles, jump ropes). Whish or COD via Wakkilni in Lebanon. Owner-managed.</li><li><b>v2.5:</b> PT tags products inside programs; one-tap order from program; PT earns commission as platform credit (default 10%).</li><li><b>v3.0:</b> UAE prices AED, Stripe, Aramex / Fetchr fulfillment.</li></ul>
+    <div class="ac"><b>Acceptance:</b> Catalog 5-200 SKUs, performance OK up to 1,000. Stock atomic decrement on order confirmation. COD first-class. Owner back-office: SKU CRUD, stock adjust, order list, daily CSV export. Returns: damaged-on-arrival within 7 days with photo. Commission paid as platform credit toward next subscription only — no cash payout.</div>
+    <div class="mermaid-wrap">
+      <div class="cap"><span class="id">D47</span> EP-21 Forge Shop checkout</div>
+<pre class="mermaid">
+flowchart LR
+  A[Browse catalog] --> B[Add SKU to cart]
+  B --> C[Enter delivery address]
+  C --> D{Pay}
+  D -->|Whish| E[Hosted payment]
+  D -->|COD| F[Confirm cash on delivery]
+  E --> G[Stock decrement atomic]
+  F --> G
+  G --> H[Order confirmed]
+  H --> I[Owner exports daily CSV]
+  I --> J[Wakkilni pickup]
+  J --> K[Out for delivery]
+  K --> L[Delivered]
+  L --> M{Return claim}
+  M -->|damaged 7 days| N[Refund as credit]
+  M -->|no| O[Done]
+</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ROADMAP ================= -->
+<section id="roadmap">
+  <h2 class="kicker">Section 10</h2>
+  <h3>Phased Roadmap</h3>
+  <p>Four phases over ~18 months. Pre-launch sets up infra and Lebanese payments. v1 ships the operational core in Lebanon. v1.5 hardens and preps UAE. v2 lands Stripe, full communications, and Forge Shop. v3 adds multi-coach, wearables, marketplace.</p>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D48</span> Gantt · 18-month roadmap</div>
+<pre class="mermaid">
+gantt
+  title Forge phased roadmap
+  dateFormat YYYY-MM-DD
+  axisFormat %b %Y
+
+  section Pre-launch
+  Team + infra + design system :p1, 2026-06-01, 30d
+  Whish + Areeba KYC sandbox    :p2, 2026-06-15, 30d
+  Arabic RTL bootstrap          :p3, 2026-06-15, 21d
+
+  section v1.0 Lebanon
+  EP-01 Auth                     :v1a, 2026-07-01, 21d
+  EP-04 Program builder          :v1b, 2026-07-15, 35d
+  EP-05 PT-led logging + iPad    :v1c, 2026-08-01, 45d
+  EP-06 Body metrics + photos    :v1d, 2026-08-15, 28d
+  EP-08 Nutrition + barcode      :v1e, 2026-09-01, 28d
+  EP-09 Scheduling               :v1f, 2026-08-15, 35d
+  EP-10 Check-in/out             :v1g, 2026-09-01, 21d
+  EP-11 Billing Whish+Areeba+AI  :v1h, 2026-09-01, 56d
+  EP-12 Announcements            :v1i, 2026-10-01, 14d
+  EP-14 Reports                  :v1j, 2026-10-15, 21d
+  EP-15 AI suggestions           :v1k, 2026-09-15, 35d
+  EP-18 Notifications            :v1l, 2026-10-01, 21d
+  EP-19 Streaks badges           :v1m, 2026-10-15, 21d
+  EP-20 Admin compliance         :v1n, 2026-09-01, 60d
+  Soft launch design partners    :milestone, m1, 2026-11-15, 1d
+  v1 public launch Lebanon       :milestone, m2, 2026-12-15, 1d
+
+  section v1.5 Polish + UAE prep
+  Logging perf hardening         :v15a, 2027-01-01, 30d
+  Stripe Connect scaffold        :v15b, 2027-01-15, 45d
+  Drip onboarding retention      :v15c, 2027-02-01, 30d
+
+  section v2.0 UAE + Comms + Shop
+  Stripe Connect live UAE        :v2a, 2027-03-01, 45d
+  AED currency Asia/Dubai        :v2b, 2027-03-15, 21d
+  EP-12 full messaging           :v2c, 2027-04-01, 60d
+  EP-12 video calls LiveKit      :v2d, 2027-05-01, 45d
+  EP-13 form-check review        :v2e, 2027-04-15, 30d
+  EP-16 AI Avatar beta           :v2f, 2027-06-01, 75d
+  EP-09 group classes            :v2g, 2027-05-15, 45d
+  French localization            :v2h, 2027-06-01, 30d
+  EP-21 Forge Shop v2.0          :v2i, 2027-04-01, 60d
+  EP-21 PT recos commission      :v2j, 2027-06-01, 45d
+  UAE soft launch                :milestone, m3, 2027-06-15, 1d
+  UAE public launch              :milestone, m4, 2027-08-15, 1d
+
+  section v3.0 Studio + Wearables
+  EP-02 Multi-coach studio       :v3a, 2027-09-01, 75d
+  EP-07 Wearables Apple Health   :v3b, 2027-10-01, 60d
+  EP-17 Marketplace discovery    :v3c, 2027-11-01, 60d
+  Apple Watch + Wear OS          :v3d, 2027-12-01, 60d
+</pre>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D49</span> Pillar × phase feature matrix</div>
+<pre class="mermaid">
+graph LR
+  subgraph v1[v1 Lebanon]
+    P1V1[P1 PT-led log offline voice]
+    P2V1[P2 Program + meal plan]
+    P3V1[P3 Announcements]
+    P4V1[P4 Whish+Areeba+packs+cash]
+    P5V1[P5 Reports + AI credits]
+    P6V1[P6 Streaks badges challenges]
+  end
+  subgraph v2[v2 UAE + Comms + Shop]
+    P1V2[P1 same + iPad polish]
+    P2V2[P2 +group classes]
+    P3V2[P3 1to1 chat + video + form review]
+    P4V2[P4 +Stripe Connect + group billing]
+    P5V2[P5 +AI Avatar beta]
+    P6V2[P6 +Forge Shop SKUs + PT recos]
+  end
+  subgraph v3[v3 Studio + Wearables]
+    P1V3[P1 +wearables sync]
+    P2V3[P2 same]
+    P3V3[P3 +studio multi-coach]
+    P4V3[P4 +multi-coach payout + P&amp;L]
+    P5V3[P5 +predictive risk]
+    P6V3[P6 +marketplace discovery + AED Shop]
+  end
+  P1V1 --> P1V2 --> P1V3
+  P2V1 --> P2V2 --> P2V3
+  P3V1 --> P3V2 --> P3V3
+  P4V1 --> P4V2 --> P4V3
+  P5V1 --> P5V2 --> P5V3
+  P6V1 --> P6V2 --> P6V3
+</pre>
+  </div>
+</section>
+
+<!-- ================= MONEY ================= -->
+<section id="money">
+  <h2 class="kicker">Section 11</h2>
+  <h3>Monetization</h3>
+  <p>Subscription-only for PTs in v1. Clients are free when their PT is paying; optional Premium for self-driven users. AI is sold as credit packs — pay only for what you consume. <b>No transaction fee on client→PT payments. No tax handled.</b></p>
+
+  <h4>PT plans · USD</h4>
+  <table>
+    <thead><tr><th>Plan</th><th>Price</th><th>Cap</th><th>Features</th></tr></thead>
+    <tbody>
+      <tr><td>Starter</td><td>$15 / mo</td><td>Up to 10 clients</td><td>Programming, PT-led logging, scheduling, announcements, Whish+Areeba, basic analytics</td></tr>
+      <tr><td>Pro</td><td>$35 / mo</td><td>Up to 50 clients</td><td>+ iPad PT-console, multi-client switcher, voice logging, nudges, advanced analytics, priority support</td></tr>
+      <tr><td>Elite</td><td>$69 / mo</td><td>Unlimited</td><td>+ highest AI priority, beta v2 features (messaging, video, AI Avatar)</td></tr>
+      <tr><td>Annual</td><td>~17% off</td><td>—</td><td>Two months free</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Client plans</h4>
+  <table>
+    <thead><tr><th>Plan</th><th>Price</th><th>Includes</th></tr></thead>
+    <tbody>
+      <tr><td>Free (with PT)</td><td>$0</td><td>Full app access: view program, self-log, body metrics, photos, payments, announcements, live mirror</td></tr>
+      <tr><td>Premium (self-driven)</td><td>$4.99 / mo</td><td>+ AI suggestions (own credits), advanced analytics, deeper history</td></tr>
+    </tbody>
+  </table>
+
+  <h4>AI credit packs · v1</h4>
+  <table>
+    <thead><tr><th>Pack</th><th>Price</th><th>Credits</th><th>Per generation</th></tr></thead>
+    <tbody>
+      <tr><td>Starter</td><td>$5</td><td>10</td><td>$0.50</td></tr>
+      <tr><td>Standard</td><td>$15</td><td>40</td><td>$0.38</td></tr>
+      <tr><td>Power</td><td>$39</td><td>120</td><td>$0.33</td></tr>
+      <tr><td>Mega</td><td>$99</td><td>350</td><td>$0.28</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:13px"><i>1 credit = 1 generation (program / meal plan / recap / workout suggestion). Credits never expire. Mobile via IAP (Apple/Google take 15-30%); web skips that fee.</i></p>
+
+  <h4>Multi-coach plans · v3 sketch</h4>
+  <table>
+    <thead><tr><th>Plan</th><th>Price</th><th>Cap</th><th>Features</th></tr></thead>
+    <tbody>
+      <tr><td>Studio</td><td>$99 / mo + $19 / extra coach</td><td>Up to 5 included</td><td>Owner dashboard, revenue split, payouts, audit log</td></tr>
+      <tr><td>Enterprise</td><td>From $499 / mo</td><td>Unlimited</td><td>SSO, multi-location, integrations, dedicated success</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Trials &amp; discounts</h4>
+  <ul style="color:var(--iron-500)">
+    <li><b>14-day free trial</b>, no card required (PT plans)</li>
+    <li><b>Founding-member</b>: first 50 Lebanese PTs get 50% off Pro for 12 months</li>
+    <li><b>Educational</b>: 30% off Pro for accredited PT students, first year</li>
+  </ul>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D50</span> Revenue flows</div>
+<pre class="mermaid">
+flowchart LR
+  PT[Personal Trainer] -->|subscription $15-$69| PLAT[Platform Forge]
+  PT -->|buy credit pack| PLAT
+  CLIENT[Client] -->|self Premium $4.99| PLAT
+  CLIENT -->|pay for session| PT
+  CLIENT -.->|Whish or Areeba or cash| PT
+  PLAT -.->|0 percent transaction fee v1| PT
+  CLIENT -->|Shop order| PLAT
+  PLAT -->|10 percent commission as credit| PT
+  PT -.->|credit applies to next subscription| PLAT
+  PT -.->|tax obligations external| TAX[External tax authority]
+  PLAT -.->|no tax collected| TAX
+</pre>
+  </div>
+</section>
+
+<!-- ================= NFR ================= -->
+<section id="nfr">
+  <h2 class="kicker">Section 12</h2>
+  <h3>Non-Functional Requirements</h3>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h5>Performance</h5>
+      <table style="margin:0">
+        <tbody>
+          <tr><td>App cold start</td><td>≤2.5s on 2022 mid-tier Android</td></tr>
+          <tr><td>Log-a-set, check-in p95</td><td>≤800ms end-to-end</td></tr>
+          <tr><td>API p95 reads</td><td>≤300ms</td></tr>
+          <tr><td>API p95 writes</td><td>≤600ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h5>Reliability</h5>
+      <table style="margin:0">
+        <tbody>
+          <tr><td>Uptime Starter/Pro</td><td>99.9%</td></tr>
+          <tr><td>Uptime Studio/Enterprise</td><td>99.95%</td></tr>
+          <tr><td>Logging</td><td>Fully offline; sync ≤60s of network restore</td></tr>
+          <tr><td>Backups</td><td>Daily encrypted, 7-day retention, quarterly restore drill</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h5>Security</h5>
+      <table style="margin:0">
+        <tbody>
+          <tr><td>Mobile</td><td>OWASP MASVS Level 2</td></tr>
+          <tr><td>API</td><td>OWASP ASVS Level 2</td></tr>
+          <tr><td>Encryption at rest</td><td>KMS-managed, rotation ≤90 days</td></tr>
+          <tr><td>Pen test</td><td>Annual third-party</td></tr>
+          <tr><td>Bug bounty</td><td>At public launch</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h5>Privacy</h5>
+      <table style="margin:0">
+        <tbody>
+          <tr><td>Standards</td><td>GDPR, CCPA, UK GDPR voluntary in Lebanon</td></tr>
+          <tr><td>Consent</td><td>Granular: analytics, marketing, AI training</td></tr>
+          <tr><td>Health data</td><td>Not PHI under HIPAA unless contracted by covered entity (avoid v1)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h5>Accessibility</h5>
+      <table style="margin:0">
+        <tbody>
+          <tr><td>Standard</td><td>WCAG 2.2 AA across web + mobile</td></tr>
+          <tr><td>Dynamic type</td><td>Supported</td></tr>
+          <tr><td>Screen readers</td><td>VoiceOver / TalkBack labels on all interactive</td></tr>
+          <tr><td>Color contrast</td><td>≥4.5:1 body text</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h5>Localization</h5>
+      <table style="margin:0">
+        <tbody>
+          <tr><td>v1 languages</td><td>English + Arabic with full RTL</td></tr>
+          <tr><td>v2 languages</td><td>+ French</td></tr>
+          <tr><td>Units</td><td>Metric only v1; imperial v2 if needed</td></tr>
+          <tr><td>Currency</td><td>USD v1, AED v2. LBP not supported</td></tr>
+          <tr><td>Timezone</td><td>Asia/Beirut v1, Asia/Dubai v2. No user-picks-tz in v1</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <h5>Observability</h5>
+      <p style="margin:0">Structured logs, OpenTelemetry traces, metrics on all services. User-visible errors carry copyable correlation ID. SLO dashboards reviewed weekly. Managed backend: Datadog, Honeycomb, or Grafana Cloud.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMPLIANCE ================= -->
+<section id="compliance">
+  <h2 class="kicker">Section 13</h2>
+  <h3>Compliance, Risk &amp; Open Decisions</h3>
+
+  <h4>Risk register</h4>
+  <table>
+    <thead><tr><th>#</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>R-1</td><td>Whish / Areeba integration harder than expected</td><td>Med</td><td>High</td><td>Adapter layer; cash-only fallback; design-partner PT willing to test</td></tr>
+      <tr><td>R-2</td><td>Lebanese banking instability disrupts payouts</td><td>High</td><td>Med</td><td>Platform entity outside Lebanon (UAE / Estonia); USD everything; fast withdrawal</td></tr>
+      <tr><td>R-3</td><td>Apple IAP rule changes hit AI credit packs</td><td>Low</td><td>High</td><td>IAP from day one; clear digital vs real-world service separation</td></tr>
+      <tr><td>R-4</td><td>Sensitive body data breach</td><td>Low</td><td>Severe</td><td>Encrypted at rest, E2E for photos, GDPR controls, annual pen test</td></tr>
+      <tr><td>R-5</td><td>Logging UX too slow → PT churn</td><td>Med</td><td>Severe</td><td>Sub-second SLO; offline-first; weekly design-partner usability tests</td></tr>
+      <tr><td>R-6</td><td>Arabic / RTL bugs in v1 launch</td><td>Med</td><td>High</td><td>Build RTL-first; Arabic QA from day one; native speaker copy review</td></tr>
+      <tr><td>R-7</td><td>AI cost exceeds credit-pack revenue</td><td>Low</td><td>Med</td><td>Per-user rate limits; abuse detection; adjustable credit ratio</td></tr>
+      <tr><td>R-8</td><td>v2 UAE launch slips (Stripe hard)</td><td>Med</td><td>Med</td><td>Stripe entity setup parallel to v1.5; UAE-resident director if DIFC</td></tr>
+      <tr><td>R-9</td><td>Multi-coach gap blocks UAE adoption</td><td>Med</td><td>Med</td><td>Re-evaluate in v2; pull from v3 to late v2 if studios need</td></tr>
+      <tr><td>R-10</td><td>Burnout from too-broad v1 scope</td><td>Med</td><td>High</td><td>Hold v1 line ruthlessly; defer all Should / Could to v1.5+</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Open decisions</h4>
+  <div class="card">
+    <ol style="color:var(--iron-500);margin:0;padding-left:20px">
+      <li>Platform legal entity: Lebanon, UAE (DIFC / ADGM), or Estonia? (Affects banking, Stripe v2, tax)</li>
+      <li>Mobile stack final: React Native (recommended) vs Flutter</li>
+      <li>LLM provider: Anthropic, OpenAI, or both behind routing</li>
+      <li>Whish vs Areeba prioritization: which ships first?</li>
+      <li>Video provider v2: LiveKit (self-host later) vs Daily (managed-only)</li>
+      <li>Multi-coach: pull from v3 to late v2 to capture UAE studios?</li>
+      <li>Group classes: v2 as drafted or earlier (v1.5)?</li>
+      <li>Apple Watch companion: v3 with wearables or pulled to v2 (high UAE penetration)?</li>
+      <li>AI credit pack pricing: tiers right for Lebanon, or lower?</li>
+      <li>Founding-member program: 50% off Pro 12 months — fair acquisition cost or margin hit?</li>
+      <li>Voice logging language: AR + EN v1 or English-only with Arabic v1.5?</li>
+    </ol>
+  </div>
+
+  <div class="mermaid-wrap">
+    <div class="cap"><span class="id">D51</span> Jurisdiction decision tree</div>
+<pre class="mermaid">
+flowchart TD
+  A[Pick platform entity jurisdiction] --> B{Operate from Lebanon directly?}
+  B -->|yes| C[Lebanon entity]
+  B -->|no| D{Banking + Stripe v2 priority?}
+  D -->|yes| E[UAE DIFC or ADGM entity]
+  D -->|cost minimized| F[Estonia e-Residency]
+  C --> C1[Pros: local presence simple PTs]
+  C --> C2[Cons: banking instability + no Stripe + sanctions risk]
+  E --> E1[Pros: Stripe eligible + USD + AED banking + investor-friendly]
+  E --> E2[Cons: setup cost + UAE-resident director required]
+  F --> F1[Pros: low cost + EU residency + tax efficiency]
+  F --> F2[Cons: no MENA presence + payment-provider scrutiny]
+  C1 --> X{Decide}
+  C2 --> X
+  E1 --> X
+  E2 --> X
+  F1 --> X
+  F2 --> X
+</pre>
+  </div>
+</section>
+
+<!-- ================= GLOSSARY ================= -->
+<section id="glossary">
+  <h2 class="kicker">Section 14</h2>
+  <h3>Glossary</h3>
+  <p>The terms used throughout this document. Memorize the abbreviations — they appear in every section.</p>
+
+  <dl class="gloss">
+    <dt>1RM</dt><dd>One-rep max. Maximum weight a person can lift for a single repetition of a given lift.</dd>
+    <dt>Adherence score</dt><dd>0–100 metric per client per day, factoring logged sessions vs programmed, macros vs target, body metrics frequency.</dd>
+    <dt>AED</dt><dd>UAE dirham. v2 currency.</dd>
+    <dt>AMRAP</dt><dd>"As many reps as possible". A set scheme where the lifter does max reps at a fixed load.</dd>
+    <dt>Areeba</dt><dd>Lebanese card processor handling Visa / Mastercard via hosted page. v1 card rails.</dd>
+    <dt>ASVS</dt><dd>OWASP Application Security Verification Standard. Forge target: Level 2 for API.</dd>
+    <dt>Block</dt><dd>Sub-unit of a programming Day — a grouping of supersetted or paired Exercises.</dd>
+    <dt>COD</dt><dd>Cash on delivery. First-class checkout option in the Forge Shop.</dd>
+    <dt>Credit pack</dt><dd>Pre-paid bundle of AI generations. 1 credit = 1 program/meal plan/recap.</dd>
+    <dt>Deload</dt><dd>Programmed lower-intensity week to allow recovery.</dd>
+    <dt>DIFC / ADGM</dt><dd>Dubai International Financial Centre / Abu Dhabi Global Market. Common UAE free-zone jurisdictions for regional startups.</dd>
+    <dt>E2E</dt><dd>End-to-end encryption (e.g., progress photos with separate key envelope).</dd>
+    <dt>Forge Shop</dt><dd>First-party Marketplace of fitness essentials (EP-21, v2). Owner-managed, Wakkilni delivery.</dd>
+    <dt>IAP</dt><dd>In-app purchase. Apple / Google billing rails for digital goods (AI credit packs, Premium).</dd>
+    <dt>KMS</dt><dd>Key management service (AWS KMS or equivalent). Holds encryption keys with rotation ≤90 days.</dd>
+    <dt>LBP</dt><dd>Lebanese pound. <b>Not supported</b> in any Forge version — USD only in Lebanon.</dd>
+    <dt>Live mirror</dt><dd>Real-time reflection of PT-side logging on the Client's device, ≤3s push (F-071).</dd>
+    <dt>MASVS</dt><dd>OWASP Mobile Application Security Verification Standard. Forge target: Level 2.</dd>
+    <dt>MFA</dt><dd>Multi-factor authentication. TOTP or SMS in Forge.</dd>
+    <dt>Owner PT</dt><dd>Studio owner; persona managing other PTs under their brand (v3).</dd>
+    <dt>PAR-Q</dt><dd>Physical Activity Readiness Questionnaire. Standard pre-training health screen.</dd>
+    <dt>PCI SAQ-A</dt><dd>Lowest PCI DSS scope — applies when no PAN data touches your servers (hosted payment pages only).</dd>
+    <dt>Periodization</dt><dd>Long-arc structuring of training intensity / volume. Linear, undulating, block models.</dd>
+    <dt>PHI</dt><dd>Protected health information under HIPAA. Forge avoids in v1.</dd>
+    <dt>PII</dt><dd>Personally identifiable information. Scrubbed before broker → LLM call.</dd>
+    <dt>RBAC</dt><dd>Role-based access control. Drives the v1/v3 permission matrix.</dd>
+    <dt>RPE</dt><dd>Rate of perceived exertion (1–10). Logged per set; feeds AI suggestions.</dd>
+    <dt>RTL</dt><dd>Right-to-left layout. Required from day one for Arabic.</dd>
+    <dt>SFU</dt><dd>Selective Forwarding Unit. WebRTC architecture for group video — use LiveKit / Daily, do not roll your own.</dd>
+    <dt>SLA</dt><dd>Service-level agreement. GDPR export ≤24h; receipts ≤60s of check-out.</dd>
+    <dt>SLO</dt><dd>Service-level objective. Internal targets behind the SLAs.</dd>
+    <dt>Sub PT</dt><dd>Junior coach working under an Owner. v3.</dd>
+    <dt>ULID</dt><dd>Universally Unique Lexicographically Sortable Identifier. Client-side ID for Sets that guarantees conflict-free ordering across offline + sync.</dd>
+    <dt>USD</dt><dd>US dollar. v1 unit of account. Hedges Lebanese banking volatility.</dd>
+    <dt>WCAG 2.2 AA</dt><dd>Web Content Accessibility Guidelines target level. Forge baseline.</dd>
+    <dt>Wakkilni</dt><dd>Lebanese last-mile delivery service. Forge Shop fulfilment in v2.</dd>
+    <dt>Whish</dt><dd>Lebanese mobile-wallet payments. Whish Money. v1 wallet rail.</dd>
+  </dl>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div><span class="em">FORGE</span> · Architecture &amp; Flows v1.0 · Engineering reference</div>
+  <div style="margin-top:8px;font-size:11px">Companion: <a href="Forge_Brand.html" style="color:var(--ember-500)">Brand</a> · <a href="Forge_DesignSystem.html" style="color:var(--ember-500)">Design System</a> · <a href="Forge_Specification_v1.6.docx" style="color:var(--ember-500)">Spec v1.6</a> · <a href="Forge_Brief_v6.docx" style="color:var(--ember-500)">Brief v6</a></div>
+</footer>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      fontFamily: "Inter, -apple-system, 'Helvetica Neue', Arial, sans-serif",
+      fontSize: '16px',
+      primaryColor: '#1A1F2B',
+      primaryTextColor: '#F5F2EE',
+      primaryBorderColor: '#E8631A',
+      lineColor: '#4A5560',
+      secondaryColor: '#FCE7D3',
+      tertiaryColor: '#F5F2EE',
+      mainBkg: '#1A1F2B',
+      secondBkg: '#FCE7D3',
+      nodeBorder: '#E8631A',
+      clusterBkg: '#FBFAF7',
+      clusterBorder: '#CDD2DB',
+      defaultLinkColor: '#4A5560',
+      titleColor: '#1A1F2B',
+      edgeLabelBackground: '#FBFAF7',
+      actorBkg: '#1A1F2B',
+      actorBorder: '#E8631A',
+      actorTextColor: '#FFFFFF',
+      actorLineColor: '#4A5560',
+      signalColor: '#E8631A',
+      signalTextColor: '#1A1F2B',
+      labelBoxBkgColor: '#FCE7D3',
+      labelBoxBorderColor: '#E8631A',
+      labelTextColor: '#1A1F2B',
+      loopTextColor: '#1A1F2B',
+      noteBkgColor: '#F5F2EE',
+      noteBorderColor: '#E8631A',
+      noteTextColor: '#1A1F2B',
+      activationBorderColor: '#E8631A',
+      activationBkgColor: '#FCE7D3',
+      sequenceNumberColor: '#FFFFFF'
+    },
+    flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis', nodeSpacing: 60, rankSpacing: 80, padding: 24 },
+    sequence: { useMaxWidth: false, mirrorActors: true, showSequenceNumbers: false, actorMargin: 90, messageFontSize: 16, noteFontSize: 14, actorFontSize: 16, boxMargin: 16, boxTextMargin: 8, messageMargin: 48, width: 180 },
+    gantt: { useMaxWidth: false, leftPadding: 160, gridLineStartPadding: 35, fontSize: 14, sectionFontSize: 16, barHeight: 22, barGap: 6 },
+    er: { useMaxWidth: false, fontSize: 16, layoutDirection: 'TB', minEntityWidth: 140, minEntityHeight: 80, entityPadding: 20 },
+    state: { useMaxWidth: false, padding: 22 },
+    mindmap: { useMaxWidth: false, padding: 24, maxNodeWidth: 220 },
+    maxTextSize: 500000
+  });
+</script>
+
+<!-- ============= Zoom modal ============= -->
+<div class="zoom-overlay" id="zoomOverlay" role="dialog" aria-modal="true" aria-label="Diagram zoom view">
+  <div class="zoom-bar">
+    <div class="title">
+      <span class="id" id="zoomId">D&mdash;</span>
+      <span class="name" id="zoomName">Diagram</span>
+    </div>
+    <div class="controls">
+      <button class="zoom-btn" id="btnOut" aria-label="Zoom out">&minus;</button>
+      <span class="zoom-level" id="zoomLevel">100%</span>
+      <button class="zoom-btn" id="btnIn" aria-label="Zoom in">+</button>
+      <button class="zoom-btn" id="btnFit" aria-label="Fit to screen">Fit</button>
+      <button class="zoom-btn" id="btnReset" aria-label="Reset">1:1</button>
+      <button class="zoom-btn primary" id="btnClose" aria-label="Close">Close &times;</button>
+    </div>
+  </div>
+  <div class="zoom-stage" id="zoomStage">
+    <div class="inner" id="zoomInner"></div>
+    <div class="zoom-help">Scroll = zoom &middot; Drag = pan &middot; Esc = close &middot; Double-click = fit</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const overlay = document.getElementById('zoomOverlay');
+  const stage   = document.getElementById('zoomStage');
+  const inner   = document.getElementById('zoomInner');
+  const lvl     = document.getElementById('zoomLevel');
+  const zId     = document.getElementById('zoomId');
+  const zName   = document.getElementById('zoomName');
+  let scale = 1, tx = 0, ty = 0, dragging = false, lastX = 0, lastY = 0;
+
+  function applyTransform(){
+    inner.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + scale + ')';
+    lvl.textContent = Math.round(scale * 100) + '%';
+  }
+  function clearInner(){
+    while(inner.firstChild) inner.removeChild(inner.firstChild);
+  }
+  function fitToStage(){
+    const svg = inner.querySelector('svg'); if(!svg) return;
+    const br = svg.getBoundingClientRect();
+    const sr = stage.getBoundingClientRect();
+    if(!br.width || !br.height) return;
+    const padded = 0.92;
+    const fit = Math.min(sr.width / br.width, sr.height / br.height) * padded * scale;
+    scale = Math.max(0.2, Math.min(5, fit));
+    tx = 0; ty = 0;
+    applyTransform();
+  }
+  function reset(){ scale = 1; tx = 0; ty = 0; applyTransform(); }
+
+  function openZoom(wrap){
+    const svg = wrap.querySelector('svg'); if(!svg) return;
+    const cap = wrap.querySelector('.cap');
+    const idEl = cap ? cap.querySelector('.id') : null;
+    zId.textContent = idEl ? idEl.textContent : 'D';
+    let nameText = '';
+    if(cap){
+      cap.childNodes.forEach(function(n){ if(n.nodeType === 3) nameText += n.textContent; });
+      nameText = nameText.trim();
+    }
+    zName.textContent = nameText || 'Diagram';
+    clearInner();
+    const clone = svg.cloneNode(true);
+    clone.removeAttribute('style');
+    clone.style.maxWidth = 'none';
+    inner.appendChild(clone);
+    overlay.classList.add('open');
+    document.body.classList.add('zoom-open');
+    scale = 1; tx = 0; ty = 0; applyTransform();
+    requestAnimationFrame(function(){ fitToStage(); });
+  }
+  function closeZoom(){
+    overlay.classList.remove('open');
+    document.body.classList.remove('zoom-open');
+    clearInner();
+  }
+
+  function attachHints(){
+    document.querySelectorAll('.mermaid-wrap').forEach(function(w){
+      if(!w.querySelector('.zoom-hint')){
+        const h = document.createElement('div');
+        h.className = 'zoom-hint';
+        h.textContent = 'Click to zoom';
+        w.appendChild(h);
+      }
+      w.addEventListener('click', function(e){
+        if(e.target.closest('.zoom-hint') || w.querySelector('svg')) openZoom(w);
+      });
+    });
+  }
+  let tries = 0;
+  const wait = setInterval(function(){
+    if(document.querySelector('.mermaid-wrap svg') || ++tries > 40){
+      clearInterval(wait);
+      attachHints();
+    }
+  }, 250);
+
+  document.getElementById('btnClose').addEventListener('click', closeZoom);
+  document.getElementById('btnIn').addEventListener('click', function(){ scale = Math.min(5, scale * 1.25); applyTransform(); });
+  document.getElementById('btnOut').addEventListener('click', function(){ scale = Math.max(0.2, scale / 1.25); applyTransform(); });
+  document.getElementById('btnFit').addEventListener('click', function(){ reset(); requestAnimationFrame(function(){ fitToStage(); }); });
+  document.getElementById('btnReset').addEventListener('click', reset);
+
+  stage.addEventListener('wheel', function(e){
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 1.12 : 1/1.12;
+    const rect = stage.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width/2;
+    const cy = e.clientY - rect.top - rect.height/2;
+    const newScale = Math.max(0.2, Math.min(5, scale * delta));
+    const ratio = newScale / scale;
+    tx = cx - (cx - tx) * ratio;
+    ty = cy - (cy - ty) * ratio;
+    scale = newScale;
+    applyTransform();
+  }, { passive: false });
+
+  stage.addEventListener('mousedown', function(e){
+    if(e.target.closest('.zoom-help')) return;
+    dragging = true; stage.classList.add('grabbing'); lastX = e.clientX; lastY = e.clientY;
+  });
+  window.addEventListener('mousemove', function(e){
+    if(!dragging) return;
+    tx += e.clientX - lastX; ty += e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    applyTransform();
+  });
+  window.addEventListener('mouseup', function(){ dragging = false; stage.classList.remove('grabbing'); });
+
+  let pinchDist = 0;
+  stage.addEventListener('touchstart', function(e){
+    if(e.touches.length === 1){ lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; dragging = true; }
+    else if(e.touches.length === 2){
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchDist = Math.hypot(dx, dy);
+    }
+  }, { passive: true });
+  stage.addEventListener('touchmove', function(e){
+    if(e.touches.length === 1 && dragging){
+      e.preventDefault();
+      tx += e.touches[0].clientX - lastX; ty += e.touches[0].clientY - lastY;
+      lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+      applyTransform();
+    } else if(e.touches.length === 2){
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const d = Math.hypot(dx, dy);
+      if(pinchDist){
+        const ratio = d / pinchDist;
+        scale = Math.max(0.2, Math.min(5, scale * ratio));
+        applyTransform();
+      }
+      pinchDist = d;
+    }
+  }, { passive: false });
+  stage.addEventListener('touchend', function(){ dragging = false; pinchDist = 0; });
+
+  stage.addEventListener('dblclick', function(){ fitToStage(); });
+  overlay.addEventListener('click', function(e){ if(e.target === overlay || e.target === stage) closeZoom(); });
+  window.addEventListener('keydown', function(e){
+    if(!overlay.classList.contains('open')) return;
+    if(e.key === 'Escape') closeZoom();
+    else if(e.key === '+' || e.key === '=') { scale = Math.min(5, scale * 1.25); applyTransform(); }
+    else if(e.key === '-' || e.key === '_') { scale = Math.max(0.2, scale / 1.25); applyTransform(); }
+    else if(e.key === '0') reset();
+    else if(e.key === 'f' || e.key === 'F') fitToStage();
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Session / tooling artifacts
+.remember/
+.playwright-mcp/
+.claude/
+
+# Screenshots and debug captures
+*.png
+!docs/**/*.png
+
+# OS junk
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Temporary
+*.tmp
+*.log

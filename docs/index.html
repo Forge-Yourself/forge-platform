@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Forge — Documentation</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --charcoal-900:#0F131C; --charcoal-800:#1A1F2B; --charcoal-700:#222836;
+    --iron-500:#4A5560; --iron-400:#6B7280; --iron-300:#9AA3B1; --iron-200:#CDD2DB; --iron-100:#E5E8ED;
+    --cream-100:#F5F2EE; --cream-50:#FBFAF7; --white:#FFFFFF;
+    --ember-700:#B84812; --ember-600:#E8631A; --ember-500:#FF8A3D; --ember-300:#FFB068; --ember-100:#FCE7D3;
+    --r-md:10px; --r-lg:14px; --r-xl:20px;
+    --font:-apple-system,BlinkMacSystemFont,'Inter','Helvetica Neue',Arial,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--cream-50);color:var(--charcoal-800);font-family:var(--font);line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--ember-600);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  header{background:var(--charcoal-800);color:var(--cream-100);padding:64px 28px;position:relative;overflow:hidden}
+  header::after{content:"";position:absolute;right:-100px;top:-100px;width:420px;height:420px;background:radial-gradient(circle,rgba(232,99,26,.25),transparent 60%);pointer-events:none}
+  .hero{max-width:1180px;margin:0 auto;display:flex;gap:36px;align-items:center;flex-wrap:wrap;position:relative;z-index:1}
+  .hero svg{width:120px;height:120px;flex-shrink:0}
+  .hero .label{color:var(--ember-300);font-size:12px;letter-spacing:6px;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+  .hero h1{color:var(--white);font-size:52px;letter-spacing:-1.5px;margin:0 0 12px;font-weight:900}
+  .hero p{color:var(--iron-300);font-size:17px;max-width:740px;margin:0}
+
+  main{max-width:1180px;margin:0 auto;padding:56px 28px 96px}
+  h2.kicker{font-size:12px;letter-spacing:6px;text-transform:uppercase;color:var(--ember-600);font-weight:700;margin:0 0 6px}
+  h3{font-size:28px;font-weight:800;letter-spacing:-.5px;margin:0 0 16px;color:var(--charcoal-800)}
+  .lead{font-size:16px;color:var(--iron-500);max-width:760px;margin:0 0 40px}
+
+  .grid{display:grid;gap:20px;grid-template-columns:repeat(2,1fr)}
+  @media(max-width:780px){.grid{grid-template-columns:1fr}}
+
+  .doc{background:var(--white);border:1px solid var(--iron-100);border-radius:var(--r-lg);padding:24px 26px;transition:transform .15s,box-shadow .15s,border-color .15s;display:block;color:inherit;position:relative}
+  .doc:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(20,30,50,.08);border-color:var(--ember-300);text-decoration:none}
+  .doc .id{font-family:var(--font-mono);font-size:11px;color:var(--ember-600);letter-spacing:1.5px;font-weight:700;text-transform:uppercase}
+  .doc h4{margin:6px 0 8px;font-size:21px;font-weight:800;color:var(--charcoal-800);letter-spacing:-.3px}
+  .doc p{font-size:14px;color:var(--iron-500);margin:0 0 16px;line-height:1.5}
+  .doc .meta{font-family:var(--font-mono);font-size:11px;color:var(--iron-400);letter-spacing:.3px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--iron-100);padding-top:12px}
+  .doc .meta .arrow{color:var(--ember-600);font-weight:700;font-size:13px}
+  .doc.primary{background:var(--charcoal-800);color:var(--cream-100);border-color:var(--charcoal-700);grid-column:1/-1}
+  .doc.primary .id{color:var(--ember-300)}
+  .doc.primary h4{color:var(--white);font-size:24px}
+  .doc.primary p{color:var(--iron-300);font-size:15px}
+  .doc.primary .meta{color:var(--iron-300);border-top-color:var(--iron-600)}
+  .doc.primary .meta .arrow{color:var(--ember-500)}
+
+  footer{background:var(--charcoal-900);color:var(--iron-300);padding:28px 28px;text-align:center;font-size:13px;letter-spacing:1px}
+  footer .em{color:var(--ember-500);font-weight:700;letter-spacing:4px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hero">
+    <svg viewBox="0 0 256 256" aria-label="Forge mark">
+      <defs>
+        <linearGradient id="ember" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFB068"/>
+          <stop offset="45%" stop-color="#FF8A3D"/>
+          <stop offset="100%" stop-color="#E8631A"/>
+        </linearGradient>
+        <linearGradient id="emberCore" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFD9A8"/>
+          <stop offset="100%" stop-color="#FF8A3D"/>
+        </linearGradient>
+      </defs>
+      <rect width="256" height="256" rx="60" fill="#0F131C"/>
+      <ellipse cx="128" cy="168" rx="80" ry="54" fill="#E8631A" opacity="0.22"/>
+      <path d="M 128 44 C 96 96, 60 130, 60 174 C 60 226, 102 252, 128 252 C 154 252, 196 226, 196 174 C 196 142, 176 120, 164 100 C 160 122, 148 132, 134 130 C 134 100, 144 80, 128 44 Z" fill="url(#ember)"/>
+      <path d="M 124 116 C 112 142, 96 162, 96 190 C 96 222, 116 238, 128 238 C 144 238, 160 222, 160 196 C 160 174, 148 160, 142 148 C 138 162, 132 164, 128 160 C 128 146, 132 132, 124 116 Z" fill="url(#emberCore)" opacity="0.9"/>
+    </svg>
+    <div>
+      <div class="label">Documentation Hub · v1.0</div>
+      <h1>Forge.</h1>
+      <p>Mobile + web training platform for personal trainers, studios, and the people they coach. Lebanon first, UAE next. Every Forge document — brand, design system, architecture, specification, brief — lives here.</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <h2 class="kicker">Documents</h2>
+  <h3>Six things to read.</h3>
+  <p class="lead">Start with <b>Architecture &amp; Flows</b> if you are an engineer joining the project. Start with <b>Brief</b> if you are a stakeholder. Start with <b>Brand</b> or <b>Design System</b> if you are a designer.</p>
+
+  <div class="grid">
+
+    <a class="doc primary" href="Forge_Architecture.html">
+      <div class="id">01 · Engineering reference</div>
+      <h4>Architecture &amp; Flows</h4>
+      <p>The full picture. Vision, personas, six pillars, system architecture, complete data model ERD, runtime sequence diagrams, lifecycle state machines, all twenty epics, eighteen-month roadmap, monetization, NFR, compliance, risk register, glossary. 51 Mermaid diagrams — visual reference for every flow that matters.</p>
+      <div class="meta"><span>Forge_Architecture.html · 14 sections · 51 diagrams</span><span class="arrow">Open →</span></div>
+    </a>
+
+    <a class="doc" href="Forge_Brand.html">
+      <div class="id">02 · Identity</div>
+      <h4>Brand Identity</h4>
+      <p>The ember mark, charcoal + ember palette, typography, voice and tone, app-icon system, taglines (Forge yourself · The work shows · Train, programmed · One app. Every rep.). Share with designers, stakeholders, and external partners.</p>
+      <div class="meta"><span>Forge_Brand.html</span><span class="arrow">Open →</span></div>
+    </a>
+
+    <a class="doc" href="Forge_DesignSystem.html">
+      <div class="id">03 · Design tokens &amp; components</div>
+      <h4>Design System</h4>
+      <p>Live visual reference. Foundations (color tokens, type ramp, spacing, radius, motion, icons), components (buttons, fields, badges, lists, tab bars, toasts, empty states, skeletons), patterns, ten phone mockups for the screens that matter most, accessibility, RTL.</p>
+      <div class="meta"><span>Forge_DesignSystem.html</span><span class="arrow">Open →</span></div>
+    </a>
+
+    <a class="doc" href="Forge_Specification_v1.6.docx">
+      <div class="id">04 · Canonical spec</div>
+      <h4>Product Specification v1.6</h4>
+      <p>The source-of-truth product spec. Nineteen sections, twenty epics with user stories and acceptance criteria, eighty features inventoried, twenty-seven data-model entities, four-phase roadmap, pricing, NFR, compliance, KPIs, risks, open decisions. Word document, ready for engineering, design, and QA breakdown.</p>
+      <div class="meta"><span>Forge_Specification_v1.6.docx</span><span class="arrow">Download →</span></div>
+    </a>
+
+    <a class="doc" href="Forge_Brief_v6.docx">
+      <div class="id">05 · Stakeholder overview</div>
+      <h4>Product Brief v6</h4>
+      <p>Reader-friendly narrative of what Forge is, for trainers and for clients. Use this for non-technical reviewers, partner conversations, founding-member outreach, and waitlist signup messaging.</p>
+      <div class="meta"><span>Forge_Brief_v6.docx</span><span class="arrow">Download →</span></div>
+    </a>
+
+    <a class="doc" href="../README.md">
+      <div class="id">06 · Repo root</div>
+      <h4>README</h4>
+      <p>One paragraph at the root of the project. Points back here. If you have just cloned the repository, that is the file you saw first.</p>
+      <div class="meta"><span>../README.md</span><span class="arrow">Open →</span></div>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  <div><span class="em">FORGE</span> · Documentation hub · v1.0</div>
+  <div style="margin-top:8px;font-size:11px">Forge yourself.</div>
+</footer>
+
+</body>
+</html>

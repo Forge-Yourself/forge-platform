@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Forge — Brand Identity</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --charcoal:#1A1F2B; --charcoal-2:#0F131C; --iron:#4A5560;
+    --ember:#E8631A; --ember-light:#FF8A3D; --ember-bright:#FFB068;
+    --cream:#F5F2EE; --white:#fff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,'Helvetica Neue',Arial,sans-serif;background:var(--cream);color:var(--charcoal);line-height:1.5}
+  header{background:var(--charcoal);color:var(--cream);padding:80px 60px;}
+  h1{font-size:14px;letter-spacing:6px;text-transform:uppercase;color:var(--ember-light);font-weight:600;margin:0 0 8px}
+  header h2{font-size:48px;margin:0 0 18px;font-weight:800;letter-spacing:-1px;color:var(--white)}
+  header p{font-size:18px;max-width:680px;margin:0;color:#B7BCC6}
+  section{padding:60px;max-width:1200px;margin:0 auto}
+  h3{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--ember);font-weight:700;margin:0 0 4px}
+  h4{font-size:28px;margin:0 0 24px;font-weight:800;letter-spacing:-0.5px}
+  .card{background:var(--white);border-radius:18px;padding:48px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 8px 24px rgba(20,30,50,.06);margin-bottom:32px}
+  .card.dark{background:var(--charcoal);color:var(--cream)}
+  .grid{display:grid;gap:24px}
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+  .grid-2{grid-template-columns:1fr 1fr}
+  .center{display:flex;align-items:center;justify-content:center;min-height:240px}
+  .swatch{height:120px;border-radius:14px;display:flex;align-items:flex-end;padding:14px;color:#fff;font-weight:600;font-size:13px;letter-spacing:.5px}
+  .swatch small{display:block;font-weight:400;opacity:.75;font-size:11px;margin-top:2px}
+  .icon-tile{aspect-ratio:1/1;border-radius:32px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--iron);margin-top:14px;text-align:center}
+  .stack{display:flex;flex-direction:column;gap:6px}
+  .badge{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--ember);color:#fff;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+  .mockup-phone{
+    width:280px;aspect-ratio:9/19.5;border-radius:42px;background:var(--charcoal);
+    box-shadow:inset 0 0 0 8px #2A3140, 0 24px 48px rgba(20,30,50,.18);
+    padding:18px;color:var(--cream);position:relative;overflow:hidden;
+  }
+  .mockup-phone .notch{width:100px;height:22px;background:#000;border-radius:0 0 14px 14px;margin:0 auto 14px}
+  .mockup-phone .greet{font-size:12px;color:#9aa3b1;letter-spacing:.5px}
+  .mockup-phone .title{font-size:24px;font-weight:800;letter-spacing:-.5px;margin:4px 0 18px}
+  .mockup-phone .row{display:flex;justify-content:space-between;align-items:center;background:#222836;border-radius:14px;padding:14px;margin-bottom:10px}
+  .mockup-phone .row .lbl{font-size:13px;color:#cdd2db}
+  .mockup-phone .row .val{font-size:13px;color:var(--ember-light);font-weight:700}
+  .mockup-phone .cta{position:absolute;bottom:18px;left:18px;right:18px;background:var(--ember);color:#fff;border-radius:14px;padding:14px;text-align:center;font-weight:700;letter-spacing:.4px;font-size:14px;box-shadow:0 8px 16px rgba(232,99,26,.3)}
+  pre{background:var(--charcoal);color:#cdd2db;padding:18px;border-radius:12px;font-family:'JetBrains Mono',Menlo,monospace;font-size:12px;overflow:auto}
+  .meta{display:flex;gap:32px;flex-wrap:wrap;margin-top:24px}
+  .meta div{flex:1;min-width:200px}
+  .rule{height:1px;background:rgba(0,0,0,.08);margin:48px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Brand Identity · v1.0</h1>
+  <h2>Forge</h2>
+  <p>You are not just training — you are forging yourself. A modern training platform for personal trainers, studios, and the people they coach. The brand is built on two ideas: the ember (energy, transformation) and the anvil (structure, discipline).</p>
+</header>
+
+<section>
+  <div class="card center">
+    <!-- HERO PRIMARY LOGO -->
+    <svg viewBox="0 0 720 240" width="720" style="max-width:100%;height:auto" aria-label="Forge primary logo">
+      <defs>
+        <linearGradient id="emberH" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFB068"/>
+          <stop offset="45%" stop-color="#FF8A3D"/>
+          <stop offset="100%" stop-color="#E8631A"/>
+        </linearGradient>
+        <linearGradient id="emberCoreH" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFD9A8"/>
+          <stop offset="100%" stop-color="#FF8A3D"/>
+        </linearGradient>
+      </defs>
+      <g transform="translate(40,40)">
+        <rect width="160" height="160" rx="38" ry="38" fill="#1A1F2B"/>
+        <ellipse cx="80" cy="105" rx="50" ry="34" fill="#E8631A" opacity="0.18"/>
+        <path d="M 80 28 C 60 60, 38 82, 38 110 C 38 142, 64 158, 80 158 C 96 158, 122 142, 122 110 C 122 90, 110 76, 102 64 C 100 78, 92 84, 84 82 C 84 64, 90 50, 80 28 Z" fill="url(#emberH)"/>
+        <path d="M 78 74 C 70 90, 60 102, 60 120 C 60 140, 72 150, 80 150 C 90 150, 100 140, 100 122 C 100 108, 92 100, 88 92 C 86 100, 82 102, 80 100 C 80 92, 82 84, 78 74 Z" fill="url(#emberCoreH)" opacity="0.85"/>
+      </g>
+      <g transform="translate(232,160)" fill="#1A1F2B">
+        <text x="0" y="0" font-family="Inter,'Helvetica Neue',Helvetica,Arial,sans-serif" font-weight="900" font-size="120" letter-spacing="6">FORGE</text>
+        <circle cx="170" cy="-44" r="6" fill="#E8631A"/>
+      </g>
+      <text x="232" y="200" font-family="Inter,'Helvetica Neue',Helvetica,Arial,sans-serif" font-weight="500" font-size="18" letter-spacing="6" fill="#4A5560">FORGE  YOURSELF</text>
+    </svg>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card center">
+      <svg viewBox="0 0 256 256" width="180" aria-label="Mark only">
+        <defs>
+          <linearGradient id="emberM" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFB068"/><stop offset="45%" stop-color="#FF8A3D"/><stop offset="100%" stop-color="#E8631A"/></linearGradient>
+          <linearGradient id="emberCoreM" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFD9A8"/><stop offset="100%" stop-color="#FF8A3D"/></linearGradient>
+        </defs>
+        <rect width="256" height="256" rx="60" ry="60" fill="#1A1F2B"/>
+        <ellipse cx="128" cy="168" rx="80" ry="54" fill="#E8631A" opacity="0.18"/>
+        <path d="M 128 44 C 96 96, 60 130, 60 174 C 60 226, 102 252, 128 252 C 154 252, 196 226, 196 174 C 196 142, 176 120, 164 100 C 160 122, 148 132, 134 130 C 134 100, 144 80, 128 44 Z" fill="url(#emberM)"/>
+        <path d="M 124 116 C 112 142, 96 162, 96 190 C 96 222, 116 238, 128 238 C 144 238, 160 222, 160 196 C 160 174, 148 160, 142 148 C 138 162, 132 164, 128 160 C 128 146, 132 132, 124 116 Z" fill="url(#emberCoreM)" opacity="0.85"/>
+      </svg>
+      <div class="label">The Ember — primary mark</div>
+    </div>
+    <div class="card dark center">
+      <svg viewBox="0 0 360 100" width="320" aria-label="Wordmark on dark">
+        <text x="0" y="78" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-weight="900" font-size="92" letter-spacing="6" fill="#F5F2EE">FORGE</text>
+        <circle cx="135" cy="32" r="5" fill="#FF8A3D"/>
+      </svg>
+      <div class="label" style="color:#9aa3b1">Wordmark — dark surfaces</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h3>App Icon System</h3>
+  <h4>Built for the home screen</h4>
+  <div class="grid grid-3">
+    <div class="card center" style="background:#0F131C">
+      <div class="icon-tile" style="width:180px">
+        <svg viewBox="0 0 1024 1024" width="180">
+          <defs>
+            <linearGradient id="bgA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#222836"/><stop offset="100%" stop-color="#0F131C"/></linearGradient>
+            <linearGradient id="emberA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFC080"/><stop offset="40%" stop-color="#FF8A3D"/><stop offset="100%" stop-color="#E8631A"/></linearGradient>
+            <linearGradient id="coreA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFE6C2"/><stop offset="100%" stop-color="#FFA050"/></linearGradient>
+            <radialGradient id="glowA" cx="0.5" cy="0.7" r="0.55"><stop offset="0%" stop-color="#E8631A" stop-opacity=".45"/><stop offset="100%" stop-color="#E8631A" stop-opacity="0"/></radialGradient>
+          </defs>
+          <rect width="1024" height="1024" rx="230" ry="230" fill="url(#bgA)"/>
+          <ellipse cx="512" cy="700" rx="360" ry="240" fill="url(#glowA)"/>
+          <g transform="translate(512,520) scale(2.55) translate(-128,-150)">
+            <path d="M 128 44 C 96 96, 60 130, 60 174 C 60 226, 102 252, 128 252 C 154 252, 196 226, 196 174 C 196 142, 176 120, 164 100 C 160 122, 148 132, 134 130 C 134 100, 144 80, 128 44 Z" fill="url(#emberA)"/>
+            <path d="M 124 116 C 112 142, 96 162, 96 190 C 96 222, 116 238, 128 238 C 144 238, 160 222, 160 196 C 160 174, 148 160, 142 148 C 138 162, 132 164, 128 160 C 128 146, 132 132, 124 116 Z" fill="url(#coreA)" opacity=".9"/>
+          </g>
+        </svg>
+      </div>
+      <div class="label" style="color:#9aa3b1">iOS / Android · 1024 ×1024</div>
+    </div>
+    <div class="card center">
+      <div class="icon-tile" style="width:180px;background:#fff;border:1px solid rgba(0,0,0,.06)">
+        <svg viewBox="0 0 256 256" width="160">
+          <defs>
+            <linearGradient id="ember2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFB068"/><stop offset="45%" stop-color="#FF8A3D"/><stop offset="100%" stop-color="#E8631A"/></linearGradient>
+          </defs>
+          <path d="M 128 24 C 92 88, 50 130, 50 178 C 50 232, 96 252, 128 252 C 160 252, 206 232, 206 178 C 206 142, 184 116, 168 92 C 162 118, 148 130, 132 128 C 132 96, 144 70, 128 24 Z" fill="url(#ember2)"/>
+        </svg>
+      </div>
+      <div class="label">Light variant — for brand surfaces</div>
+    </div>
+    <div class="card center" style="background:var(--ember)">
+      <div class="icon-tile" style="width:180px">
+        <svg viewBox="0 0 256 256" width="180">
+          <rect width="256" height="256" rx="56" fill="transparent"/>
+          <path d="M 128 38 C 96 96, 60 130, 60 174 C 60 226, 102 252, 128 252 C 154 252, 196 226, 196 174 C 196 142, 176 120, 164 100 C 160 122, 148 132, 134 130 C 134 100, 144 80, 128 38 Z" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="label" style="color:#fff">Reverse — on ember</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h3>Color System</h3>
+  <h4>Charcoal and ember, with quiet support tones</h4>
+  <div class="grid grid-3">
+    <div class="swatch" style="background:#1A1F2B">CHARCOAL<small>#1A1F2B · 26 31 43 · primary</small></div>
+    <div class="swatch" style="background:#E8631A">EMBER<small>#E8631A · 232 99 26 · accent</small></div>
+    <div class="swatch" style="background:#FF8A3D">EMBER LIGHT<small>#FF8A3D · 255 138 61 · highlight</small></div>
+    <div class="swatch" style="background:#4A5560">IRON<small>#4A5560 · 74 85 96 · body text</small></div>
+    <div class="swatch" style="background:#F5F2EE;color:#1A1F2B">CREAM<small style="opacity:.7">#F5F2EE · warm background</small></div>
+    <div class="swatch" style="background:#FFFFFF;color:#1A1F2B;border:1px solid rgba(0,0,0,.08)">WHITE<small style="opacity:.7">#FFFFFF · cards / surfaces</small></div>
+  </div>
+</section>
+
+<section>
+  <h3>Typography</h3>
+  <h4>Geometric, confident, sweat-on-the-bar honest</h4>
+  <div class="card">
+    <div style="font-family:Inter,sans-serif;font-weight:900;font-size:96px;letter-spacing:-2px;line-height:1;color:var(--charcoal)">Forge yourself.</div>
+    <div style="font-family:Inter,sans-serif;font-weight:600;font-size:24px;letter-spacing:-.3px;color:var(--iron);margin-top:24px">Inter ExtraBold for display. Inter SemiBold for headings. Inter Regular for body. JetBrains Mono for numerics in the app (sets, reps, weights).</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:36px;color:var(--ember);font-weight:700;margin-top:24px">100kg × 8 · RPE 8</div>
+  </div>
+</section>
+
+<section>
+  <h3>In Context</h3>
+  <h4>The brand on a phone</h4>
+  <div class="grid grid-2" style="align-items:start">
+    <div class="card center" style="background:linear-gradient(180deg,#F5F2EE,#E8DFD3)">
+      <div class="mockup-phone">
+        <div class="notch"></div>
+        <div class="greet">Tuesday · 8:42</div>
+        <div class="title">Push Day · Week 3</div>
+        <div class="row"><span class="lbl">Bench Press</span><span class="val">100kg × 8</span></div>
+        <div class="row"><span class="lbl">Incline DB</span><span class="val">28kg × 10</span></div>
+        <div class="row"><span class="lbl">Cable Fly</span><span class="val">15kg × 12</span></div>
+        <div class="row"><span class="lbl">Tricep Pushdown</span><span class="val">25kg × 12</span></div>
+        <div class="row"><span class="lbl">Lateral Raise</span><span class="val">10kg × 15</span></div>
+        <div class="cta">Log next set</div>
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">Voice & tone</h4>
+      <p style="margin:0 0 12px">Direct. Confident. Built around action verbs. Never preachy. Never gym-bro.</p>
+      <p style="margin:0 0 12px"><span class="badge">Yes</span> &nbsp; "Two more sets. You've got this."</p>
+      <p style="margin:0 0 12px"><span class="badge" style="background:var(--charcoal)">No</span> &nbsp; "Let's crush this absolutely insane workout, beast!"</p>
+      <div class="rule"></div>
+      <h4 style="margin:0 0 12px">Taglines</h4>
+      <ul style="margin:0;padding-left:18px;color:var(--iron)">
+        <li><b style="color:var(--charcoal)">Forge yourself.</b> &nbsp; Primary.</li>
+        <li>The work shows. &nbsp; Secondary.</li>
+        <li>Train, programmed. &nbsp; PT-targeted.</li>
+        <li>One app. Every rep. &nbsp; Client-targeted.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h3>Files</h3>
+  <h4>Vector assets in this folder</h4>
+  <div class="card">
+    <div class="meta">
+      <div><b>Forge_Logo.svg</b><br><small>Primary lockup (mark + wordmark + tagline)</small></div>
+      <div><b>Forge_Mark.svg</b><br><small>The ember on charcoal — for app icon, social avatars</small></div>
+      <div><b>Forge_AppIcon.svg</b><br><small>1024×1024, iOS/Android-ready squircle</small></div>
+      <div><b>Forge_Brand.html</b><br><small>This page — share with designers / stakeholders</small></div>
+      <div><b>Forge_Specification.docx</b><br><small>Updated product spec with the Forge name</small></div>
+    </div>
+    <div class="rule"></div>
+    <p style="margin:0;color:var(--iron)"><b>Note:</b> the wordmark uses Inter as a system fallback for portability. For a finished identity, a custom-cut display face (think a slightly extended Eurostile / Aktiv Grotesk variation) will lift it from "good" to "ownable". Worth investing once the name and trademark are locked.</p>
+  </div>
+</section>
+
+<footer style="background:var(--charcoal);color:#9aa3b1;padding:40px 60px;text-align:center;font-size:13px;letter-spacing:1px">
+  <span style="color:var(--ember-light);font-weight:700">FORGE</span> &nbsp;·&nbsp; Brand identity v1.0 &nbsp;·&nbsp; Drafted for Mike, May 2026
+</footer>
+
+</body>
+</html>
