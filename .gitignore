@@ -2,6 +2,7 @@
 .remember/
 .playwright-mcp/
 .claude/
+.superpowers/
 
 # Screenshots and debug captures
 *.png
