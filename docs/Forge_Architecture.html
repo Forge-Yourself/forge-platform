@@ -270,31 +270,45 @@
 <section id="personas">
   <h2 class="kicker">Section 02</h2>
   <h3>Personas &amp; Permissions</h3>
-  <p>Six roles drive permissions, billing, and UX choices throughout the spec. <b>Solo PT</b> and <b>Client</b> are the only v1 personas with a heavy footprint; Owner / Sub / Studio Admin / Platform Admin are sketched in v1 and grown in v3.</p>
+  <p>Four personas drive permissions and UX choices throughout the spec. The <b>PT</b> is a single account that operates in one or more <b>modes</b> (Solo, Master, Sub-under-Master) on the same login; the data model keeps each mode's clients, sessions, and subscription separated. <b>Gym Account</b> is always free, no card, no down payment.</p>
 
   <div class="grid grid-3">
-    <div class="card"><h4>Solo PT</h4><p>Independent contractor, 5-30 clients. Trains in commercial gym, outdoors, or online. Pain: invoicing, no-shows, programming time, retention. Wants: one app for clients, programs, and money in/out.</p></div>
-    <div class="card"><h4>Owner / Studio Owner</h4><p>Owns the brand and contracts. Employs or sub-contracts 2-15 coaches. Pain: tracking who did how many sessions, paying coaches, splitting revenue. Wants: P&amp;L per coach, automated payouts, central client list. <span class="badge v3">v3</span></p></div>
-    <div class="card"><h4>Sub-Coach / Junior PT</h4><p>Works under an Owner. May not own the client relationship. Pain: visibility into own pipeline and earnings. Wants: clean schedule, fast logging, transparent commission. <span class="badge v3">v3</span></p></div>
-    <div class="card"><h4>Client</h4><p>Trains 1-5×/week. Mix of in-person and online. Pain: motivation gaps, unclear progress, scheduling friction. Wants: clear next workout, visible progress, easy payments.</p></div>
-    <div class="card"><h4>Studio Admin</h4><p>Front desk / operations. Books sessions, reconciles payments, no programming features. <span class="badge v3">v3</span></p></div>
-    <div class="card"><h4>Platform Admin</h4><p>Forge-internal support, fraud, operations. Read-only by default; write access gated by permission.</p></div>
+    <div class="card">
+      <h4>PT — Solo / Master / Sub modes</h4>
+      <p>Primary actor. Single Forge login. Operates in one or more modes simultaneously:</p>
+      <ul style="font-size:13px;margin-top:6px">
+        <li><b>Solo mode</b> — independent contractor, owns clients, pays own Solo tier (Free trial / Pro / Elite / Power).</li>
+        <li><b>Master mode</b> — has 1+ sub-PTs. Pays Master tier covering sub-PT seats + combined client pool. Sees aggregated view of all sub-PT clients.</li>
+        <li><b>Sub-under-Master mode</b> — connected to a Master. App access covered by master's sub. Sees only master-assigned clients. May also run Solo mode on the same login.</li>
+      </ul>
+    </div>
+    <div class="card"><h4>Client</h4><p>Trains 1-5×/week. Mix of in-person and online. <b>Free</b> if invited by a PT (counts against PT's plan cap). <b>$4.99/mo Premium</b> if self-serve with no PT. Pain: motivation gaps, unclear progress. Wants: clear next workout, visible progress.</p></div>
+    <div class="card"><h4>Gym Account <span class="badge v1">v1</span></h4><p>Gym entity — <b>always free, no card required, no down payment</b>. v1 ships single shared login. Purpose: PT roster management, gym-subbed (offline) client list, calendar/space booking, gym profile/branding, analytics on counts. <b>Never sees PT-owned client progress</b> — only anonymous counts. Marketplace + events deferred to Phase B/C.</p></div>
+    <div class="card"><h4>Platform Admin</h4><p>Forge-internal support, fraud, operations. <b>Only role with visibility into subscription billing data.</b> Read-only by default; write access gated by permission.</p></div>
   </div>
+
+  <p style="font-size:13px;color:var(--iron-500);margin-top:14px"><i><b>Collapsed personas:</b> the previous <i>Owner / Studio Owner</i> persona is replaced by <b>Gym Account</b> (free) + <b>Master PT</b> (paid mode). <i>Sub-Coach / Junior PT</i> is renamed to <b>Sub-PT under Master PT</b> — a PT-under-PT relationship, not PT-under-gym. <i>Studio Admin</i> is folded into the Gym Account single login for v1; multi-staff roles deferred to v2+.</i></p>
 
   <h4>Permission matrix</h4>
   <table>
-    <thead><tr><th>Capability</th><th>Solo</th><th>Owner</th><th>Sub</th><th>Client</th><th>Admin</th></tr></thead>
+    <thead><tr><th>Capability</th><th>Solo PT</th><th>Master PT</th><th>Sub-PT</th><th>Client</th><th>Gym</th><th>Admin</th></tr></thead>
     <tbody>
-      <tr><td>Manage own profile</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td></tr>
-      <tr><td>Manage other coaches</td><td>—</td><td>Y</td><td>—</td><td>—</td><td>—</td></tr>
-      <tr><td>Build programs</td><td>Y</td><td>Y</td><td>Y</td><td>—</td><td>—</td></tr>
-      <tr><td>Log a session</td><td>Y</td><td>Y</td><td>Y</td><td>Y (self)</td><td>—</td></tr>
-      <tr><td>Take payment</td><td>Y</td><td>Y</td><td>Y (if enabled)</td><td>—</td><td>Y</td></tr>
-      <tr><td>See revenue split</td><td>self</td><td>all</td><td>self</td><td>—</td><td>—</td></tr>
-      <tr><td>Edit billing settings</td><td>Y</td><td>Y</td><td>—</td><td>—</td><td>—</td></tr>
-      <tr><td>Schedule sessions</td><td>Y</td><td>Y</td><td>Y</td><td>request</td><td>Y</td></tr>
+      <tr><td>Manage own profile</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td></tr>
+      <tr><td>Manage sub-PTs (invite, assign clients, remove)</td><td>—</td><td>Y</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Invite clients</td><td>Y</td><td>Y</td><td>Y</td><td>—</td><td>gym-subbed only</td><td>—</td></tr>
+      <tr><td>Build programs</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>—</td><td>—</td></tr>
+      <tr><td>Log session</td><td>Y</td><td>Y</td><td>Y</td><td>Y (self)</td><td>—</td><td>—</td></tr>
+      <tr><td>Schedule sessions</td><td>Y</td><td>Y</td><td>Y</td><td>request</td><td>space-book only</td><td>Y</td></tr>
+      <tr><td>Connect to gym(s)</td><td>Y</td><td>Y</td><td>Y</td><td>via PT or self-sub</td><td>n/a</td><td>—</td></tr>
+      <tr><td>Invite PTs to gym / accept join requests</td><td>—</td><td>—</td><td>—</td><td>—</td><td>Y</td><td>—</td></tr>
+      <tr><td>Accept gym invites</td><td>Y</td><td>Y</td><td>Y</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Assign client → sub-PT</td><td>—</td><td>Y</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>See own clients</td><td>own</td><td>own + all sub-PT clients</td><td>own assigned</td><td>self</td><td>gym-subbed (name, no progress)</td><td>Y</td></tr>
+      <tr><td>See client counts</td><td>own</td><td>aggregate</td><td>own assigned</td><td>—</td><td>gym-subbed named + PT-linked anon</td><td>Y</td></tr>
+      <tr><td>View own Forge subscription</td><td>Y</td><td>Y</td><td>Y (if Solo on same acct)</td><td>Y (if self-Premium)</td><td>n/a (free)</td><td>view all</td></tr>
     </tbody>
   </table>
+  <p style="font-size:13px;color:var(--iron-500);margin-top:10px"><i><b>No inter-party payments.</b> The only payment integration in the system is Forge → PT/Client billing (subscriptions + AI credit packs + Client Premium). Client↔PT and gym↔PT money flows happen outside the app.</i></p>
 </section>
 
 <!-- ================= PILLARS ================= -->
@@ -307,7 +321,7 @@
     <div class="pillar-card"><div class="num">P1</div><h4>Logging &amp; Tracking</h4><p>The fastest, most reliable way in the world to record what happened in a workout. Sub-second log-a-set, offline-first, voice-friendly.</p></div>
     <div class="pillar-card"><div class="num">P2</div><h4>Programming &amp; Nutrition</h4><p>Build a 4-, 8-, or 12-week training plan in minutes. Pair it with a meal plan that respects macros and dietary constraints.</p></div>
     <div class="pillar-card"><div class="num">P3</div><h4>Coaching &amp; Communication</h4><p>Announcements in v1; messaging, video, and form-check video review in v2. Automated nudges, a real relationship loop.</p></div>
-    <div class="pillar-card"><div class="num">P4</div><h4>Business &amp; Billing</h4><p>Schedules, check-in / check-out, packages, recurring memberships, no-show fees, multi-coach payouts (v3), tax-free exports.</p></div>
+    <div class="pillar-card"><div class="num">P4</div><h4>Business &amp; Scheduling</h4><p>Schedules, check-in / check-out, capacity caps per subscription tier. <b>No inter-party payments</b> — packages, memberships, no-show fees, and coach payouts are out of scope. Forge subscription billing visible only to Platform Admin.</p></div>
     <div class="pillar-card"><div class="num">P5</div><h4>Insights &amp; AI</h4><p>Charts and reports the client and PT actually open. AI that drafts work, summarizes work, and flags risk — not a chatbot novelty.</p></div>
     <div class="pillar-card"><div class="num">P6</div><h4>Marketplace &amp; Growth</h4><p>Discovery for clients to find coaches (v3). Branded portals so coaches market their own brand. Referral rewards, community challenges, Forge Shop.</p></div>
   </div>
@@ -320,7 +334,7 @@ flowchart TB
   F --> P1["<b>P1 &middot; Logging</b><br/>Sub-second log-a-set<br/>Offline-first &middot; Voice<br/>Live mirror &middot; PRs"]:::p
   F --> P2["<b>P2 &middot; Programming</b><br/>Exercise library 2k+<br/>Drag-drop builder<br/>Templates &middot; Macros"]:::p
   F --> P3["<b>P3 &middot; Coaching</b><br/>Announcements v1<br/>Messaging + video v2<br/>Form-check &middot; Nudges"]:::p
-  F --> P4["<b>P4 &middot; Business</b><br/>Calendar + bookings<br/>Check-in / check-out<br/>Whish + Areeba v1"]:::p
+  F --> P4["<b>P4 &middot; Scheduling</b><br/>Calendar + bookings<br/>Check-in / check-out<br/>Capacity caps · no in-app $"]:::p
   F --> P5["<b>P5 &middot; Insights</b><br/>Charts + reports<br/>Adherence score<br/>AI drafts + recap"]:::p
   F --> P6["<b>P6 &middot; Growth</b><br/>Discovery v3<br/>Branded portals<br/>Streaks &middot; Forge Shop"]:::p
 
@@ -342,54 +356,53 @@ flowchart TB
 flowchart LR
   A[Signup email or Apple or Google] --> B[Verify email]
   B --> C[Role select: Solo PT]
-  C --> D[KYC: Whish merchant + Areeba account]
-  D --> E[Build PT profile bio certs rates]
+  C --> D[Build PT profile bio certs rates]
+  D --> E[Subscribe to Pro or stay Free 30-day trial]
   E --> F[Invite first client via link]
   F --> G[Build first 4-week program]
   G --> H[Schedule first session]
   H --> I[Run session: PT-led logging]
-  I --> J[Client checks out: receipt issued]
-  J --> K[First payment received Whish or card or cash]
-  K --> L[Buy AI credit pack]
-  L --> M[Generate AI recap of client month]
-  M --> N{Retention loop}
-  N --> O[Adherence score visible]
-  N --> P[Nudges fire]
-  N --> G
+  I --> J[Session complete: AI recap drafted]
+  J --> K[Buy AI credit pack from Forge]
+  K --> L[Generate AI recap of client month]
+  L --> M{Retention loop}
+  M --> N[Adherence score visible]
+  M --> O[Nudges fire]
+  M --> G
 </pre>
   </div>
 
   <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D3</span> Owner PT journey · v3</div>
+    <div class="cap"><span class="id">D3</span> Master PT journey · v1</div>
 <pre class="mermaid">
 flowchart LR
-  A[Owner signs up] --> B[Create studio brand]
-  B --> C[Invite Sub-Coach by email]
-  C --> D[Sub accepts invite within 7 days]
-  D --> E[Set commission policy percent or flat or hybrid]
-  E --> F[Assign clients to coaches]
-  F --> G[Sub runs sessions: logs revenue accrues]
-  G --> H[Owner sees P&amp;L per coach]
-  H --> I[Trigger payout cycle]
-  I --> J[Transfer funds with split detail]
-  J --> K{Transfer client?}
-  K -->|yes| L[Reassign client preserve history audit log]
-  K -->|no| H
+  A[Master PT signs up] --> B[Subscribe to Master tier]
+  B --> C[Invite Sub-PT by email or link]
+  C --> D[Sub-PT accepts joins under Master]
+  D --> E[Master assigns clients to specific Sub-PTs]
+  E --> F[Sub-PTs run sessions log sets]
+  F --> G[Master dashboard aggregate view all sub-PT clients]
+  G --> H[AI recap across roster]
+  H --> I{Capacity hit?}
+  I -->|yes| J[Buy +10 client pack or upgrade tier]
+  I -->|no| G
 </pre>
   </div>
 
   <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D4</span> Sub-Coach journey · v3</div>
+    <div class="cap"><span class="id">D4</span> Sub-PT under Master journey · v1</div>
 <pre class="mermaid">
 flowchart LR
-  A[Receive invite email] --> B[Accept and onboard]
-  B --> C[See own pipeline only RBAC]
-  C --> D[View assigned clients today]
+  A[Receive Master invite email or link] --> B[Sign up or log in]
+  B --> C[Accept Master invite]
+  C --> D[See only Master-assigned clients]
   D --> E[Run session log sets]
   E --> F[Session completes]
-  F --> G[Commission accrues per policy]
-  G --> H[See own earnings dashboard]
-  H --> I[Payout arrives at cycle close]
+  F --> G{Add own Solo subscription?}
+  G -->|yes| H[Same login dual context Master + Solo]
+  G -->|no| D
+  H --> I[Toggle context Master mode vs Solo mode]
+  I --> D
 </pre>
   </div>
 
@@ -397,34 +410,39 @@ flowchart LR
     <div class="cap"><span class="id">D5</span> Client journey · v1</div>
 <pre class="mermaid">
 flowchart LR
-  A[Receive PT invite link] --> B[Install app sign up]
+  A{Has PT?} -->|yes invite| B[Install app accept PT invite]
+  A -->|no| Z[Self-subscribe $4.99 Premium]
   B --> C[Complete intake PAR-Q goals history]
+  Z --> C
   C --> D[E-sign liability waiver]
   D --> E[See today programmed session]
   E --> F[Arrive at gym]
   F --> G[Scan QR check-in]
-  G --> H[PT logs sets: live mirror shows on phone]
+  G --> H[PT logs sets live mirror on phone]
   H --> I[Session ends one-tap rating]
-  I --> J[Pay via Whish card or mark cash]
-  J --> K[See progress chart updated]
-  K --> L{Engagement loop}
-  L --> M[Streak badge earned]
-  L --> N[Body metric weekly]
-  L --> O[Photo progression]
-  L --> E
+  I --> J[Progress chart updated]
+  J --> K{Engagement loop}
+  K --> L[Streak badge earned]
+  K --> M[Body metric weekly]
+  K --> N[Photo progression]
+  K --> E
 </pre>
   </div>
 
   <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D6</span> Studio Admin journey · v3</div>
+    <div class="cap"><span class="id">D6</span> Gym Account journey · v1</div>
 <pre class="mermaid">
 flowchart LR
-  A[Sign in as Admin] --> B[View calendar all coaches]
-  B --> C[Manual check-in walk-in]
-  C --> D[Process payment]
-  D --> E[Reconcile day Whish + Areeba + cash]
-  E --> F[Export daily settlement CSV]
-  F --> G[No programming features hidden]
+  A[Gym admin signs up no card] --> B[Create gym profile name logo address hours]
+  B --> C[Browse PT directory or paste invite emails]
+  C --> D[Send PT invites OR receive PT join requests]
+  D --> E[Accept PTs build roster]
+  E --> F[Add offline gym-subbed clients name contact]
+  F --> G[Open calendar PTs reserve space and time]
+  G --> H[Dashboard PT count gym-subbed client list PT-linked client count anon]
+  H --> I{Phase B or C}
+  I -->|v2| J[Marketplace list gym attract PTs and clients]
+  I -->|v3| K[Post events private public-free public-paid]
 </pre>
   </div>
 
@@ -444,6 +462,32 @@ flowchart LR
   G --> I
   H --> I
 </pre>
+  </div>
+
+  <h4 style="margin-top:32px">Gym Account dashboard mockup · v1</h4>
+  <p>Free Gym Account ships with a sidebar-nav + KPI-grid dashboard. Left nav: <b>Dashboard · PT Roster · Gym Clients · Calendar · Profile</b>. Greyed-out future tabs: <i>Marketplace (v2)</i>, <i>Events (v3)</i>. Main pane shows KPI cards + recent join activity. <b>No PT-owned client progress is ever shown</b> — only counts.</p>
+
+  <div class="card" style="background:var(--cream-50);padding:0;overflow:hidden">
+    <div style="display:flex;gap:0;min-height:340px;font-family:ui-monospace,Menlo,monospace;font-size:12px">
+      <div style="width:180px;background:var(--iron-50);border-right:1px solid var(--iron-100);padding:18px 16px;line-height:1.95">
+        <div style="font-weight:700;font-size:13px;color:var(--iron-800);margin-bottom:8px">GoldGym BEY</div>
+        <div style="border-top:1px solid var(--iron-200);margin-bottom:10px"></div>
+        <div style="color:var(--brand-orange);font-weight:600">· Dashboard</div>
+        <div>· PT Roster</div>
+        <div>· Gym Clients</div>
+        <div>· Calendar</div>
+        <div>· Profile</div>
+        <div style="border-top:1px solid var(--iron-200);margin-top:10px;padding-top:10px;color:var(--iron-400)">· Marketplace <span class="badge v2">v2</span></div>
+        <div style="color:var(--iron-400)">· Events <span class="badge v3">v3</span></div>
+      </div>
+      <div style="flex:1;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start">
+        <div style="background:#fff;border:1px solid var(--iron-100);border-radius:8px;padding:14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--iron-500)">PTs connected</div><div style="font-size:24px;font-weight:700;color:var(--iron-800);margin-top:4px">12</div><div style="font-size:11px;color:var(--iron-500)">3 pending requests</div></div>
+        <div style="background:#fff;border:1px solid var(--iron-100);border-radius:8px;padding:14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--iron-500)">Gym-subbed clients</div><div style="font-size:24px;font-weight:700;color:var(--iron-800);margin-top:4px">87</div><div style="font-size:11px;color:var(--iron-500)">named members</div></div>
+        <div style="background:#fff;border:1px solid var(--iron-100);border-radius:8px;padding:14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--iron-500)">PT-linked clients</div><div style="font-size:24px;font-weight:700;color:var(--iron-800);margin-top:4px">~140</div><div style="font-size:11px;color:var(--iron-500)">anonymous · no progress</div></div>
+        <div style="background:#fff;border:1px solid var(--iron-100);border-radius:8px;padding:14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--iron-500)">Today space</div><div style="font-size:24px;font-weight:700;color:var(--iron-800);margin-top:4px">5/7</div><div style="font-size:11px;color:var(--iron-500)">PTs booked · 2 rooms free</div></div>
+        <div style="grid-column:1/-1;background:#fff;border:1px solid var(--iron-100);border-radius:8px;padding:14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--iron-500);margin-bottom:6px">Recent join activity</div><div style="font-size:11px;color:var(--iron-700);line-height:1.6">· PT Sarah requested to join<br/>· Member John added by front desk<br/>· Room 2 booked 14:00 by PT Ahmad<br/>· PT Maya invite accepted</div></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -575,15 +619,20 @@ graph TD
 <section id="data-model">
   <h2 class="kicker">Section 06</h2>
   <h3>Data Model</h3>
-  <p>Thirty-plus entities organized across coaching, programming, logging, business, marketplace, and compliance domains. The master ERD below shows every entity and its primary relations; the four focused diagrams that follow zoom into the working subgraphs an engineer will touch most.</p>
+  <p>Entities organized across coaching, programming, logging, scheduling, gym, and compliance domains. The master ERD below shows the v1 entities and primary relations; the focused diagrams that follow zoom into the working subgraphs an engineer will touch most. <b>No inter-party payment entities</b> — the only billing in scope is Forge → PT/Client subscription. Marketplace entities are deferred to v3+.</p>
 
   <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D11</span> Master ERD · all entities</div>
+    <div class="cap"><span class="id">D11</span> Master ERD · v1 entities</div>
 <pre class="mermaid">
 erDiagram
-  User ||--o{ CoachMembership : "has"
-  Studio ||--o{ CoachMembership : "employs"
+  User ||--o{ PTMode : "operates as"
+  PTMode ||--o| MasterSubRelation : "links via"
   User ||--o{ Client : "coaches"
+  User ||--o{ GymMembership : "joins"
+  Gym ||--o{ GymMembership : "hosts"
+  Gym ||--o{ GymClient : "registers"
+  User ||--o{ ClientPTAssignment : "assigned to"
+  Client ||--o{ ClientPTAssignment : "served via"
   Client ||--o{ IntakeForm : "fills"
   User ||--o{ Program : "authors"
   Program ||--o{ Week : "contains"
@@ -591,6 +640,7 @@ erDiagram
   Day ||--o{ Block : "contains"
   Block ||--o{ Exercise : "uses"
   Client ||--o{ WorkoutSession : "logs"
+  WorkoutSession }o--o| Gym : "at gym (optional)"
   WorkoutSession ||--o{ Set : "contains"
   Client ||--o{ BodyMetric : "records"
   Client ||--o{ ProgressPhoto : "records"
@@ -600,50 +650,58 @@ erDiagram
   Schedule ||--o{ Booking : "produces"
   Booking ||--o| CheckIn : "starts"
   Class ||--o{ Booking : "has"
-  Client ||--o{ Pack : "purchases"
-  Client ||--o{ Subscription : "holds"
-  Pack ||--o{ Charge : "pays via"
+  User ||--o{ Subscription : "holds (Forge billing)"
+  Client ||--o| Subscription : "self-Premium"
   Subscription ||--o{ Charge : "renews via"
-  CheckIn ||--o| Charge : "triggers"
-  Charge ||--o| Payout : "settles to"
+  Charge ||--o| Payout : "Forge revenue only"
+  User ||--o{ AICreditWallet : "owns"
+  AICreditWallet ||--o{ AICreditPack : "tops up"
   User ||--o{ Message : "sends"
   Booking ||--o| VideoSession : "may have"
   User ||--o{ Notification : "receives"
   User ||--o{ AuditLog : "writes"
-  Product ||--o{ Inventory : "has"
-  Order ||--o{ OrderItem : "lists"
-  Product ||--o{ OrderItem : "appears in"
-  User ||--o{ Order : "places"
-  User ||--o{ Address : "owns"
-  Order ||--|| Address : "ships to"
-  Block ||--o{ ProductRecommendation : "tags"
-  ProductRecommendation }o--|| Product : "points to"
-  ProductRecommendation }o--|| User : "attributed to PT"
-  Order ||--o| ShopCommission : "accrues"
-  ShopCommission }o--|| User : "credits PT"
 </pre>
   </div>
 
   <div class="grid grid-2">
     <div class="mermaid-wrap">
-      <div class="cap"><span class="id">D12</span> Coaching subgraph</div>
+      <div class="cap"><span class="id">D12</span> Coaching + Gym subgraph</div>
 <pre class="mermaid">
 erDiagram
-  User ||--o{ CoachMembership : "has"
-  Studio ||--o{ CoachMembership : "employs"
-  CoachMembership {
-    enum role "Owner Sub"
-    string commissionPolicy
+  User ||--o{ PTMode : "has"
+  PTMode {
+    enum mode "solo master sub_under_master"
+    uuid masterId "null unless sub"
+    bool active
+    date startedAt
+  }
+  PTMode ||--o| MasterSubRelation : "if sub"
+  MasterSubRelation {
+    uuid masterPtId
+    uuid subPtId
+    enum state
     date joinedAt
   }
-  User ||--o{ Client : "coaches"
-  Client ||--o{ IntakeForm : "fills"
-  Client ||--o{ Program : "assigned"
-  IntakeForm {
-    json parq
-    json goals
-    bool waiverSigned
-    string version
+  User ||--o{ GymMembership : "many-to-many"
+  Gym ||--o{ GymMembership : "many-to-many"
+  GymMembership {
+    enum state "invited requested active left"
+    enum initiatedBy "gym pt"
+    date joinedAt
+  }
+  Gym ||--o{ GymClient : "offline members"
+  GymClient {
+    string clientName
+    string contact
+    date joinedAt
+    string notes
+  }
+  User ||--o{ ClientPTAssignment : "via master"
+  Client ||--o{ ClientPTAssignment : "served by sub"
+  ClientPTAssignment {
+    uuid clientId
+    uuid ptId
+    uuid masterId
   }
 </pre>
     </div>
@@ -655,6 +713,7 @@ erDiagram
   Booking ||--o| CheckIn : "starts"
   CheckIn ||--|| WorkoutSession : "opens"
   WorkoutSession ||--o{ Set : "records"
+  WorkoutSession }o--o| Gym : "at gym (optional)"
   Set {
     ulid id
     int reps
@@ -676,49 +735,59 @@ erDiagram
     </div>
 
     <div class="mermaid-wrap">
-      <div class="cap"><span class="id">D14</span> Billing subgraph</div>
+      <div class="cap"><span class="id">D14</span> Forge Billing subgraph</div>
 <pre class="mermaid">
 erDiagram
   User ||--o{ Subscription : "holds"
   Subscription ||--o{ Charge : "renews"
-  Client ||--o{ Pack : "buys"
-  Pack ||--o{ Charge : "creates"
-  CheckIn ||--o| Charge : "may trigger"
+  Subscription {
+    enum product "solo_free solo_pro solo_elite solo_power master_pro master_elite master_power client_premium"
+    json addons "client_pack subpt_seat"
+    int clientCap
+    int subPtSeats
+    date renewsAt
+  }
   Charge {
-    string method "whish areeba stripe cash"
+    string method "whish areeba stripe applepay googlepay"
     decimal amount
     string currency "USD AED"
     enum status
     string processorRef
   }
-  Charge ||--o| Payout : "settles"
-  ShopCommission }o--|| Subscription : "credits next renewal"
+  User ||--o{ AICreditWallet : "owns"
+  AICreditWallet ||--o{ AICreditPack : "tops up"
+  AICreditPack {
+    enum tier "starter standard power mega"
+    int credits
+    decimal price
+  }
 </pre>
     </div>
 
     <div class="mermaid-wrap">
-      <div class="cap"><span class="id">D15</span> Marketplace subgraph</div>
+      <div class="cap"><span class="id">D15</span> Marketplace + Events <span class="badge v3">v3+</span></div>
 <pre class="mermaid">
 erDiagram
-  Product ||--o{ Inventory : "has"
-  Product {
-    string sku
-    string name
-    decimal price
-    int stock
-    string[] photos
+  Gym ||--o{ Listing : "publishes (v2)"
+  Listing {
+    enum type "gym_seeks_pt pt_seeks_gym gym_public_dir"
+    string blurb
+    date publishedAt
   }
-  Order ||--o{ OrderItem : "lists"
-  OrderItem }o--|| Product : "of"
-  User ||--o{ Order : "places"
-  Order ||--|| Address : "ships to"
-  Block ||--o{ ProductRecommendation : "tags"
-  ProductRecommendation }o--|| Product : "points to"
-  ProductRecommendation }o--|| User : "PT attribution"
-  Order ||--o| ShopCommission : "accrues 10 percent"
+  Gym ||--o{ Event : "hosts (v3)"
+  Event {
+    enum visibility "private public_free public_paid"
+    decimal ticketPrice
+    int capacity
+    date startsAt
+  }
+  Event ||--o{ Ticket : "issued"
+  Product ||--o{ Inventory : "has (v3)"
+  Order ||--o{ OrderItem : "lists (v3)"
 </pre>
     </div>
   </div>
+  <p style="font-size:13px;color:var(--iron-500);margin-top:14px"><i><b>Removed from v1 ERD (vs. prior spec):</b> <code>Studio</code>, <code>CoachMembership</code> (replaced by <code>PTMode</code> + <code>GymMembership</code> + <code>MasterSubRelation</code>), <code>Pack</code>, <code>Payout</code> for inter-party flows, <code>ShopCommission</code>, <code>Product</code>/<code>OrderItem</code>/<code>Address</code>/<code>ProductRecommendation</code> (Forge Shop deferred to v3+). <code>Charge</code> retained but scoped to Forge revenue (subscription + AI credit pack) only.</i></p>
 </section>
 
 <!-- ================= RUNTIME ================= -->
@@ -826,71 +895,9 @@ sequenceDiagram
 </pre>
   </div>
 
-  <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D20</span> Whish payment for session</div>
-<pre class="mermaid">
-sequenceDiagram
-  autonumber
-  actor Client
-  participant App
-  participant API
-  participant Whish as Whish hosted
-  participant DB
-  participant PT
-  Client->>App: Pay session Whish
-  App->>API: POST /charges intent
-  API->>Whish: Create charge intent
-  Whish-->>API: hosted page url
-  API-->>App: redirect url
-  App->>Whish: Open hosted page
-  Client->>Whish: Confirm in Whish app
-  Whish-->>API: webhook payment.succeeded
-  API->>DB: Charge persist status=succeeded
-  API->>DB: Receipt generate
-  API-->>PT: push payment received
-  API-->>Client: push receipt + email
-</pre>
-  </div>
-
-  <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D21</span> Areeba card payment · PCI SAQ-A</div>
-<pre class="mermaid">
-sequenceDiagram
-  autonumber
-  actor Client
-  participant App
-  participant API
-  participant Areeba as Areeba hosted
-  participant DB
-  Client->>App: Pay card
-  App->>API: POST /charges intent type=card
-  API->>Areeba: Create payment session
-  Areeba-->>API: hosted page
-  API-->>App: redirect url
-  App->>Areeba: Card on hosted page never touches Forge
-  Areeba-->>API: webhook authorized + captured
-  API->>DB: Charge persist
-  API-->>App: push receipt
-  Note over App,Areeba: PCI scope SAQ-A no PAN data on Forge servers
-</pre>
-  </div>
-
-  <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D22</span> Cash payment recorded by PT</div>
-<pre class="mermaid">
-sequenceDiagram
-  autonumber
-  actor PT
-  participant App
-  participant API
-  participant DB
-  PT->>App: Mark session paid in cash
-  App->>API: POST /charges method=cash amount
-  API->>DB: Charge persist method=cash
-  API->>DB: AuditLog event=cash_recorded
-  API->>DB: Receipt generate
-  API-->>PT: 201 + receipt link
-</pre>
+  <div class="card" style="background:var(--cream-50);border-left:4px solid var(--brand-orange)">
+    <h5>D20–D22 · Client → PT payment sequences <span class="badge v3">removed</span></h5>
+    <p style="font-size:13px;color:var(--iron-600);margin:0">Whish hosted-page, Areeba SAQ-A card flow, and PT-recorded cash flow are <b>out of scope</b> for v1+. The system processes no inter-party payments. Client↔PT money flows happen outside the app. Forge billing (PT subs + Client Premium + AI credit packs) uses Whish/Areeba/Stripe but Forge is always the merchant of record — see <code>D24/D25</code> for the only payment paths Forge ever processes.</p>
   </div>
 
   <div class="mermaid-wrap">
@@ -1050,63 +1057,9 @@ sequenceDiagram
 </pre>
   </div>
 
-  <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D29</span> Forge Shop order · v2</div>
-<pre class="mermaid">
-sequenceDiagram
-  autonumber
-  actor Client
-  participant App
-  participant API
-  participant DB
-  participant Pay as Whish or COD
-  participant Owner as Owner dashboard
-  participant Wakk as Wakkilni
-  Client->>App: Add SKU to cart
-  Client->>App: Checkout enter address
-  App->>API: POST /orders
-  API->>DB: Stock decrement atomic
-  alt Whish
-    API->>Pay: Create intent
-    Pay-->>API: paid webhook
-  else COD
-    API->>DB: order status=confirmed COD
-  end
-  API->>Owner: Order appears in dashboard
-  Owner->>API: Daily export CSV
-  API-->>Owner: download
-  Owner->>Wakk: Hand-off package
-  Wakk-->>Owner: tracking
-  loop status updates
-    Owner->>API: status: out_for_delivery, delivered
-  end
-  API-->>Client: status push
-</pre>
-  </div>
-
-  <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D30</span> PT shop commission accrual · v2.5</div>
-<pre class="mermaid">
-sequenceDiagram
-  autonumber
-  actor PT
-  participant App
-  participant API
-  participant DB
-  actor Client
-  participant Order
-  PT->>App: Tag Product in Program block
-  App->>API: POST /recommendation
-  API->>DB: ProductRecommendation persist attribution=PT
-  Client->>App: See suggested product one-tap order
-  App->>API: POST /orders ref=recommendation
-  API->>DB: Order linked to recommendation
-  Order->>DB: status=delivered
-  DB->>API: trigger ShopCommission default 10 percent
-  API->>DB: ShopCommission credit PT
-  Note over API,DB: paid as platform credit only no cash payout
-  API-->>PT: balance shown applies to next subscription renewal
-</pre>
+  <div class="card" style="background:var(--cream-50);border-left:4px solid var(--brand-orange)">
+    <h5>D29–D30 · Forge Shop sequences <span class="badge v3">deferred to v3+</span></h5>
+    <p style="font-size:13px;color:var(--iron-600);margin:0">Shop order flow (Whish/COD + Wakkilni fulfillment) and PT shop-commission-as-credit accrual are deferred to v3+. The Shop is out of scope for v1 and v2. Re-evaluate scope when revisiting marketplace work; commission-as-credit also depends on the prior subscription-credit model which has been simplified.</p>
   </div>
 
   <div class="mermaid-wrap">
@@ -1180,28 +1133,29 @@ stateDiagram-v2
   [*] --> scheduled
   scheduled --> reminder_sent : T-24h and T-1h
   reminder_sent --> checked_in : QR scan or manual
-  scheduled --> cancelled : within policy window
-  scheduled --> late_cancel_fee : outside window
+  scheduled --> cancelled : user cancel
   scheduled --> no_show : grace expired
   scheduled --> waitlisted : class full
   waitlisted --> promoted : seat opens
   promoted --> scheduled
   checked_in --> in_progress
-  in_progress --> checked_out : feedback + tip prompt
-  checked_out --> completed : receipt issued
-  late_cancel_fee --> [*]
+  in_progress --> checked_out : feedback
+  checked_out --> completed
   no_show --> [*]
   cancelled --> [*]
   completed --> [*]
+  note right of no_show
+    No fee. Tracking only.
+  end note
 </pre>
   </div>
 
   <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D34</span> Subscription lifecycle · PT</div>
+    <div class="cap"><span class="id">D34</span> Forge subscription lifecycle · Solo / Master / Client Premium</div>
 <pre class="mermaid">
 stateDiagram-v2
-  [*] --> trial : 14 days no card
-  trial --> active : add payment method
+  [*] --> trial : Solo Free 30 days no card
+  trial --> active : pick paid tier add payment
   trial --> [*] : trial ended no upgrade
   active --> past_due : renewal failed
   past_due --> active : dunning retry success
@@ -1210,29 +1164,20 @@ stateDiagram-v2
   cancelled --> reactivated : user returns
   reactivated --> active
   active --> active : monthly renewal
+  active --> tier_changed : upgrade or add-on
+  tier_changed --> active
   note right of active
-    Founding member discount
-    50 percent off Pro 12 months
+    Tiers: Solo Pro Elite Power
+    Master Pro Elite Power
+    Client Premium $4.99
+    Add-ons: +client pack +sub-PT seat
   end note
 </pre>
   </div>
 
-  <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D35</span> Pack lifecycle</div>
-<pre class="mermaid">
-stateDiagram-v2
-  [*] --> purchased
-  purchased --> active : credits=n
-  active --> decrementing : session checked-in atomic
-  decrementing --> active : credits &gt; 0
-  decrementing --> exhausted : credits=0
-  active --> refunded : refund issued
-  exhausted --> [*]
-  refunded --> [*]
-  note right of active
-    Packs do not expire by default
-  end note
-</pre>
+  <div class="card" style="background:var(--cream-50);border-left:4px solid var(--brand-orange)">
+    <h5>D35 · Pack lifecycle <span class="badge v3">removed</span></h5>
+    <p style="font-size:13px;color:var(--iron-600);margin:0">Session-Pack model (client buys N sessions, decrement on check-in) is out of scope. The system does not process client→PT payments and therefore does not own a session-pack accounting state machine. Forge subscription tier caps (clients, sub-PT seats) replace this; see <code>D34</code>.</p>
   </div>
 
   <div class="mermaid-wrap">
@@ -1252,23 +1197,9 @@ stateDiagram-v2
 </pre>
   </div>
 
-  <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D37</span> Forge Shop order lifecycle</div>
-<pre class="mermaid">
-stateDiagram-v2
-  [*] --> cart
-  cart --> placed : checkout
-  placed --> confirmed : payment ok or COD selected
-  placed --> cancelled : payment failed
-  confirmed --> handed_to_courier : Wakkilni pickup
-  handed_to_courier --> out_for_delivery
-  out_for_delivery --> delivered
-  delivered --> returned : within 7 days damaged-on-arrival
-  returned --> refunded : credit on next purchase
-  delivered --> [*]
-  refunded --> [*]
-  cancelled --> [*]
-</pre>
+  <div class="card" style="background:var(--cream-50);border-left:4px solid var(--brand-orange)">
+    <h5>D37 · Forge Shop order lifecycle <span class="badge v3">deferred to v3+</span></h5>
+    <p style="font-size:13px;color:var(--iron-600);margin:0">Shop order state machine (cart → placed → confirmed → out_for_delivery → delivered → returned/refunded) is deferred to v3+. Out of scope for v1 and v2.</p>
   </div>
 
   <div class="mermaid-wrap">
@@ -1338,11 +1269,11 @@ flowchart LR
   <!-- EP-02 -->
   <div class="epic">
     <div class="head">
-      <div><span class="id">EP-02</span><h4>PT Profile &amp; Multi-Coach Studio Management</h4></div>
-      <div class="badges"><span class="badge must">Must v1 profile</span><span class="badge should">Should v3 studio</span><span class="badge pillar">P4 Business</span></div>
+      <div><span class="id">EP-02</span><h4>PT Profile · Solo / Master / Sub modes &amp; Gym Membership</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P4 Scheduling</span></div>
     </div>
-    <ul><li>v1: Solo PT profile (bio, certs, services, rates) in ≤5 minutes</li><li>v3: Studio with revenue split, payouts, client transfer, P&amp;L dashboard</li><li>v3: Owner invites Sub by email; commission % / flat / hybrid</li></ul>
-    <div class="ac"><b>Acceptance:</b> Profile complete ≤5 min with required fields. Account model future-proofed for v3. Invite expires 7 days. Commission changes apply to future sessions only. Transfers preserve history + audit log. RBAC tested.</div>
+    <ul><li><b>v1 profile:</b> Solo PT profile (bio, certs, services) in ≤5 minutes. <b>No rates field</b> — Forge does not handle session pricing.</li><li><b>v1 Master mode:</b> Master PT invites Sub-PTs by email/link. Master assigns specific clients to specific Sub-PTs (Sub-PT sees only assigned clients). No revenue split, no commission, no payout — Master pays one Forge subscription covering sub-PT seats.</li><li><b>v1 Sub-under-Master mode:</b> Sub-PT joins Master, app access covered. Sub-PT may also hold own Solo subscription on same login with separate client list.</li><li><b>v1 Gym membership:</b> PT browses gym directory or pastes invite emails (M:N). Bidirectional: gym invites PT, or PT requests to join gym. Accept/decline state machine.</li></ul>
+    <div class="ac"><b>Acceptance:</b> Profile complete ≤5 min. Invite expires 7 days. Mode-switch in UI is instant. Sub-PT cannot see Master clients other than assigned. Master sees aggregate of all Sub-PT clients. PT-Gym join state transitions audit-logged.</div>
   </div>
 
   <!-- EP-03 -->
@@ -1506,27 +1437,28 @@ flowchart LR
   <!-- EP-11 -->
   <div class="epic">
     <div class="head">
-      <div><span class="id">EP-11</span><h4>Billing, Payments &amp; AI Credit Packs</h4></div>
-      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P4 Business</span></div>
+      <div><span class="id">EP-11</span><h4>Forge Subscription Billing &amp; AI Credit Packs</h4></div>
+      <div class="badges"><span class="badge must">Must</span><span class="badge v1">v1</span><span class="badge pillar">P4 Scheduling</span></div>
     </div>
-    <ul><li>Two flows: (1) Platform → PT subscription; (2) Client → PT for sessions</li><li>Whish + Areeba v1; Stripe v2; cash anytime</li><li>Platform earns from PT subscription only in v1 — no transaction fee, no payouts</li><li>Tax explicitly out of scope</li><li>PT subscribes in ≤3 min (card or Whish)</li><li>Sell 10-session pack with atomic decrement</li><li>No-show fee policy configurable</li><li>Mark cash paid + notes</li><li>AI credit packs purchased via IAP (mobile) or web checkout</li></ul>
-    <div class="ac"><b>Acceptance:</b> Card data never touches servers — Whish/Areeba handle PCI. Packs atomic/idempotent. Cash is first-class UI (one tap). Refunds ≤3 taps + audit logged. AI credit balance consistent across builders. Currency USD v1, AED v2. Receipt footer: "Forge does not collect or remit taxes."</div>
+    <ul><li><b>Single payment direction:</b> PT/Client → Forge. Forge is always the merchant of record. No client→PT, gym→PT, or PT→PT in-app payments.</li><li>Whish + Areeba v1; Stripe v2 (Forge merchant account, not PT pass-through)</li><li>PT subscribes to Solo (Free trial / Pro / Elite / Power), Master (Pro / Elite / Power), or adds packs (+10 clients, +1 sub-PT seat)</li><li>Client self-Premium $4.99/mo if no PT</li><li>AI credit packs purchased via IAP (mobile) or web checkout</li><li>Founding-member 50% off Pro 12 months · Educational 30% off Pro first year</li><li>Tax explicitly out of scope (Forge collects + remits nothing on behalf of users)</li></ul>
+    <div class="ac"><b>Acceptance:</b> Card data never touches Forge servers — Whish/Areeba/Stripe handle PCI. Subscription tier change applies at next renewal (or pro-rates on upgrade). Add-on packs activate atomically. AI credit balance consistent across builders. Failed generations refund credit. Currency USD v1, AED v2. <b>No no-show fee, no session pack, no inter-party charge exists.</b></div>
     <div class="mermaid-wrap">
-      <div class="cap"><span class="id">D45</span> EP-11 billing flow</div>
+      <div class="cap"><span class="id">D45</span> EP-11 Forge subscription billing flow</div>
 <pre class="mermaid">
 flowchart LR
-  A[Session checked out] --> B{Pay method}
+  A[PT or Client picks tier] --> B{Method}
   B -->|Whish| C[Hosted page]
   B -->|Areeba card| D[Hosted card page]
-  B -->|Cash| E[PT marks paid notes]
-  B -->|Pack credit| F[Atomic decrement]
+  B -->|Stripe v2| E[Stripe Checkout]
+  B -->|IAP credit pack| F[Apple or Google IAP]
   C --> G[Webhook succeeded]
   D --> G
-  G --> H[Charge persist receipt]
-  E --> H
-  F --> H
-  H --> I[Audit log]
-  I --> J[Notification PT and Client]
+  E --> G
+  F --> G
+  G --> H[Subscription or AICreditPack persist]
+  H --> I[Cap fields updated client cap subPT seats]
+  I --> J[Audit log]
+  J --> K[Notification subscriber]
 </pre>
     </div>
   </div>
@@ -1643,31 +1575,14 @@ flowchart LR
   <!-- EP-21 -->
   <div class="epic">
     <div class="head">
-      <div><span class="id">EP-21</span><h4>Forge Shop · First-party Marketplace</h4></div>
-      <div class="badges"><span class="badge should">Should</span><span class="badge v2">v2</span><span class="badge pillar">P6 Growth</span></div>
+      <div><span class="id">EP-21</span><h4>Forge Shop · First-party Marketplace <span class="badge v3">deferred to v3+</span></h4></div>
+      <div class="badges"><span class="badge should">Should</span><span class="badge v3">v3+</span><span class="badge pillar">P6 Growth</span></div>
     </div>
-    <ul><li><b>v2.0:</b> 5-30 SKU catalog (bands, gloves, towels, bottles, jump ropes). Whish or COD via Wakkilni in Lebanon. Owner-managed.</li><li><b>v2.5:</b> PT tags products inside programs; one-tap order from program; PT earns commission as platform credit (default 10%).</li><li><b>v3.0:</b> UAE prices AED, Stripe, Aramex / Fetchr fulfillment.</li></ul>
-    <div class="ac"><b>Acceptance:</b> Catalog 5-200 SKUs, performance OK up to 1,000. Stock atomic decrement on order confirmation. COD first-class. Owner back-office: SKU CRUD, stock adjust, order list, daily CSV export. Returns: damaged-on-arrival within 7 days with photo. Commission paid as platform credit toward next subscription only — no cash payout.</div>
-    <div class="mermaid-wrap">
-      <div class="cap"><span class="id">D47</span> EP-21 Forge Shop checkout</div>
-<pre class="mermaid">
-flowchart LR
-  A[Browse catalog] --> B[Add SKU to cart]
-  B --> C[Enter delivery address]
-  C --> D{Pay}
-  D -->|Whish| E[Hosted payment]
-  D -->|COD| F[Confirm cash on delivery]
-  E --> G[Stock decrement atomic]
-  F --> G
-  G --> H[Order confirmed]
-  H --> I[Owner exports daily CSV]
-  I --> J[Wakkilni pickup]
-  J --> K[Out for delivery]
-  K --> L[Delivered]
-  L --> M{Return claim}
-  M -->|damaged 7 days| N[Refund as credit]
-  M -->|no| O[Done]
-</pre>
+    <ul><li>Deferred entirely to v3+. Out of scope for v1 and v2. Re-scope when revisiting marketplace work.</li><li><b>Future scope sketch:</b> Forge-curated SKU catalog (bands, towels, bottles, jump ropes), Whish or COD fulfillment Lebanon, Aramex/Fetchr UAE, Stripe AED. Client → Forge transaction. Optional PT-tags-product attribution stream.</li><li><b>Note:</b> Prior commission-as-platform-credit model assumed Forge-credited PT subs. Re-evaluate before resurrecting.</li></ul>
+    <div class="ac"><b>Acceptance:</b> Re-spec at v3+ kickoff. Catalog and fulfillment partners to be re-confirmed.</div>
+    <div class="card" style="background:var(--cream-50);border-left:4px solid var(--brand-orange);margin-top:12px">
+      <h5>D47 · EP-21 Forge Shop checkout sequence <span class="badge v3">deferred to v3+</span></h5>
+      <p style="font-size:13px;color:var(--iron-600);margin:0">Checkout flow (browse → cart → Whish/COD → Wakkilni → delivered → 7-day return) is out of scope for v1/v2 and will be re-drawn at v3+ kickoff.</p>
     </div>
   </div>
 </section>
@@ -1676,7 +1591,7 @@ flowchart LR
 <section id="roadmap">
   <h2 class="kicker">Section 10</h2>
   <h3>Phased Roadmap</h3>
-  <p>Four phases over ~18 months. Pre-launch sets up infra and Lebanese payments. v1 ships the operational core in Lebanon. v1.5 hardens and preps UAE. v2 lands Stripe, full communications, and Forge Shop. v3 adds multi-coach, wearables, marketplace.</p>
+  <p>Four phases over ~18 months. Pre-launch sets up infra and Lebanese Forge-side payments. <b>v1 ships the operational core in Lebanon including the free Gym Account and the Master PT tier alongside Solo tiers.</b> v1.5 hardens and preps UAE. v2 lands Stripe (Forge merchant of record), full communications, and the four-way Marketplace (gym↔PT, client↔gym, client↔PT-at-gym, Forge Shop for gyms). v3 adds Events (private/public-free/public-paid), wearables, and revisits the Forge Shop.</p>
 
   <div class="mermaid-wrap">
     <div class="cap"><span class="id">D48</span> Gantt · 18-month roadmap</div>
@@ -1693,13 +1608,16 @@ gantt
 
   section v1.0 Lebanon
   EP-01 Auth                     :v1a, 2026-07-01, 21d
+  EP-02 PT modes + Gym mem       :v1az, 2026-07-15, 35d
   EP-04 Program builder          :v1b, 2026-07-15, 35d
   EP-05 PT-led logging + iPad    :v1c, 2026-08-01, 45d
   EP-06 Body metrics + photos    :v1d, 2026-08-15, 28d
   EP-08 Nutrition + barcode      :v1e, 2026-09-01, 28d
-  EP-09 Scheduling               :v1f, 2026-08-15, 35d
-  EP-10 Check-in/out             :v1g, 2026-09-01, 21d
-  EP-11 Billing Whish+Areeba+AI  :v1h, 2026-09-01, 56d
+  EP-09 Scheduling + gym calendar:v1f, 2026-08-15, 35d
+  EP-10 Check-in/out tracking    :v1g, 2026-09-01, 21d
+  EP-11 Forge sub billing + AI   :v1h, 2026-09-01, 45d
+  Gym Account screen Layout A    :v1ga, 2026-09-15, 30d
+  Master PT tier launch          :v1mp, 2026-10-01, 21d
   EP-12 Announcements            :v1i, 2026-10-01, 14d
   EP-14 Reports                  :v1j, 2026-10-15, 21d
   EP-15 AI suggestions           :v1k, 2026-09-15, 35d
@@ -1711,11 +1629,11 @@ gantt
 
   section v1.5 Polish + UAE prep
   Logging perf hardening         :v15a, 2027-01-01, 30d
-  Stripe Connect scaffold        :v15b, 2027-01-15, 45d
+  Stripe Connect scaffold Forge  :v15b, 2027-01-15, 45d
   Drip onboarding retention      :v15c, 2027-02-01, 30d
 
-  section v2.0 UAE + Comms + Shop
-  Stripe Connect live UAE        :v2a, 2027-03-01, 45d
+  section v2.0 UAE + Comms + Marketplace
+  Stripe live UAE Forge merchant :v2a, 2027-03-01, 45d
   AED currency Asia/Dubai        :v2b, 2027-03-15, 21d
   EP-12 full messaging           :v2c, 2027-04-01, 60d
   EP-12 video calls LiveKit      :v2d, 2027-05-01, 45d
@@ -1723,15 +1641,17 @@ gantt
   EP-16 AI Avatar beta           :v2f, 2027-06-01, 75d
   EP-09 group classes            :v2g, 2027-05-15, 45d
   French localization            :v2h, 2027-06-01, 30d
-  EP-21 Forge Shop v2.0          :v2i, 2027-04-01, 60d
-  EP-21 PT recos commission      :v2j, 2027-06-01, 45d
+  Marketplace gym-PT directory   :v2m1, 2027-04-01, 45d
+  Marketplace client-gym public  :v2m2, 2027-05-01, 45d
+  Marketplace client-PT-at-gym   :v2m3, 2027-06-01, 45d
   UAE soft launch                :milestone, m3, 2027-06-15, 1d
   UAE public launch              :milestone, m4, 2027-08-15, 1d
 
-  section v3.0 Studio + Wearables
-  EP-02 Multi-coach studio       :v3a, 2027-09-01, 75d
+  section v3.0 Events + Wearables + Shop
+  Events private public free paid:v3e, 2027-09-01, 75d
+  Multi-staff gym roles          :v3s, 2027-10-01, 45d
   EP-07 Wearables Apple Health   :v3b, 2027-10-01, 60d
-  EP-17 Marketplace discovery    :v3c, 2027-11-01, 60d
+  EP-21 Forge Shop revisited     :v3sh, 2027-11-01, 60d
   Apple Watch + Wear OS          :v3d, 2027-12-01, 60d
 </pre>
   </div>
@@ -1744,25 +1664,25 @@ graph LR
     P1V1[P1 PT-led log offline voice]
     P2V1[P2 Program + meal plan]
     P3V1[P3 Announcements]
-    P4V1[P4 Whish+Areeba+packs+cash]
+    P4V1[P4 Scheduling + Forge sub billing]
     P5V1[P5 Reports + AI credits]
-    P6V1[P6 Streaks badges challenges]
+    P6V1[P6 Streaks + Gym Account free + Master PT tier]
   end
-  subgraph v2[v2 UAE + Comms + Shop]
+  subgraph v2[v2 UAE + Comms + Marketplace]
     P1V2[P1 same + iPad polish]
     P2V2[P2 +group classes]
     P3V2[P3 1to1 chat + video + form review]
-    P4V2[P4 +Stripe Connect + group billing]
+    P4V2[P4 +Stripe Forge merchant UAE]
     P5V2[P5 +AI Avatar beta]
-    P6V2[P6 +Forge Shop SKUs + PT recos]
+    P6V2[P6 +4-way Marketplace gym PT client]
   end
-  subgraph v3[v3 Studio + Wearables]
+  subgraph v3[v3 Events + Wearables + Shop]
     P1V3[P1 +wearables sync]
     P2V3[P2 same]
-    P3V3[P3 +studio multi-coach]
-    P4V3[P4 +multi-coach payout + P&amp;L]
+    P3V3[P3 +multi-staff gym roles]
+    P4V3[P4 +ticketed paid events]
     P5V3[P5 +predictive risk]
-    P6V3[P6 +marketplace discovery + AED Shop]
+    P6V3[P6 +Events 3-mode + Forge Shop revisited]
   end
   P1V1 --> P1V2 --> P1V3
   P2V1 --> P2V2 --> P2V3
@@ -1778,29 +1698,64 @@ graph LR
 <section id="money">
   <h2 class="kicker">Section 11</h2>
   <h3>Monetization</h3>
-  <p>Subscription-only for PTs in v1. Clients are free when their PT is paying; optional Premium for self-driven users. AI is sold as credit packs — pay only for what you consume. <b>No transaction fee on client→PT payments. No tax handled.</b></p>
+  <p><b>Single payment direction: PT and Client → Forge.</b> Forge is always the merchant of record. No client→PT, no gym→PT, no PT→PT in-app payments. Solo PT tiers (existing) are kept; Master PT tier is new and bundles sub-PT seats. Gym Account is always free. AI is sold as credit packs. <b>No tax collected or remitted by Forge.</b></p>
 
-  <h4>PT plans · USD</h4>
+  <h4>Solo PT plans · USD</h4>
   <table>
-    <thead><tr><th>Plan</th><th>Price</th><th>Cap</th><th>Features</th></tr></thead>
+    <thead><tr><th>Tier</th><th>Price</th><th>Client cap</th><th>Per-client</th><th>Notes</th></tr></thead>
     <tbody>
-      <tr><td>Starter</td><td>$15 / mo</td><td>Up to 10 clients</td><td>Programming, PT-led logging, scheduling, announcements, Whish+Areeba, basic analytics</td></tr>
-      <tr><td>Pro</td><td>$35 / mo</td><td>Up to 50 clients</td><td>+ iPad PT-console, multi-client switcher, voice logging, nudges, advanced analytics, priority support</td></tr>
-      <tr><td>Elite</td><td>$69 / mo</td><td>Unlimited</td><td>+ highest AI priority, beta v2 features (messaging, video, AI Avatar)</td></tr>
-      <tr><td>Annual</td><td>~17% off</td><td>—</td><td>Two months free</td></tr>
+      <tr><td>Free <span class="badge v1">trial</span></td><td>$0</td><td>3</td><td>—</td><td><b>30-day trial only</b>, no card. Auto-prompt to Pro on day 30.</td></tr>
+      <tr><td>Pro</td><td>$15 / mo</td><td>5</td><td>$3.00</td><td>Programming, PT-led logging, scheduling, announcements, basic analytics</td></tr>
+      <tr><td>Elite</td><td>$39 / mo</td><td>25</td><td>$1.56</td><td>+ iPad PT-console, multi-client switcher, voice logging, nudges, advanced analytics, priority support</td></tr>
+      <tr><td>Power</td><td>$69 / mo</td><td>unlimited</td><td>flat</td><td>+ highest AI priority, beta v2 features (messaging, video, AI Avatar)</td></tr>
+      <tr><td>Annual</td><td>~17% off any paid Solo tier</td><td>—</td><td>—</td><td>Two months free</td></tr>
     </tbody>
   </table>
+
+  <h4>Master PT plans · USD</h4>
+  <p style="font-size:13px;color:var(--iron-500);margin-top:-6px">Scaled from Solo accounting baseline: per-PT cost ≈ $13–$17; per-client cost drops from $1.00 → $0.66 across tiers, mirroring Solo Pro → Elite → Power. Each tier is below Solo equivalent × PT count (bulk discount). <b>Numbers illustrative</b> — founders may revise pre-launch.</p>
+  <table>
+    <thead><tr><th>Tier</th><th>Price</th><th>Sub-PT seats</th><th>Clients combined</th><th>Per-PT (incl. master)</th><th>Per-client</th></tr></thead>
+    <tbody>
+      <tr><td>Master Pro</td><td>$40 / mo</td><td>2</td><td>40</td><td>$13.33 (3 PTs)</td><td>$1.00</td></tr>
+      <tr><td>Master Elite</td><td>$99 / mo</td><td>5</td><td>100</td><td>$16.50 (6 PTs)</td><td>$0.99</td></tr>
+      <tr><td>Master Power</td><td>$199 / mo</td><td>12</td><td>300</td><td>$15.31 (13 PTs)</td><td>$0.66</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Add-ons · apply to Solo or Master</h4>
+  <table>
+    <thead><tr><th>Add-on</th><th>Price</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>Extra client pack</td><td>$10 / mo</td><td>+10 client cap on current tier</td></tr>
+      <tr><td>Extra sub-PT seat</td><td>$10 / mo</td><td>+1 sub-PT seat under master (Master tier only)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Sub-PT pricing</h4>
+  <ul style="color:var(--iron-500)">
+    <li><b>Sub-PT under Master</b> = $0. Covered by master's seat. Sees only master-assigned clients.</li>
+    <li><b>Sub-PT with own Solo mode on same login</b> = pays own Solo tier separately. Two billings, one login. Data model separates the master-shared work from the independent Solo work.</li>
+  </ul>
 
   <h4>Client plans</h4>
   <table>
     <thead><tr><th>Plan</th><th>Price</th><th>Includes</th></tr></thead>
     <tbody>
-      <tr><td>Free (with PT)</td><td>$0</td><td>Full app access: view program, self-log, body metrics, photos, payments, announcements, live mirror</td></tr>
-      <tr><td>Premium (self-driven)</td><td>$4.99 / mo</td><td>+ AI suggestions (own credits), advanced analytics, deeper history</td></tr>
+      <tr><td>Free (PT-invited)</td><td>$0</td><td>Full app access. Counts against PT's plan cap.</td></tr>
+      <tr><td>Premium (self-serve, no PT)</td><td>$4.99 / mo</td><td>+ AI suggestions (own credits), advanced analytics, deeper history</td></tr>
     </tbody>
   </table>
 
-  <h4>AI credit packs · v1</h4>
+  <h4>Gym Account</h4>
+  <table>
+    <thead><tr><th>Tier</th><th>Price</th><th>Includes</th></tr></thead>
+    <tbody>
+      <tr><td>Gym Account · v1</td><td><b>$0 always · no card · no down payment</b></td><td>PT roster + invites, gym-subbed client list (named, no progress), space-booking calendar, gym profile/branding, analytics on counts only. Marketplace (v2) and Events (v3) added in later phases.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>AI credit packs</h4>
   <table>
     <thead><tr><th>Pack</th><th>Price</th><th>Credits</th><th>Per generation</th></tr></thead>
     <tbody>
@@ -1812,37 +1767,36 @@ graph LR
   </table>
   <p style="font-size:13px"><i>1 credit = 1 generation (program / meal plan / recap / workout suggestion). Credits never expire. Mobile via IAP (Apple/Google take 15-30%); web skips that fee.</i></p>
 
-  <h4>Multi-coach plans · v3 sketch</h4>
-  <table>
-    <thead><tr><th>Plan</th><th>Price</th><th>Cap</th><th>Features</th></tr></thead>
-    <tbody>
-      <tr><td>Studio</td><td>$99 / mo + $19 / extra coach</td><td>Up to 5 included</td><td>Owner dashboard, revenue split, payouts, audit log</td></tr>
-      <tr><td>Enterprise</td><td>From $499 / mo</td><td>Unlimited</td><td>SSO, multi-location, integrations, dedicated success</td></tr>
-    </tbody>
-  </table>
+  <h4>Deprecated</h4>
+  <ul style="color:var(--iron-500)">
+    <li><b>Studio $99/mo + $19/extra coach</b> — replaced by Master Pro $40/mo + sub-PT seat add-ons.</li>
+    <li><b>Enterprise $499/mo</b> — removed from v1 spec. Revisit only when demand justifies.</li>
+    <li><b>0% transaction fee on client→PT</b> — no inter-party transaction exists.</li>
+  </ul>
 
   <h4>Trials &amp; discounts</h4>
   <ul style="color:var(--iron-500)">
-    <li><b>14-day free trial</b>, no card required (PT plans)</li>
-    <li><b>Founding-member</b>: first 50 Lebanese PTs get 50% off Pro for 12 months</li>
-    <li><b>Educational</b>: 30% off Pro for accredited PT students, first year</li>
+    <li><b>Solo Free 30-day trial</b>, no card required.</li>
+    <li><b>Founding-member</b>: first 50 Lebanese PTs get 50% off Pro for 12 months. Applies to Solo and Master tiers.</li>
+    <li><b>Educational</b>: 30% off Pro for accredited PT students, first year. Applies to Solo and Master tiers.</li>
   </ul>
 
   <div class="mermaid-wrap">
-    <div class="cap"><span class="id">D50</span> Revenue flows</div>
+    <div class="cap"><span class="id">D50</span> Revenue flows · single payment direction</div>
 <pre class="mermaid">
 flowchart LR
-  PT[Personal Trainer] -->|subscription $15-$69| PLAT[Platform Forge]
-  PT -->|buy credit pack| PLAT
-  CLIENT[Client] -->|self Premium $4.99| PLAT
-  CLIENT -->|pay for session| PT
-  CLIENT -.->|Whish or Areeba or cash| PT
-  PLAT -.->|0 percent transaction fee v1| PT
-  CLIENT -->|Shop order| PLAT
-  PLAT -->|10 percent commission as credit| PT
-  PT -.->|credit applies to next subscription| PLAT
-  PT -.->|tax obligations external| TAX[External tax authority]
-  PLAT -.->|no tax collected| TAX
+  SOLO[Solo PT] -->|sub $0-$69| FORGE[Forge platform]
+  MASTER[Master PT] -->|sub $40-$199 covers sub-PT seats| FORGE
+  SUBPT[Sub-PT under Master] -.->|covered by master seat $0| FORGE
+  SUBPT -.->|optional own Solo sub on same login| FORGE
+  CLIENT[Client no PT] -->|Premium $4.99| FORGE
+  CLIENTPT[Client with PT] -.->|free under PT cap| FORGE
+  SOLO -->|AI credit pack $5-$99| FORGE
+  MASTER -->|AI credit pack $5-$99| FORGE
+  GYM[Gym Account] -.->|$0 always free| FORGE
+  FORGE -.->|no tax collected| TAX[External tax authority]
+  classDef no fill:#fbfaf7,stroke:#cbd0d8,stroke-dasharray:4 3
+  class SUBPT,CLIENTPT,GYM no
 </pre>
   </div>
 </section>
@@ -2010,14 +1964,17 @@ flowchart TD
     <dt>Deload</dt><dd>Programmed lower-intensity week to allow recovery.</dd>
     <dt>DIFC / ADGM</dt><dd>Dubai International Financial Centre / Abu Dhabi Global Market. Common UAE free-zone jurisdictions for regional startups.</dd>
     <dt>E2E</dt><dd>End-to-end encryption (e.g., progress photos with separate key envelope).</dd>
-    <dt>Forge Shop</dt><dd>First-party Marketplace of fitness essentials (EP-21, v2). Owner-managed, Wakkilni delivery.</dd>
+    <dt>Forge Shop</dt><dd>First-party marketplace of fitness essentials (EP-21). <b>Deferred to v3+.</b></dd>
+    <dt>Gym Account</dt><dd>Free, non-billable entity. Hosts PT roster, gym-subbed (offline) client list, calendar, gym profile/branding. v1 ships single shared login. Never sees PT-owned client progress — only counts.</dd>
+    <dt>Gym-subbed client</dt><dd>Offline gym member entered by a Gym Account. Named to the gym, no progress data tied unless they also become a PT-linked client.</dd>
+    <dt>GymMembership</dt><dd>Junction entity between PT and Gym. Many-to-many. Carries join-state (invited / requested / active / left) and who initiated.</dd>
     <dt>IAP</dt><dd>In-app purchase. Apple / Google billing rails for digital goods (AI credit packs, Premium).</dd>
     <dt>KMS</dt><dd>Key management service (AWS KMS or equivalent). Holds encryption keys with rotation ≤90 days.</dd>
     <dt>LBP</dt><dd>Lebanese pound. <b>Not supported</b> in any Forge version — USD only in Lebanon.</dd>
     <dt>Live mirror</dt><dd>Real-time reflection of PT-side logging on the Client's device, ≤3s push (F-071).</dd>
     <dt>MASVS</dt><dd>OWASP Mobile Application Security Verification Standard. Forge target: Level 2.</dd>
     <dt>MFA</dt><dd>Multi-factor authentication. TOTP or SMS in Forge.</dd>
-    <dt>Owner PT</dt><dd>Studio owner; persona managing other PTs under their brand (v3).</dd>
+    <dt>Master PT</dt><dd>PT mode where one or more Sub-PTs operate under the master. Pays a Master tier (Pro $40 / Elite $99 / Power $199) that covers sub-PT seats + a combined client pool. Sees aggregated view of all sub-PT clients.</dd>
     <dt>PAR-Q</dt><dd>Physical Activity Readiness Questionnaire. Standard pre-training health screen.</dd>
     <dt>PCI SAQ-A</dt><dd>Lowest PCI DSS scope — applies when no PAN data touches your servers (hosted payment pages only).</dd>
     <dt>Periodization</dt><dd>Long-arc structuring of training intensity / volume. Linear, undulating, block models.</dd>
@@ -2029,7 +1986,9 @@ flowchart TD
     <dt>SFU</dt><dd>Selective Forwarding Unit. WebRTC architecture for group video — use LiveKit / Daily, do not roll your own.</dd>
     <dt>SLA</dt><dd>Service-level agreement. GDPR export ≤24h; receipts ≤60s of check-out.</dd>
     <dt>SLO</dt><dd>Service-level objective. Internal targets behind the SLAs.</dd>
-    <dt>Sub PT</dt><dd>Junior coach working under an Owner. v3.</dd>
+    <dt>PT mode</dt><dd>One of Solo / Master / Sub-under-Master. A single Forge account can carry one or more active modes simultaneously; the data model keeps each mode's clients, sessions, and subscription separated.</dd>
+    <dt>PT-linked client</dt><dd>Client invited by a PT (Solo, Master, or Sub). Free under the PT's plan cap. Visible to the PT; <b>anonymous count only</b> to any linked gym.</dd>
+    <dt>Sub-PT (under Master)</dt><dd>PT mode connected to a Master PT. App access covered by master's subscription. Sees only master-assigned clients. May simultaneously hold own Solo mode on the same login.</dd>
     <dt>ULID</dt><dd>Universally Unique Lexicographically Sortable Identifier. Client-side ID for Sets that guarantees conflict-free ordering across offline + sync.</dd>
     <dt>USD</dt><dd>US dollar. v1 unit of account. Hedges Lebanese banking volatility.</dd>
     <dt>WCAG 2.2 AA</dt><dd>Web Content Accessibility Guidelines target level. Forge baseline.</dd>
@@ -2046,8 +2005,8 @@ flowchart TD
   <div style="margin-top:8px;font-size:11px">Companion: <a href="Forge_Brand.html" style="color:var(--ember-500)">Brand</a> · <a href="Forge_DesignSystem.html" style="color:var(--ember-500)">Design System</a> · <a href="Forge_Specification_v1.6.docx" style="color:var(--ember-500)">Spec v1.6</a> · <a href="Forge_Brief_v6.docx" style="color:var(--ember-500)">Brief v6</a></div>
 </footer>
 
-<script type="module">
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
   mermaid.initialize({
     startOnLoad: true,
     theme: 'base',
