@@ -1,0 +1,22 @@
+{
+  "name": "forge-platform",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "types:gen": "supabase gen types typescript --linked --schema public > packages/shared/src/database.types.ts",
+    "tokens:css": "pnpm --filter @forge/shared run tokens:css"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}
