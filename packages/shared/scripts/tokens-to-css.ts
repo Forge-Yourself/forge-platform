@@ -5,7 +5,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { darkColors, lightColors } from '../src/theme/semantic.js';
+import { darkColors, lightColors } from '../src/theme/semantic';
 import {
   fontFamilyWeb,
   motion,
@@ -13,7 +13,7 @@ import {
   radius,
   space,
   typography,
-} from '../src/theme/tokens.js';
+} from '../src/theme/tokens';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const target = join(here, '../../../apps/web/app/globals.css');

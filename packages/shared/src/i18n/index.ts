@@ -1,5 +1,5 @@
-import ar from './ar.json' with { type: 'json' };
-import en from './en.json' with { type: 'json' };
+import ar from './ar.json';
+import en from './en.json';
 
 /** Matches users.locale CHECK constraint in db/schema.sql. */
 export const locales = ['en', 'ar', 'fr'] as const;

@@ -21,6 +21,8 @@ expo-env.d.ts
 # Screenshots and debug captures
 *.png
 !docs/**/*.png
+!apps/*/assets/**/*.png
+!apps/*/public/**/*.png
 
 # OS junk
 Thumbs.db

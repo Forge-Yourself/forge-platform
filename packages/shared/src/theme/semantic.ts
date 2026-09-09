@@ -1,4 +1,4 @@
-import { palette } from './tokens.js';
+import { palette } from './tokens';
 
 /**
  * Role names, not color names. Screens reference roles so a palette change is one edit.

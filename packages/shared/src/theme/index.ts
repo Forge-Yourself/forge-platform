@@ -1,3 +1,3 @@
-export * from './contrast.js';
-export * from './semantic.js';
-export * from './tokens.js';
+export * from './contrast';
+export * from './semantic';
+export * from './tokens';

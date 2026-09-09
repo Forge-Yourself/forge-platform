@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { contrastRatio } from './contrast.js';
-import { colorSchemes, type ColorRoles, type SchemeName } from './semantic.js';
-import { space, touchTarget, typography } from './tokens.js';
+import { contrastRatio } from './contrast';
+import { colorSchemes, type ColorRoles, type SchemeName } from './semantic';
+import { space, touchTarget, typography } from './tokens';
 
 const TEXT_MIN = 4.5; // WCAG 2.2 AA, body text
 const NON_TEXT_MIN = 3; // WCAG 2.2 AA, UI components and large text
