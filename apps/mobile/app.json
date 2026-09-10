@@ -8,12 +8,19 @@
     "scheme": "forge",
     "userInterfaceStyle": "automatic",
     "extra": {
-      "supportsRTL": true
+      "supportsRTL": true,
+      "router": {},
+      "eas": {
+        "projectId": "d26a36f3-7916-48b8-9d32-2e75e611ae8f"
+      }
     },
     "ios": {
       "bundleIdentifier": "app.forge.mobile",
       "supportsTablet": true,
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "ExpoLocalization_supportsRTL": true
+      }
     },
     "android": {
       "package": "app.forge.mobile",
@@ -45,6 +52,7 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "owner": "josephaddad1"
   }
 }
