@@ -54,16 +54,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    // Bumped on every event that kicks off a loadProfile() fetch. A slow fetch from an
+    // earlier event (e.g. the previous user's SIGNED_IN, right before a fast sign-out /
+    // sign-in-as-someone-else) checks its own captured requestId against the latest one
+    // before applying its result, so it can't clobber fresher state that already landed —
+    // the same stale-async problem Gate's user-id-keyed remount solves one layer down,
+    // solved here with a request counter instead since AuthProvider itself can't remount.
+    let requestId = 0;
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
 
       if (event === 'SIGNED_OUT') {
+        requestId += 1;
         setState({ status: 'signedOut', session: null, user: null, ptProfile: null, mfaFactors: null });
         return;
       }
 
       if (!session) {
+        requestId += 1;
         setState({ status: 'signedOut', session: null, user: null, ptProfile: null, mfaFactors: null });
         return;
       }
@@ -71,8 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
         // Refetch users/pt_profiles: these are the events where the underlying rows may
         // have actually changed (first load, sign-in, or an explicit user update).
+        requestId += 1;
+        const thisRequestId = requestId;
         void loadProfile(session.user.id).then((profile) => {
-          if (cancelled) return;
+          if (cancelled || thisRequestId !== requestId) return;
           setState({ status: 'signedIn', session, ...profile });
         });
         return;
