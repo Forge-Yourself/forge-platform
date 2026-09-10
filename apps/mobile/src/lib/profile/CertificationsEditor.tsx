@@ -1,5 +1,5 @@
 import { ptCertificationSchema } from '@forge/shared';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -44,6 +44,18 @@ export function CertificationsEditor({
   const [expiresOn, setExpiresOn] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Neither parent screen gates its own Continue/Skip/Finish on this component's
+  // `submitting` — a user can advance the wizard (or leave profile-edit) while an
+  // insert/delete here is still in flight, unmounting this component mid-await. The
+  // write itself still completes server-side; this guard only stops the trailing
+  // setState calls and onChange()/refetch() from firing against unmounted state.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   async function handleAdd() {
     setFormError(null);
     const result = ptCertificationSchema.safeParse({
@@ -65,6 +77,7 @@ export function CertificationsEditor({
         issuer: result.data.issuer ?? null,
         expires_on: result.data.expires_on ?? null,
       });
+      if (!mountedRef.current) return;
       if (error) {
         setFormError(t('onboarding.ptProfile.error'));
         return;
@@ -75,7 +88,7 @@ export function CertificationsEditor({
       setAdding(false);
       await onChange();
     } finally {
-      setSubmitting(false);
+      if (mountedRef.current) setSubmitting(false);
     }
   }
 
@@ -83,9 +96,10 @@ export function CertificationsEditor({
     setSubmitting(true);
     try {
       const { error } = await supabase.from('pt_certifications').delete().eq('id', id);
+      if (!mountedRef.current) return;
       if (!error) await onChange();
     } finally {
-      setSubmitting(false);
+      if (mountedRef.current) setSubmitting(false);
     }
   }
 

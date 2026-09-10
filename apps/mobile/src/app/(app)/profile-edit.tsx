@@ -9,6 +9,7 @@ import { refreshAuthProfile } from '../../lib/auth/refreshProfile';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { Avatar } from '../../lib/profile/Avatar';
 import { CertificationsEditor } from '../../lib/profile/CertificationsEditor';
+import { LANGUAGE_OPTIONS, SPECIALIZATION_OPTIONS, toggleOption } from '../../lib/profile/options';
 import { usePtProfileData } from '../../lib/profile/usePtProfileData';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -18,23 +19,6 @@ const SUPPORT_EMAIL = 'support@forge.app';
 
 type UsersUpdate = Database['public']['Tables']['users']['Update'];
 type PtProfilesInsert = Database['public']['Tables']['pt_profiles']['Insert'];
-
-// Same canonical, non-localized option lists as (onboarding)/pt-profile — see that
-// screen's comment on why ChipRow's lack of a value/label split rules out i18n here.
-const SPECIALIZATION_OPTIONS = [
-  'Strength Training',
-  'Weight Loss',
-  'Bodybuilding',
-  'Powerlifting',
-  'Mobility & Recovery',
-  'Sports Performance',
-  'Pre/Postnatal',
-  'Nutrition Coaching',
-  'Group Classes',
-  'Rehab',
-];
-
-const LANGUAGE_OPTIONS = ['Arabic', 'English', 'French', 'Armenian'];
 
 /**
  * Writes ONLY the RLS-granted column lists:
@@ -65,10 +49,6 @@ export default function ProfileEdit() {
   const [specializations, setSpecializations] = useState<string[]>(ptProfile?.specializations ?? []);
   const [languages, setLanguages] = useState<string[]>(ptProfile?.languages ?? []);
   const [photoUrl, setPhotoUrl] = useState(ptProfile?.profile_photo_url ?? '');
-
-  function toggle(list: string[], setList: (v: string[]) => void, option: string) {
-    setList(list.includes(option) ? list.filter((o) => o !== option) : [...list, option]);
-  }
 
   async function handleSave() {
     setError(null);
@@ -105,6 +85,7 @@ export default function ProfileEdit() {
     await run(async () => {
       const userPayload: UsersUpdate = { ...userResult.data };
       if (phone.trim().length === 0) userPayload.phone = null;
+      if (avatarUrl.trim().length === 0) userPayload.avatar_url = null;
 
       const { error: userError } = await supabase.from('users').update(userPayload).eq('id', userId);
       if (userError) {
@@ -214,7 +195,7 @@ export default function ProfileEdit() {
               <ChipRow
                 options={SPECIALIZATION_OPTIONS}
                 selected={specializations}
-                onToggle={(option) => toggle(specializations, setSpecializations, option)}
+                onToggle={(option) => toggleOption(specializations, setSpecializations, option)}
               />
 
               <Text variant="label" tone="muted" style={{ marginTop: theme.space[4], marginBottom: theme.space[2] }}>
@@ -223,7 +204,7 @@ export default function ProfileEdit() {
               <ChipRow
                 options={LANGUAGE_OPTIONS}
                 selected={languages}
-                onToggle={(option) => toggle(languages, setLanguages, option)}
+                onToggle={(option) => toggleOption(languages, setLanguages, option)}
               />
             </View>
 

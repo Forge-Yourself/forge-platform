@@ -7,6 +7,7 @@ import { refreshAuthProfile } from '../../lib/auth/refreshProfile';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { Avatar } from '../../lib/profile/Avatar';
 import { CertificationsEditor } from '../../lib/profile/CertificationsEditor';
+import { LANGUAGE_OPTIONS, SPECIALIZATION_OPTIONS, toggleOption } from '../../lib/profile/options';
 import { usePtProfileData } from '../../lib/profile/usePtProfileData';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -14,29 +15,6 @@ import { Banner, Button, Card, ChipRow, FormScreen, Row, StepProgress, Text, Tex
 
 const TOTAL_STEPS = 4;
 const BIO_MAX = 300;
-
-/**
- * Fixed option lists for the "What you offer" / "Where and how" chip steps.
- * ChipRow (Task 5) has no value/label split — the string shown IS the string stored
- * in `pt_profiles.specializations`/`languages` (TEXT[]) — so these are deliberately
- * kept as plain English canonical values rather than routed through i18n: storing a
- * translated label directly would make the same specialization read as a different
- * raw value depending on which locale the PT was in when they picked it.
- */
-const SPECIALIZATION_OPTIONS = [
-  'Strength Training',
-  'Weight Loss',
-  'Bodybuilding',
-  'Powerlifting',
-  'Mobility & Recovery',
-  'Sports Performance',
-  'Pre/Postnatal',
-  'Nutrition Coaching',
-  'Group Classes',
-  'Rehab',
-];
-
-const LANGUAGE_OPTIONS = ['Arabic', 'English', 'French', 'Armenian'];
 
 type PtProfilesInsert = Database['public']['Tables']['pt_profiles']['Insert'];
 
@@ -71,10 +49,6 @@ export default function PtProfile() {
   // Steps 3 & 4 — chip selections.
   const [specializations, setSpecializations] = useState<string[]>(ptProfile?.specializations ?? []);
   const [languages, setLanguages] = useState<string[]>(ptProfile?.languages ?? []);
-
-  function toggle(list: string[], setList: (v: string[]) => void, option: string) {
-    setList(list.includes(option) ? list.filter((o) => o !== option) : [...list, option]);
-  }
 
   async function upsertPtProfile(partial: Omit<PtProfilesInsert, 'user_id'>) {
     if (!userId) return;
@@ -256,7 +230,7 @@ export default function PtProfile() {
             <ChipRow
               options={SPECIALIZATION_OPTIONS}
               selected={specializations}
-              onToggle={(option) => toggle(specializations, setSpecializations, option)}
+              onToggle={(option) => toggleOption(specializations, setSpecializations, option)}
             />
           </View>
           <Banner variant="info" message={t('onboarding.ptProfile.step3.pricingNote')} />
@@ -272,7 +246,7 @@ export default function PtProfile() {
             <ChipRow
               options={LANGUAGE_OPTIONS}
               selected={languages}
-              onToggle={(option) => toggle(languages, setLanguages, option)}
+              onToggle={(option) => toggleOption(languages, setLanguages, option)}
             />
           </View>
           <Card>
