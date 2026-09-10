@@ -27,6 +27,9 @@
       "forgotPassword": "Forgot password?",
       "noAccount": "No account? Sign up"
     },
+    "google": {
+      "continue": "Continue with Google"
+    },
     "signUp": {
       "title": "Create your account",
       "subtitle": "Two minutes. Then you're in.",

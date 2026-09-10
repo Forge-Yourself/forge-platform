@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { logAccountEvent } from '../../lib/auth/audit';
 import { mapAuthError } from '../../lib/auth/authErrors';
+import { signInWithProvider } from '../../lib/auth/oauth';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { zodIssuesToFieldErrors } from '../../lib/forms/zodFieldErrors';
 import { supabase } from '../../lib/supabase';
@@ -47,6 +48,25 @@ export default function SignIn() {
       }
 
       void logAccountEvent('user_login');
+    });
+  }
+
+  async function handleGoogleSignIn() {
+    setFormError(null);
+    await run(async () => {
+      const outcome = await signInWithProvider('google');
+      if (outcome.type === 'error') {
+        setFormError(mapAuthError(outcome.error, t));
+        return;
+      }
+      if (outcome.type === 'cancelled') {
+        // User closed the browser without finishing — nothing to report.
+        return;
+      }
+      void logAccountEvent('user_login');
+      // No navigation here: a successful exchangeCodeForSession() fires the
+      // SIGNED_IN auth event same as password sign-in, and the root gate
+      // (app/_layout.tsx) reacts to it and routes onward.
     });
   }
 
@@ -114,6 +134,14 @@ export default function SignIn() {
         variant="ghost"
         onPress={() => router.push('/(auth)/forgot-password')}
         style={{ marginTop: theme.space[3] }}
+      />
+
+      <Button
+        label={t('auth.google.continue')}
+        variant="ghost"
+        onPress={handleGoogleSignIn}
+        disabled={submitting}
+        style={{ marginTop: theme.space[5] }}
       />
     </FormScreen>
   );
