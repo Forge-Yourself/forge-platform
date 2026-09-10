@@ -27,7 +27,11 @@ export function Button({ label, variant = 'primary', size = 'md', style, ...rest
           paddingHorizontal: t.space[5],
           paddingVertical: t.space[3],
           borderRadius: t.radius.md,
-          backgroundColor: isPrimary ? t.colors.primary : 'transparent',
+          // The design's one filled CTA style is `.btn-accent` (ember-700/white
+          // in light, verified 5.28:1 — see Task 3's token reconciliation), not
+          // the separate `primary`/`onPrimary` role pair. `variant="primary"`
+          // names the button's PURPOSE (the primary action), not a color role.
+          backgroundColor: isPrimary ? t.colors.accent : 'transparent',
           borderWidth: isPrimary ? 0 : 1.5,
           borderColor: t.colors.borderStrong,
           opacity: state.pressed ? 0.85 : 1,
@@ -38,7 +42,7 @@ export function Button({ label, variant = 'primary', size = 'md', style, ...rest
     >
       <Text
         variant="bodyBold"
-        tone={isPrimary ? 'onPrimary' : 'primary'}
+        tone={isPrimary ? 'onAccent' : 'primary'}
         style={isLg ? styles.lgLabel : undefined}
       >
         {label}
