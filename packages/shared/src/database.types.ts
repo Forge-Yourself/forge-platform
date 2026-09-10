@@ -471,6 +471,342 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs_2026_11: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_12: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2027_01: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2027_02: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2027_03: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2027_04: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2027_05: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2027_06: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           category: string
@@ -1749,6 +2085,438 @@ export type Database = {
         }
         Relationships: []
       }
+      food_logs_2026_11: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs_2026_12: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs_2027_01: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs_2027_02: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs_2027_03: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs_2027_04: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs_2027_05: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs_2027_06: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       form_check_comments: {
         Row: {
           author_user_id: string
@@ -2840,6 +3608,462 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications_2026_11: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_2026_12: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_2027_01: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_2027_02: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_2027_03: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_2027_04: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_2027_05: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_2027_06: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           charge_id: string | null
@@ -3257,6 +4481,50 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pt_certifications: {
+        Row: {
+          created_at: string
+          document_url: string | null
+          expires_on: string | null
+          id: string
+          issuer: string | null
+          name: string
+          pt_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_url?: string | null
+          expires_on?: string | null
+          id?: string
+          issuer?: string | null
+          name: string
+          pt_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_url?: string | null
+          expires_on?: string | null
+          id?: string
+          issuer?: string | null
+          name?: string
+          pt_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_pt_certifications_user"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -3819,6 +5087,534 @@ export type Database = {
         Relationships: []
       }
       sets_2026_10: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
+      sets_2026_11: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
+      sets_2026_12: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
+      sets_2027_01: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
+      sets_2027_02: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
+      sets_2027_03: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
+      sets_2027_04: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
+      sets_2027_05: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
+      sets_2027_06: {
         Row: {
           conflict_resolved: boolean
           created_at: string
@@ -4732,6 +6528,10 @@ export type Database = {
       is_master_of: { Args: { p_pt_user_id: string }; Returns: boolean }
       is_pt_of_client: { Args: { p_client_id: string }; Returns: boolean }
       is_pt_of_user: { Args: { p_user_id: string }; Returns: boolean }
+      log_account_event: {
+        Args: { p_action: string; p_details?: Json }
+        Returns: undefined
+      }
       longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -4773,6 +6573,7 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      set_initial_role: { Args: { p_role: string }; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       st_3dclosestpoint: {

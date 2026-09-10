@@ -152,4 +152,144 @@ END;
 $$;
 RESET ROLE;
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- M1 fixtures — pt_profiles / pt_certifications / notification_preferences
+-- for pt_a, published later in this block to exercise both denial and
+-- positive read paths.
+-- ─────────────────────────────────────────────────────────────────────────────
+\set ptprofile_a '77777777-7777-4777-8777-777777777777'
+\set ptcert_a    '88888888-8888-4888-8888-888888888888'
+
+INSERT INTO public.pt_profiles (id, user_id, is_published)
+VALUES (:'ptprofile_a', :'pt_a', FALSE);
+
+INSERT INTO public.pt_certifications (id, pt_user_id, name, issuer, status)
+VALUES (:'ptcert_a', :'pt_a', 'NASM CPT', 'NASM', 'verified');
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A can upsert their own notification_preferences', 1,
+  format('WITH ins AS (
+            INSERT INTO public.notification_preferences (user_id, channel, category, enabled)
+            VALUES (%L, ''push'', ''streak'', TRUE)
+            RETURNING 1
+          ) SELECT count(*) FROM ins', :'pt_a'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- notification_preferences — strictly self-owned.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('PT B cannot read PT A notification_preferences', 0,
+  'SELECT count(*) FROM public.notification_preferences');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A reads their own notification_preferences', 1,
+  'SELECT count(*) FROM public.notification_preferences');
+SELECT pg_temp.expect('PT A can update their own notification_preferences', 1,
+  format('WITH u AS (
+            UPDATE public.notification_preferences SET enabled = FALSE
+             WHERE user_id = %L
+            RETURNING 1
+          ) SELECT count(*) FROM u', :'pt_a'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- pt_certifications — readable by the owner always; by anyone else only once
+-- the parent pt_profiles.is_published flips to TRUE.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('PT B cannot read PT A certifications while unpublished', 0,
+  'SELECT count(*) FROM public.pt_certifications');
+RESET ROLE;
+
+-- Publish PT A's profile as PT A (self-owned write policy).
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A can publish their own pt_profiles row', 1,
+  format('WITH u AS (
+            UPDATE public.pt_profiles SET is_published = TRUE WHERE user_id = %L
+            RETURNING 1
+          ) SELECT count(*) FROM u', :'pt_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('PT B can read PT A certifications once published', 1,
+  'SELECT count(*) FROM public.pt_certifications');
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- set_initial_role — one-time role picker. 'admin' is never reachable, and a
+-- second call after onboarding_completed is a silent no-op, not a crash.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+DO $$
+BEGIN
+  BEGIN
+    PERFORM public.set_initial_role('admin');
+    RAISE EXCEPTION 'FAIL set_initial_role — admin role was accepted';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'FAIL set_initial_role%' THEN
+      RAISE;
+    END IF;
+    RAISE NOTICE 'pass  set_initial_role rejects admin';
+  END;
+END;
+$$;
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT public.set_initial_role('pt');
+SELECT pg_temp.expect('set_initial_role flips the role while onboarding is incomplete', 1,
+  format('SELECT count(*) FROM public.users WHERE id = %L AND role = ''pt''', :'client_a'));
+RESET ROLE;
+
+-- Mark client_a's onboarding complete, then confirm a second call is a no-op.
+UPDATE public.users SET onboarding_completed = TRUE WHERE id = :'client_a';
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT public.set_initial_role('client');
+SELECT pg_temp.expect('set_initial_role no-ops once onboarding is complete', 1,
+  format('SELECT count(*) FROM public.users WHERE id = %L AND role = ''pt''', :'client_a'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- log_account_event — actor is always auth.uid(); the action allow-list holds.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+DO $$
+BEGIN
+  BEGIN
+    PERFORM public.log_account_event('user_delete', NULL);
+    RAISE EXCEPTION 'FAIL log_account_event — user_delete was accepted';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'FAIL log_account_event%' THEN
+      RAISE;
+    END IF;
+    RAISE NOTICE 'pass  log_account_event rejects an action outside the allow-list';
+  END;
+END;
+$$;
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT public.log_account_event('user_login', '{}'::jsonb);
+RESET ROLE;
+
+-- audit_logs is policy-free by design (service-role only), so authenticated
+-- can't read it back — verify the insert with the harness's own (RLS-exempt
+-- table-owner) connection instead.
+SELECT pg_temp.expect('log_account_event inserts exactly one audit_logs row for the actor', 1,
+  format('SELECT count(*) FROM public.audit_logs WHERE actor_id = %L', :'client_b'));
+
 ROLLBACK;
