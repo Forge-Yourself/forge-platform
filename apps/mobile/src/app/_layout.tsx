@@ -1,5 +1,5 @@
 import type { AuthMFAGetAuthenticatorAssuranceLevelResponse } from '@supabase/supabase-js';
-import { Redirect, Slot } from 'expo-router';
+import { Redirect, Slot, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -23,7 +23,11 @@ function LoadingScreen() {
 /**
  * The auth gate. Order matters (see Task 6 plan step 5):
  *   1. AuthProvider still resolving -> hold on a loading screen.
- *   2. Signed out -> (auth)/sign-in.
+ *   2. Signed out -> (auth)/sign-in, UNLESS the current route is already somewhere in
+ *      (auth) — sign-up, forgot-password and verify-pending are all legitimately
+ *      reachable pre-session, and without this check the gate would force every one
+ *      of them back to sign-in the instant they're navigated to (status is
+ *      'signedOut' throughout signup until the email is confirmed).
  *   3. Signed in, AAL still aal1 with an aal2 step pending (an MFA factor is enrolled
  *      but this session hasn't cleared the challenge) -> (auth)/mfa-challenge.
  *   4. onboarding not completed -> (onboarding)/role.
@@ -44,6 +48,7 @@ function LoadingScreen() {
  */
 function Gate() {
   const auth = useAuth();
+  const segments = useSegments();
   // `aal` starts fresh at 'loading' on every mount. Gate is keyed by user id in
   // ThemedGate below, so a sign-out -> different-user-sign-in remounts this component
   // instead of reusing stale AAL state from the previous user while the new check is
@@ -73,6 +78,13 @@ function Gate() {
   }
 
   if (auth.status === 'signedOut') {
+    // Let any (auth) screen render as-is — sign-up, forgot-password, verify-pending
+    // are all navigated to imperatively while still signed out. Only force sign-in
+    // when landing signed-out on a route OUTSIDE (auth), e.g. deep-linking straight
+    // into (app) or (onboarding) with no session.
+    if (segments[0] === '(auth)') {
+      return <Slot />;
+    }
     return <Redirect href="/(auth)/sign-in" />;
   }
 
@@ -86,6 +98,23 @@ function Gate() {
   }
 
   if (auth.user?.onboarding_completed === false) {
+    // Same reasoning as the signedOut branch above: tapping the signup-confirmation
+    // email link establishes a session immediately, and a brand-new user always has
+    // onboarding_completed=false — so without this check, (auth)/verify-success would
+    // be forced straight to (onboarding)/role the instant it mounted, and the design's
+    // "offer MFA before onboarding" screen would never actually be reachable. Letting
+    // (auth) render as-is here means verify-success's own two exits (MFA setup, or
+    // "Skip for now" -> router.replace('/')) are what eventually leave this state, not
+    // the gate racing them.
+    // TODO(Task 9): (onboarding)/mfa-enroll is a DIFFERENT segment ((onboarding), not
+    // (auth)) — once it exists, navigating there from verify-success's "Set up
+    // two-factor" button will hit this same redirect (segments[0] !== '(auth)') and
+    // bounce back to /(onboarding)/role before mfa-enroll ever renders. Task 9 needs to
+    // either allow segments[0]==='(onboarding)' through here too, or make the gate's
+    // redirect target aware of the mfa-enroll-vs-role ordering explicitly.
+    if (segments[0] === '(auth)') {
+      return <Slot />;
+    }
     return <Redirect href="/(onboarding)/role" />;
   }
 
