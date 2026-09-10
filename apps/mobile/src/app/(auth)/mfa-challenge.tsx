@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { mapAuthError } from '../../lib/auth/authErrors';
 import { useAuth } from '../../lib/auth/AuthProvider';
-import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
+import { useMfaAutoVerify } from '../../lib/auth/useMfaAutoVerify';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Banner, CodeCells, NumericKeypad, Screen, Spinner, Text } from '../../ui';
@@ -27,9 +27,18 @@ export default function MfaChallenge() {
   const [factorId, setFactorId] = useState<string | null>(null);
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
-  const [code, setCode] = useState('');
-  const { submitting, error: verifyError, setError: setVerifyError, run } = useAsyncSubmit();
   const startedRef = useRef(false);
+
+  // Deliberately no audit event and no navigation here: this is an existing,
+  // already-enrolled factor clearing its per-session challenge on sign-in, not an
+  // enrollment — user_login was already logged when the password/OAuth step
+  // succeeded (see sign-in.tsx / lib/auth/oauth.ts), and user_mfa_enable is logged
+  // once, at enrollment time, in (onboarding)/mfa-enroll.tsx. A successful verify()
+  // fires MFA_CHALLENGE_VERIFIED, AuthProvider picks up the refreshed session, and the
+  // root gate's AAL re-check (keyed off auth.session?.access_token) sees aal2 and lets
+  // this screen fall away on its own.
+  const handleVerified = useCallback(() => {}, []);
+  const { code, setCode, verifyError } = useMfaAutoVerify(factorId, challengeId, t, handleVerified);
 
   useEffect(() => {
     // Guards against the effect's cleanup-less re-run under React's dev double-invoke —
@@ -55,29 +64,11 @@ export default function MfaChallenge() {
       }
       setChallengeId(data.id);
     })();
-  }, [auth.mfaFactors, t]);
-
-  useEffect(() => {
-    if (code.length !== 6 || !factorId || !challengeId || submitting) {
-      return;
-    }
-    void run(async () => {
-      const { error } = await supabase.auth.mfa.verify({ factorId, challengeId, code });
-      if (error) {
-        setVerifyError(mapAuthError(error, t));
-        setCode('');
-        return;
-      }
-      // Deliberately no audit event here: this is an existing, already-enrolled factor
-      // clearing its per-session challenge on sign-in, not an enrollment — user_login
-      // was already logged when the password/OAuth step succeeded (see sign-in.tsx /
-      // lib/auth/oauth.ts). user_mfa_enable is logged once, at enrollment time, in
-      // (onboarding)/mfa-enroll.tsx.
-      // No navigation: a successful verify() fires MFA_CHALLENGE_VERIFIED, AuthProvider
-      // picks up the refreshed session, and the root gate's AAL re-check (keyed off
-      // auth.session?.access_token) sees aal2 and lets this screen fall away on its own.
-    });
-  }, [code, factorId, challengeId, submitting, run, setVerifyError, t]);
+    // startedRef makes this a run-once-per-mount effect regardless of dependency
+    // changes, so auth.mfaFactors is read once via closure, not tracked reactively —
+    // deliberately absent from the deps list rather than listed-but-inert.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
 
   const ready = !!factorId && !!challengeId && !initError;
 

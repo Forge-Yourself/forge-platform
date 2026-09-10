@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { router } from 'expo-router';
 import { logAccountEvent } from '../../lib/auth/audit';
 import { mapAuthError } from '../../lib/auth/authErrors';
-import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
+import { useMfaAutoVerify } from '../../lib/auth/useMfaAutoVerify';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
 import {
@@ -42,9 +42,18 @@ export default function MfaEnroll() {
   const [qrXml, setQrXml] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
-  const [code, setCode] = useState('');
-  const { submitting, error: verifyError, setError: setVerifyError, run } = useAsyncSubmit();
   const startedRef = useRef(false);
+
+  const handleVerified = useCallback(() => {
+    void logAccountEvent('user_mfa_enable');
+    // verify() on enrollment elevates the session straight to aal2 (no separate
+    // aal2 challenge is pending afterward), so the gate won't bounce this back to
+    // (auth)/mfa-challenge. router.replace('/') hands control back to the gate, which
+    // continues the normal onboarding flow (role picker, etc.) from here — same exit
+    // shape as verify-success's own "Skip for now".
+    router.replace('/');
+  }, []);
+  const { code, setCode, verifyError } = useMfaAutoVerify(factorId, challengeId, t, handleVerified);
 
   useEffect(() => {
     // Guards against React's dev double-invoke re-running this effect — enroll() creates
@@ -75,27 +84,6 @@ export default function MfaEnroll() {
       setChallengeId(challengeData.id);
     })();
   }, [t]);
-
-  useEffect(() => {
-    if (code.length !== 6 || !factorId || !challengeId || submitting) {
-      return;
-    }
-    void run(async () => {
-      const { error } = await supabase.auth.mfa.verify({ factorId, challengeId, code });
-      if (error) {
-        setVerifyError(mapAuthError(error, t));
-        setCode('');
-        return;
-      }
-      void logAccountEvent('user_mfa_enable');
-      // verify() on enrollment elevates the session straight to aal2 (no separate
-      // aal2 challenge is pending afterward), so the gate won't bounce this back to
-      // (auth)/mfa-challenge. router.replace('/') hands control back to the gate, which
-      // continues the normal onboarding flow (role picker, etc.) from here — same exit
-      // shape as verify-success's own "Skip for now".
-      router.replace('/');
-    });
-  }, [code, factorId, challengeId, submitting, run, setVerifyError, t]);
 
   const ready = !!qrXml && !!secret && !!challengeId && !initError;
 
@@ -153,6 +141,10 @@ export default function MfaEnroll() {
                 width: QR_SIZE,
                 height: QR_SIZE,
                 marginBottom: theme.space[5],
+                // Deliberately hardcoded, not a theme token: a QR code needs a light
+                // background to scan reliably regardless of app theme, and no role in
+                // semantic.ts is fixed-white in both schemes (onAccent/onPrimary both
+                // flip per-scheme) — this is the one place white genuinely means white.
                 backgroundColor: '#fff',
                 borderRadius: theme.radius.md,
                 alignItems: 'center',
