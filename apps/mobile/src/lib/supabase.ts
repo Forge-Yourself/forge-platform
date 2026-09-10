@@ -25,5 +25,9 @@ export const supabase = createClient<Database>(url, anonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // Implicit flow (the default) cannot survive a mobile deep-link round trip —
+    // the app process handling the callback is not the one that started the request.
+    // PKCE keeps a verifier in secureStorage and exchanges it for a session on return.
+    flowType: 'pkce',
   },
 });
