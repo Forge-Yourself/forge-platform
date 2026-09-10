@@ -194,5 +194,50 @@
     "deleteAccountBody": "تواصل مع الدعم لحذف حسابك. لا يتوفر حذف ذاتي للحساب حاليًا — هذا يفتح رسالة فقط، ولا يحذف أي شيء.",
     "deleteAccountContact": "تواصل مع الدعم",
     "deleteAccountClose": "إغلاق"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "error": "حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.",
+    "preferences": {
+      "heading": "التفضيلات",
+      "languageLabel": "اللغة",
+      "languageSubtitle": "يعكس التخطيط بالكامل أيضًا",
+      "languageNote": "الاتجاه إعداد أصلي — سينعكس التخطيط في المرة القادمة التي تفتح فيها Forge.",
+      "unitsLabel": "الوحدات",
+      "appearanceLabel": "المظهر",
+      "appearanceSubtitle": "أرضيات الصالات الرياضية داكنة",
+      "appearanceLight": "فاتح",
+      "appearanceDark": "داكن",
+      "appearanceSystem": "النظام"
+    },
+    "quietHours": {
+      "heading": "ساعات الهدوء",
+      "muteLabel": "ساعات الهدوء",
+      "muteSubtitle": "تصلك تذكيرات الحصص دائمًا. كل شيء آخر ينتظر.",
+      "from": "من",
+      "until": "حتى"
+    },
+    "account": {
+      "heading": "الحساب",
+      "editProfile": "تعديل الملف الشخصي",
+      "twoFactor": "التحقق بخطوتين",
+      "twoFactorOn": "مفعّل",
+      "twoFactorOff": "غير مفعّل",
+      "unenrollTitle": "إيقاف التحقق بخطوتين؟",
+      "unenrollBody": "سيحتاج حسابك إلى كلمة المرور فقط لتسجيل الدخول. يمكنك إعادة تفعيل التحقق بخطوتين في أي وقت.",
+      "unenrollConfirm": "إيقاف",
+      "unenrollCancel": "إلغاء",
+      "unenrollError": "تعذّر إيقاف التحقق بخطوتين. يرجى المحاولة مرة أخرى."
+    },
+    "consents": {
+      "heading": "الخصوصية",
+      "analyticsLabel": "تحليلات الاستخدام",
+      "analyticsSubtitle": "ساعدنا في تحسين Forge ببيانات استخدام مجهولة المصدر.",
+      "marketingLabel": "رسائل تسويقية",
+      "marketingSubtitle": "أخبار المنتج والعروض.",
+      "aiTrainingLabel": "تدريب الذكاء الاصطناعي",
+      "aiTrainingSubtitle": "السماح باستخدام بيانات مجهولة المصدر لتحسين ميزات الذكاء الاصطناعي في Forge."
+    },
+    "signOut": "تسجيل الخروج"
   }
 }

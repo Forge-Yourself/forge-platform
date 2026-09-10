@@ -194,5 +194,50 @@
     "deleteAccountBody": "Contact support to delete your account. We don't support self-service account deletion yet — this only opens a message, it doesn't delete anything.",
     "deleteAccountContact": "Contact support",
     "deleteAccountClose": "Close"
+  },
+  "settings": {
+    "title": "Settings",
+    "error": "Something went wrong saving that. Please try again.",
+    "preferences": {
+      "heading": "Preferences",
+      "languageLabel": "Language",
+      "languageSubtitle": "Also flips the whole layout",
+      "languageNote": "Direction is a native setting — the layout mirrors next time you open Forge.",
+      "unitsLabel": "Units",
+      "appearanceLabel": "Appearance",
+      "appearanceSubtitle": "Gym floors are dark",
+      "appearanceLight": "Light",
+      "appearanceDark": "Dark",
+      "appearanceSystem": "System"
+    },
+    "quietHours": {
+      "heading": "Quiet hours",
+      "muteLabel": "Quiet hours",
+      "muteSubtitle": "Session reminders still come through. Everything else waits.",
+      "from": "FROM",
+      "until": "UNTIL"
+    },
+    "account": {
+      "heading": "Account",
+      "editProfile": "Edit profile",
+      "twoFactor": "Two-factor",
+      "twoFactorOn": "ON",
+      "twoFactorOff": "OFF",
+      "unenrollTitle": "Turn off two-factor?",
+      "unenrollBody": "Your account will only need a password to sign in. You can set two-factor up again anytime.",
+      "unenrollConfirm": "Turn off",
+      "unenrollCancel": "Cancel",
+      "unenrollError": "Couldn't turn off two-factor. Please try again."
+    },
+    "consents": {
+      "heading": "Privacy",
+      "analyticsLabel": "Usage analytics",
+      "analyticsSubtitle": "Help us improve Forge with anonymized usage data.",
+      "marketingLabel": "Marketing emails",
+      "marketingSubtitle": "Product news and offers.",
+      "aiTrainingLabel": "AI training",
+      "aiTrainingSubtitle": "Allow anonymized data to improve Forge's AI features."
+    },
+    "signOut": "Sign out"
   }
 }
