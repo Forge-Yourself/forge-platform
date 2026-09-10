@@ -37,8 +37,10 @@ describe('userProfileSchema', () => {
 
   it('rejects fields outside the granted column list, e.g. role', () => {
     const result = userProfileSchema.safeParse({ role: 'admin' });
-    // extra/unknown keys must not silently grant escalation via this schema
-    expect('role' in (result.success ? result.data : {})).toBe(false);
+    // .strict() fails the parse outright — a caller who mistypes a key, or
+    // tries to smuggle an ungranted column, gets a real validation error
+    // rather than having it silently stripped.
+    expect(result.success).toBe(false);
   });
 });
 

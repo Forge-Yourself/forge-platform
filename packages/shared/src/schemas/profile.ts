@@ -14,18 +14,23 @@ export const unitSystemSchema = z.enum(['metric', 'imperial']);
  * enforcement boundary, this schema just keeps the client from attempting to
  * send a column (e.g. `role`) it was never granted.
  */
-export const userProfileSchema = z.object({
-  display_name: z.string().trim().min(1).max(120).optional(),
-  avatar_url: z.string().url().optional(),
-  phone: z.string().trim().min(1).optional(),
-  locale: localeSchema.optional(),
-  unit_system: unitSystemSchema.optional(),
-  timezone: z.string().trim().min(1).optional(),
-  consent_analytics: z.boolean().optional(),
-  consent_marketing: z.boolean().optional(),
-  consent_ai_training: z.boolean().optional(),
-  onboarding_completed: z.boolean().optional(),
-});
+export const userProfileSchema = z
+  .object({
+    display_name: z.string().trim().min(1).max(120).optional(),
+    avatar_url: z.string().url().optional(),
+    phone: z.string().trim().min(1).optional(),
+    locale: localeSchema.optional(),
+    unit_system: unitSystemSchema.optional(),
+    timezone: z.string().trim().min(1).optional(),
+    consent_analytics: z.boolean().optional(),
+    consent_marketing: z.boolean().optional(),
+    consent_ai_training: z.boolean().optional(),
+    onboarding_completed: z.boolean().optional(),
+  })
+  // .strict() so an ungranted column (e.g. `role`) fails validation instead
+  // of being silently stripped — a caller who mistypes a key gets a signal
+  // instead of a write that quietly goes nowhere.
+  .strict();
 export type UserProfileInput = z.infer<typeof userProfileSchema>;
 
 /**
