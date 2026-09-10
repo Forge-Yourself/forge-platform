@@ -1,0 +1,20 @@
+{
+  "boot": {
+    "tagline": "اصنع نفسك.",
+    "status": "الأساس جاهز",
+    "scheme": "المظهر",
+    "schemeLight": "فاتح",
+    "schemeDark": "داكن",
+    "direction": "الاتجاه",
+    "language": "اللغة",
+    "switchLanguage": "English",
+    "connection": "سوبابيس",
+    "connectionChecking": "جارٍ التحقق…",
+    "connectionOk": "متصل",
+    "connectionFailed": "غير متصل"
+  },
+  "common": {
+    "retry": "إعادة المحاولة",
+    "cancel": "إلغاء"
+  }
+}

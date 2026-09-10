@@ -1,3 +1,17 @@
+# Dependencies and build output
+node_modules/
+dist/
+.turbo/
+.next/
+.expo/
+expo-env.d.ts
+
+# Secrets and deploy state
+.env
+.env.*
+!.env.example
+.vercel
+
 # Session / tooling artifacts
 .remember/
 .playwright-mcp/
@@ -7,6 +21,8 @@
 # Screenshots and debug captures
 *.png
 !docs/**/*.png
+!apps/*/assets/**/*.png
+!apps/*/public/**/*.png
 
 # OS junk
 Thumbs.db
@@ -22,3 +38,4 @@ desktop.ini
 # Temporary
 *.tmp
 *.log
+*.tsbuildinfo

@@ -1,0 +1,20 @@
+{
+  "boot": {
+    "tagline": "Forge yourself.",
+    "status": "Foundation online",
+    "scheme": "Theme",
+    "schemeLight": "Light",
+    "schemeDark": "Dark",
+    "direction": "Direction",
+    "language": "Language",
+    "switchLanguage": "العربية",
+    "connection": "Supabase",
+    "connectionChecking": "Checking…",
+    "connectionOk": "Reachable",
+    "connectionFailed": "Unreachable"
+  },
+  "common": {
+    "retry": "Retry",
+    "cancel": "Cancel"
+  }
+}
