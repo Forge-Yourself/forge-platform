@@ -15,6 +15,70 @@
   },
   "common": {
     "retry": "Retry",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "back": "Back"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Welcome back.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "No account? Sign up"
+    },
+    "signUp": {
+      "title": "Create your account",
+      "subtitle": "Two minutes. Then you're in.",
+      "fullNameLabel": "Full name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "termsLabel": "I agree to the Terms of Service and Privacy Policy",
+      "submit": "Create account",
+      "haveAccount": "Already have an account? Sign in"
+    },
+    "verifyPending": {
+      "title": "Check your email",
+      "body": "We sent a confirmation link to",
+      "expiry": "The link expires in {{minutes}} minutes.",
+      "waiting": "Waiting for confirmation",
+      "continue": "I've verified — continue",
+      "stillPending": "Still waiting — check your inbox, or open the link from this device.",
+      "resend": "Resend link",
+      "resendCooldown": "Resend available in {{seconds}}s",
+      "resent": "Link sent. Check your inbox.",
+      "changeEmail": "Wrong address? Change it"
+    },
+    "verifySuccess": {
+      "title": "Email verified",
+      "setupMfa": "Set up two-factor",
+      "skip": "Skip for now"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "We'll email you a link. It expires in {{minutes}} minutes.",
+      "emailLabel": "Email",
+      "submit": "Send reset link",
+      "confirmation": "If an account exists for this address, a reset link is on its way. It expires in 30 minutes."
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "warning": "Saving a new password signs you out of every other device — this one stays signed in.",
+      "passwordLabel": "New password",
+      "confirmLabel": "Confirm password",
+      "match": "Passwords match.",
+      "submit": "Save new password"
+    },
+    "errors": {
+      "invalidCredentials": "That email and password combination doesn't match our records.",
+      "emailNotConfirmed": "Confirm your email before signing in.",
+      "userAlreadyExists": "An account with this email already exists.",
+      "weakPassword": "Choose a stronger password.",
+      "samePassword": "Your new password must be different from your current one.",
+      "rateLimited": "Too many attempts. Please wait a moment and try again.",
+      "sessionExpired": "Your session expired. Please sign in again.",
+      "network": "Couldn't reach the server. Check your connection and try again.",
+      "generic": "Something went wrong. Please try again."
+    }
   }
 }
