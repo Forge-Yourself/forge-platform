@@ -44,6 +44,12 @@ function LoadingScreen() {
  */
 function Gate() {
   const auth = useAuth();
+  // `aal` starts fresh at 'loading' on every mount. Gate is keyed by user id in
+  // ThemedGate below, so a sign-out -> different-user-sign-in remounts this component
+  // instead of reusing stale AAL state from the previous user while the new check is
+  // in flight — a plain effect reset would either need to setState during the same
+  // render (react-hooks/set-state-in-effect) or leave a one-tick window where the
+  // gate evaluates the new user's MFA requirement against the old user's AAL.
   const [aal, setAal] = useState<Aal | 'loading'>('loading');
 
   useEffect(() => {
@@ -92,13 +98,17 @@ function Gate() {
 
 function ThemedGate() {
   const t = useTheme();
+  const auth = useAuth();
 
   useEffect(() => subscribeToDeepLinks(), []);
 
   return (
     <>
       <StatusBar style={t.scheme === 'dark' ? 'light' : 'dark'} />
-      <Gate />
+      {/* Keyed by user id (stable across token refresh, unlike access_token) so a
+          sign-out -> different-user-sign-in remounts Gate and its AAL state resets
+          for free, instead of racing a stale value from the previous user. */}
+      <Gate key={auth.session?.user.id ?? 'signed-out'} />
     </>
   );
 }
