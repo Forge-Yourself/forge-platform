@@ -178,7 +178,14 @@ export default function Settings() {
   async function saveUsers(payload: UsersUpdate) {
     if (!userId) return;
     const { error: updateError } = await supabase.from('users').update(payload).eq('id', userId);
-    if (updateError) setError(t('settings.error'));
+    if (updateError) {
+      setError(t('settings.error'));
+      return;
+    }
+    // A plain table write fires none of the auth events AuthProvider listens for
+    // (see lib/auth/refreshProfile.ts) — without this, useAuth().user stays stale
+    // here the same way profile-edit.tsx's users.update() needed it.
+    await refreshAuthProfile();
   }
 
   async function handleLocaleChange(next: Locale) {
