@@ -58,6 +58,22 @@
       "setupMfa": "Set up two-factor",
       "skip": "Skip for now"
     },
+    "mfaEnroll": {
+      "title": "Two-factor authentication",
+      "subtitle": "Pick how you want to confirm it's you.",
+      "authenticator": "Authenticator",
+      "sms": "SMS",
+      "smsComingSoon": "Coming soon",
+      "qrInstructions": "Scan this QR code with your authenticator app.",
+      "manualEntryLabel": "Can't scan? Enter this code manually:",
+      "codeLabel": "Enter the 6-digit code from your app",
+      "recoveryWarning": "If you lose access to your authenticator app, you'll need to contact support to regain access to your account — there is no self-service recovery yet.",
+      "settingUp": "Setting up two-factor…"
+    },
+    "mfaChallenge": {
+      "title": "Enter your code",
+      "subtitle": "Open your authenticator app for the 6-digit code."
+    },
     "forgotPassword": {
       "title": "Reset your password",
       "subtitle": "We'll email you a link. It expires in {{minutes}} minutes.",

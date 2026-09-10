@@ -106,13 +106,17 @@ function Gate() {
     // (auth) render as-is here means verify-success's own two exits (MFA setup, or
     // "Skip for now" -> router.replace('/')) are what eventually leave this state, not
     // the gate racing them.
-    // TODO(Task 9): (onboarding)/mfa-enroll is a DIFFERENT segment ((onboarding), not
-    // (auth)) — once it exists, navigating there from verify-success's "Set up
-    // two-factor" button will hit this same redirect (segments[0] !== '(auth)') and
-    // bounce back to /(onboarding)/role before mfa-enroll ever renders. Task 9 needs to
-    // either allow segments[0]==='(onboarding)' through here too, or make the gate's
-    // redirect target aware of the mfa-enroll-vs-role ordering explicitly.
-    if (segments[0] === '(auth)') {
+    //
+    // (Task 9) (onboarding)/mfa-enroll is a DIFFERENT segment ((onboarding), not (auth))
+    // from verify-success's "Set up two-factor" button, so it needs its own carve-out
+    // here too — otherwise this branch would redirect it straight to /(onboarding)/role
+    // before mfa-enroll ever rendered. Scoped to that one route specifically (not all of
+    // (onboarding)) so role.tsx/pt-profile.tsx still redirect normally for a user who
+    // lands there some other way pre-onboarding.
+    if (
+      segments[0] === '(auth)' ||
+      (segments[0] === '(onboarding)' && (segments as readonly string[])[1] === 'mfa-enroll')
+    ) {
       return <Slot />;
     }
     return <Redirect href="/(onboarding)/role" />;
