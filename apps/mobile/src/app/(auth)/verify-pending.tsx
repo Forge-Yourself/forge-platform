@@ -124,7 +124,7 @@ export default function VerifyPending() {
     <Screen>
       <View
         accessible
-        accessibilityLabel="Mail"
+        accessibilityLabel={t('auth.verifyPending.mailIcon')}
         style={{
           width: 64,
           height: 64,

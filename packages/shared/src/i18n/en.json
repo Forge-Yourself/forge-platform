@@ -47,7 +47,8 @@
       "resend": "Resend link",
       "resendCooldown": "Resend available in {{seconds}}s",
       "resent": "Link sent. Check your inbox.",
-      "changeEmail": "Wrong address? Change it"
+      "changeEmail": "Wrong address? Change it",
+      "mailIcon": "Mail"
     },
     "verifySuccess": {
       "title": "Email verified",
