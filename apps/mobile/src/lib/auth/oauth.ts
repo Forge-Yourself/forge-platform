@@ -1,6 +1,9 @@
 import { AuthError } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import type { TFunction } from 'i18next';
+import { logAccountEvent } from './audit';
+import { mapAuthError } from './authErrors';
 import { supabase } from '../supabase';
 
 export type OAuthProvider = 'google' | 'apple';
@@ -67,4 +70,37 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<OAuth
   }
 
   return { type: 'success' };
+}
+
+/**
+ * The full "tap the OAuth button" handler shared by sign-in and sign-up — both screens
+ * do the exact same thing on success or failure, so this owns the outcome-handling
+ * switch once instead of it being copy-pasted per screen (see sign-in.tsx/sign-up.tsx's
+ * git history before this was factored out). Each screen still owns its own
+ * `useAsyncSubmit()` state and just passes `run`/`setError` through.
+ */
+export async function runOAuthSignIn(
+  provider: OAuthProvider,
+  run: (fn: () => Promise<void>) => Promise<void>,
+  setError: (message: string | null) => void,
+  t: TFunction,
+): Promise<void> {
+  setError(null);
+  await run(async () => {
+    const outcome = await signInWithProvider(provider);
+
+    if (outcome.type === 'error') {
+      setError(mapAuthError(outcome.error, t));
+      return;
+    }
+    if (outcome.type === 'cancelled') {
+      // User closed the browser without finishing — nothing to report.
+      return;
+    }
+
+    void logAccountEvent('user_login');
+    // No navigation here: a successful exchangeCodeForSession() fires the SIGNED_IN
+    // auth event same as password sign-in, and the root gate (app/_layout.tsx) reacts
+    // to it and routes onward.
+  });
 }

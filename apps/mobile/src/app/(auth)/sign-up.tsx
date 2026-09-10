@@ -3,9 +3,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
-import { logAccountEvent } from '../../lib/auth/audit';
 import { mapAuthError } from '../../lib/auth/authErrors';
-import { signInWithProvider } from '../../lib/auth/oauth';
+import { runOAuthSignIn } from '../../lib/auth/oauth';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { zodIssuesToFieldErrors } from '../../lib/forms/zodFieldErrors';
 import { supabase } from '../../lib/supabase';
@@ -115,25 +114,14 @@ export default function SignUp() {
     });
   }
 
+  /**
+   * Unlike password sign-up, OAuth returns a session immediately (no
+   * email-confirmation step) — runOAuthSignIn's success path fires SIGNED_IN, and the
+   * root gate reacts by routing to (onboarding)/role, since onboarding_completed is
+   * false for every brand-new user regardless of provider (Task 6's gate).
+   */
   async function handleGoogleSignIn() {
-    setFormError(null);
-    await run(async () => {
-      const outcome = await signInWithProvider('google');
-      if (outcome.type === 'error') {
-        setFormError(mapAuthError(outcome.error, t));
-        return;
-      }
-      if (outcome.type === 'cancelled') {
-        // User closed the browser without finishing — nothing to report.
-        return;
-      }
-      void logAccountEvent('user_login');
-      // No navigation here: unlike password sign-up, OAuth returns a session
-      // immediately (no email-confirmation step) — the root gate reacts to the
-      // SIGNED_IN event and routes to (onboarding)/role since onboarding_completed
-      // is false for every brand-new user regardless of provider (Task 6's gate,
-      // Step 4 of this task's plan).
-    });
+    await runOAuthSignIn('google', run, setFormError, t);
   }
 
   const strength = password.length > 0 ? passwordStrength(password) : 0;
