@@ -4200,53 +4200,6 @@ export type Database = {
           },
         ]
       }
-      user_sessions: {
-        Row: {
-          created_at: string
-          device_info: Json | null
-          expires_at: string
-          family_id: string
-          id: string
-          ip_address: unknown
-          refresh_token_hash: string
-          revoked_at: string | null
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          device_info?: Json | null
-          expires_at: string
-          family_id?: string
-          id?: string
-          ip_address?: unknown
-          refresh_token_hash: string
-          revoked_at?: string | null
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          device_info?: Json | null
-          expires_at?: string
-          family_id?: string
-          id?: string
-          ip_address?: unknown
-          refresh_token_hash?: string
-          revoked_at?: string | null
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_user_sessions_user"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       users: {
         Row: {
           auth_provider: string
@@ -4258,17 +4211,11 @@ export type Database = {
           deleted_at: string | null
           display_name: string
           email: string
-          failed_login_count: number
           id: string
           is_deleted: boolean
           is_quarantined: boolean
           locale: string
-          locked_until: string | null
-          mfa_enabled: boolean
-          mfa_key_id: string | null
-          mfa_method: string | null
           onboarding_completed: boolean
-          password_hash: string | null
           phone: string | null
           quarantine_reason: string | null
           role: string
@@ -4286,17 +4233,11 @@ export type Database = {
           deleted_at?: string | null
           display_name: string
           email: string
-          failed_login_count?: number
-          id?: string
+          id: string
           is_deleted?: boolean
           is_quarantined?: boolean
           locale?: string
-          locked_until?: string | null
-          mfa_enabled?: boolean
-          mfa_key_id?: string | null
-          mfa_method?: string | null
           onboarding_completed?: boolean
-          password_hash?: string | null
           phone?: string | null
           quarantine_reason?: string | null
           role: string
@@ -4314,17 +4255,11 @@ export type Database = {
           deleted_at?: string | null
           display_name?: string
           email?: string
-          failed_login_count?: number
           id?: string
           is_deleted?: boolean
           is_quarantined?: boolean
           locale?: string
-          locked_until?: string | null
-          mfa_enabled?: boolean
-          mfa_key_id?: string | null
-          mfa_method?: string | null
           onboarding_completed?: boolean
-          password_hash?: string | null
           phone?: string | null
           quarantine_reason?: string | null
           role?: string
@@ -4656,6 +4591,7 @@ export type Database = {
             }
             Returns: string
           }
+      current_user_role: { Args: never; Returns: string }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -4788,6 +4724,14 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       gettransactionid: { Args: never; Returns: unknown }
+      is_admin: { Args: never; Returns: boolean }
+      is_client_record_owner: {
+        Args: { p_client_id: string }
+        Returns: boolean
+      }
+      is_master_of: { Args: { p_pt_user_id: string }; Returns: boolean }
+      is_pt_of_client: { Args: { p_client_id: string }; Returns: boolean }
+      is_pt_of_user: { Args: { p_user_id: string }; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
