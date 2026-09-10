@@ -28,6 +28,7 @@ export function Skeleton({ width = '100%', height = 16, radius = 6 }: SkeletonPr
 
   return (
     <Animated.View
+      accessible
       accessibilityLabel="Loading content"
       style={{
         width,

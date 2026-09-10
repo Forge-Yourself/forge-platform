@@ -15,6 +15,7 @@ export function CodeCells({ code, length = 6 }: CodeCellsProps) {
 
   return (
     <View
+      accessible
       accessibilityLabel={`Code entry, ${code.length} of ${length} digits entered`}
       style={{ flexDirection: 'row', gap: 8 }}
     >

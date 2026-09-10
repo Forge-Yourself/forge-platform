@@ -34,6 +34,7 @@ export function StepProgress({ progress, label }: StepProgressProps) {
 
   return (
     <View
+      accessible
       accessibilityRole="progressbar"
       accessibilityLabel={label}
       style={{

@@ -18,6 +18,7 @@ export function PasswordStrength({ strength }: PasswordStrengthProps) {
 
   return (
     <View
+      accessible
       accessibilityLabel={`Password strength: ${label}`}
       style={{ flexDirection: 'row', gap: 4 }}
     >
