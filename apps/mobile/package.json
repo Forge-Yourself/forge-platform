@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo/ui": "~57.0.17",
     "@forge/shared": "workspace:*",
+    "zod": "^4.6.1",
     "@supabase/supabase-js": "^2.116.0",
     "expo": "~57.0.21",
     "expo-constants": "~57.0.17",

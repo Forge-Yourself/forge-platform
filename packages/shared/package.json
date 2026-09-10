@@ -8,13 +8,17 @@
   "exports": {
     ".": "./src/index.ts",
     "./theme": "./src/theme/index.ts",
-    "./i18n": "./src/i18n/index.ts"
+    "./i18n": "./src/i18n/index.ts",
+    "./schemas": "./src/schemas/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "tokens:css": "tsx scripts/tokens-to-css.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
