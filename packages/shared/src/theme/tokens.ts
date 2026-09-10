@@ -8,6 +8,9 @@ export const palette = {
   charcoal900: '#0F131C',
   charcoal800: '#1A1F2B',
   charcoal700: '#222836',
+  // charcoal-600: dark-mode divider between surfaceRaised and surfaceSunken tones — one step
+  // lighter than charcoal-700, used for the dark `border` role (design-prototype reconciliation).
+  charcoal600: '#2C3342',
   iron600: '#3A4150',
   iron500: '#4A5560',
   iron400: '#6B7280',
@@ -17,6 +20,8 @@ export const palette = {
   cream100: '#F5F2EE',
   cream50: '#FBFAF7',
   white: '#FFFFFF',
+  // ember-800: one step darker than ember-700, reserved for pressed/active CTA states.
+  ember800: '#A03D0E',
   ember700: '#B84812',
   ember600: '#E8631A',
   ember500: '#FF8A3D',
@@ -24,10 +29,15 @@ export const palette = {
   ember100: '#FCE7D3',
   success: '#2E8B57',
   successBg: '#D5EBD9',
+  // on-tint trio: hue-matched, darker text for status chips, replacing the generic
+  // charcoal900 that was used across all three (design-prototype reconciliation).
+  onSuccess: '#1A4F31',
   warn: '#C77800',
   warnBg: '#FFF1D6',
+  onWarn: '#8A5300',
   danger: '#C0392B',
   dangerBg: '#FADBD8',
+  onDanger: '#8C2A1F',
 } as const;
 
 /** 4px base progression. Index is the design-system step (s-1 … s-11). */
