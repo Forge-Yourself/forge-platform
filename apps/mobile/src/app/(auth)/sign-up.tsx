@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { mapAuthError } from '../../lib/auth/authErrors';
+import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
+import { zodIssuesToFieldErrors } from '../../lib/forms/zodFieldErrors';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Banner, Button, FormScreen, PasswordStrength, Text, TextField } from '../../ui';
@@ -39,8 +41,7 @@ export default function SignUp() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [touched, setTouched] = useState<Touched>({});
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, error: formError, setError: setFormError, run } = useAsyncSubmit();
 
   function currentInput() {
     return {
@@ -65,13 +66,9 @@ export default function SignUp() {
       return true;
     }
 
-    const errors: FieldErrors = {};
-    for (const issue of result.error.issues) {
-      const key = issue.path[0];
-      const field: Field | null =
-        key === 'displayName' ? 'fullName' : key === 'acceptedTerms' ? 'acceptedTerms' : (key as Field);
-      if (field && !errors[field]) errors[field] = issue.message;
-    }
+    const errors = zodIssuesToFieldErrors<Field>(result.error.issues, (key) =>
+      key === 'displayName' ? 'fullName' : key === 'acceptedTerms' ? 'acceptedTerms' : (key as Field),
+    );
 
     setFieldErrors((prev) => {
       if (!onlyFields) return errors;
@@ -95,25 +92,25 @@ export default function SignUp() {
     setTouched({ fullName: true, email: true, password: true, acceptedTerms: true });
     if (!validate()) return;
 
-    setSubmitting(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          role: SIGNUP_ROLE,
-          display_name: fullName,
+    await run(async () => {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            role: SIGNUP_ROLE,
+            display_name: fullName,
+          },
         },
-      },
+      });
+
+      if (error) {
+        setFormError(mapAuthError(error, t));
+        return;
+      }
+
+      router.push({ pathname: '/(auth)/verify-pending', params: { email } });
     });
-    setSubmitting(false);
-
-    if (error) {
-      setFormError(mapAuthError(error, t));
-      return;
-    }
-
-    router.push({ pathname: '/(auth)/verify-pending', params: { email } });
   }
 
   const strength = password.length > 0 ? passwordStrength(password) : 0;

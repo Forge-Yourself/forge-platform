@@ -60,7 +60,7 @@
       "subtitle": "We'll email you a link. It expires in {{minutes}} minutes.",
       "emailLabel": "Email",
       "submit": "Send reset link",
-      "confirmation": "If an account exists for this address, a reset link is on its way. It expires in 30 minutes."
+      "confirmation": "If an account exists for this address, a reset link is on its way. It expires in {{minutes}} minutes."
     },
     "resetPassword": {
       "title": "Set a new password",

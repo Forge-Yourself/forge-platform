@@ -3,13 +3,11 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { I18nManager, Pressable, View } from 'react-native';
-import { mapAuthError } from '../../lib/auth/authErrors';
+import { mapAuthError, OTP_EXPIRY_MINUTES } from '../../lib/auth/authErrors';
+import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Banner, Button, FormScreen, Text, TextField } from '../../ui';
-
-/** Matches Supabase's `otp_expiry = 1800` (Task 2 config) — 30 minutes. */
-const OTP_EXPIRY_MINUTES = 30;
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -17,8 +15,12 @@ export default function ForgotPassword() {
 
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | undefined>(undefined);
-  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const {
+    submitting,
+    error: rateLimitError,
+    setError: setRateLimitError,
+    run,
+  } = useAsyncSubmit();
   const [submitted, setSubmitted] = useState(false);
 
   // The glyph, not just its position, flips: a plain mirrored layout would still point
@@ -33,18 +35,19 @@ export default function ForgotPassword() {
       return;
     }
     setEmailError(undefined);
-    setSubmitting(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(result.data.email);
-    setSubmitting(false);
 
-    // Confirmation reads identically whether or not the address exists — never branch
-    // this copy on the error, except for a rate limit, which isn't account-specific and
-    // so doesn't leak anything about whether the address has an account.
-    if (error?.code === 'over_email_send_rate_limit' || error?.code === 'over_request_rate_limit') {
-      setRateLimitError(mapAuthError(error, t));
-      return;
-    }
-    setSubmitted(true);
+    await run(async () => {
+      const { error } = await supabase.auth.resetPasswordForEmail(result.data.email);
+
+      // Confirmation reads identically whether or not the address exists — never branch
+      // this copy on the error, except for a rate limit, which isn't account-specific and
+      // so doesn't leak anything about whether the address has an account.
+      if (error?.code === 'over_email_send_rate_limit' || error?.code === 'over_request_rate_limit') {
+        setRateLimitError(mapAuthError(error, t));
+        return;
+      }
+      setSubmitted(true);
+    });
   }
 
   return (
@@ -64,7 +67,10 @@ export default function ForgotPassword() {
           <Text variant="h2" style={{ marginBottom: theme.space[3] }}>
             {t('auth.forgotPassword.title')}
           </Text>
-          <Banner variant="success" message={t('auth.forgotPassword.confirmation')} />
+          <Banner
+            variant="success"
+            message={t('auth.forgotPassword.confirmation', { minutes: OTP_EXPIRY_MINUTES })}
+          />
         </View>
       ) : (
         <View style={{ marginTop: theme.space[6] }}>

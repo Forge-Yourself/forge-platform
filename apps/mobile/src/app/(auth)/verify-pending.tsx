@@ -2,13 +2,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, View } from 'react-native';
-import { mapAuthError } from '../../lib/auth/authErrors';
+import { mapAuthError, OTP_EXPIRY_MINUTES } from '../../lib/auth/authErrors';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Button, Screen, Text } from '../../ui';
 
-/** Matches Supabase's `otp_expiry = 1800` (Task 2 config) — 30 minutes. */
-const OTP_EXPIRY_MINUTES = 30;
 /** Client-side floor, independent of Supabase's own [auth.rate_limit] (2/hour default) —
  * gives clear feedback and keeps taps from hammering that server-side limit. */
 const RESEND_COOLDOWN_SECONDS = 60;

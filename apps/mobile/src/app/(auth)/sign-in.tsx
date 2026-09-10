@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { logAccountEvent } from '../../lib/auth/audit';
 import { mapAuthError } from '../../lib/auth/authErrors';
+import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
+import { zodIssuesToFieldErrors } from '../../lib/forms/zodFieldErrors';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Banner, Button, FormScreen, Text, TextField } from '../../ui';
@@ -23,36 +25,29 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, error: formError, setError: setFormError, run } = useAsyncSubmit();
 
   async function handleSubmit() {
     setFormError(null);
     const result = signInSchema.safeParse({ email, password });
     if (!result.success) {
-      const errors: FieldErrors = {};
-      for (const issue of result.error.issues) {
-        const key = issue.path[0];
-        if (key === 'email' && !errors.email) errors.email = issue.message;
-        if (key === 'password' && !errors.password) errors.password = issue.message;
-      }
-      setFieldErrors(errors);
+      setFieldErrors(zodIssuesToFieldErrors<'email' | 'password'>(result.error.issues));
       return;
     }
 
     setFieldErrors({});
-    setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword(result.data);
-    setSubmitting(false);
+    await run(async () => {
+      const { error } = await supabase.auth.signInWithPassword(result.data);
 
-    if (error) {
-      // invalid_credentials reads identically whether the email exists or not —
-      // see mapAuthError's doc comment. Never branch this copy on account existence.
-      setFormError(mapAuthError(error, t));
-      return;
-    }
+      if (error) {
+        // invalid_credentials reads identically whether the email exists or not —
+        // see mapAuthError's doc comment. Never branch this copy on account existence.
+        setFormError(mapAuthError(error, t));
+        return;
+      }
 
-    void logAccountEvent('user_login');
+      void logAccountEvent('user_login');
+    });
   }
 
   return (
