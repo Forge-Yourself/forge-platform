@@ -16,7 +16,12 @@
   "common": {
     "retry": "إعادة المحاولة",
     "cancel": "إلغاء",
-    "back": "رجوع"
+    "back": "رجوع",
+    "skip": "تخطٍ",
+    "continue": "متابعة",
+    "save": "حفظ",
+    "finish": "إنهاء",
+    "close": "إغلاق"
   },
   "auth": {
     "signIn": {
@@ -100,5 +105,94 @@
       "network": "تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.",
       "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
     }
+  },
+  "onboarding": {
+    "role": {
+      "step": "الخطوة 1 من 3",
+      "title": "من أنت؟",
+      "subtitle": "اختر كيف ستستخدم Forge.",
+      "ptTitle": "أنا مدرب شخصي",
+      "ptSubtitle": "إدارة العملاء والبرامج والمدفوعات.",
+      "clientTitle": "أتدرب مع مدرب",
+      "clientSubtitle": "تتبّع تمارينك وتقدّمك.",
+      "continue": "متابعة",
+      "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    },
+    "ptProfile": {
+      "stepOf": "الخطوة {{step}} من {{total}}",
+      "step1": {
+        "title": "من أنت",
+        "addPhoto": "إضافة صورة",
+        "addPhotoNote": "رفع الصور قادم في تحديث مستقبلي.",
+        "displayNameLabel": "الاسم المعروض",
+        "bioLabel": "نبذة تعريفية",
+        "bioPlaceholder": "أخبر عملاءك قليلاً عن أسلوبك في التدريب."
+      },
+      "step2": {
+        "title": "الشهادات",
+        "addCertification": "+ إضافة شهادة",
+        "nameLabel": "اسم الشهادة",
+        "issuerLabel": "الجهة المانحة",
+        "expiresLabel": "تاريخ الانتهاء (YYYY-MM-DD)",
+        "saveCertification": "إضافة",
+        "empty": "لم تتم إضافة أي شهادات بعد.",
+        "statusUnverified": "غير موثّقة",
+        "nameRequired": "اسم الشهادة مطلوب"
+      },
+      "step3": {
+        "title": "ما الذي تقدّمه",
+        "specializationsLabel": "التخصصات",
+        "pricingNote": "لا تتعامل Forge مع أسعار الجلسات إطلاقًا. تتفق على الأسعار مع عملائك مباشرة."
+      },
+      "step4": {
+        "title": "أين وكيف",
+        "languagesLabel": "اللغات التي تدرّب بها",
+        "summaryTitle": "أنت جاهز تمامًا",
+        "summaryBody": "اضغط إنهاء لبدء استخدام Forge. يمكنك دائمًا إكمال المزيد من ملفك الشخصي لاحقًا.",
+        "finish": "إنهاء"
+      },
+      "error": "حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى."
+    }
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "loadFailed": "تعذّر تحميل ملفك الشخصي.",
+    "emailLabel": "البريد الإلكتروني",
+    "roleLabel": "الدور",
+    "roles": {
+      "pt": "مدرب شخصي",
+      "client": "عميل",
+      "gym_account": "حساب نادٍ رياضي",
+      "admin": "مسؤول المنصة"
+    },
+    "bioLabel": "نبذة تعريفية",
+    "bioEmpty": "لا توجد نبذة بعد.",
+    "specializationsLabel": "التخصصات",
+    "specializationsEmpty": "لم تتم إضافة تخصصات بعد.",
+    "languagesLabel": "اللغات",
+    "languagesEmpty": "لم تتم إضافة لغات بعد.",
+    "certificationsLabel": "الشهادات",
+    "certificationsEmpty": "لم تتم إضافة شهادات بعد.",
+    "editButton": "تعديل الملف الشخصي"
+  },
+  "profileEdit": {
+    "title": "تعديل الملف الشخصي",
+    "accountSection": "الحساب",
+    "displayNameLabel": "الاسم المعروض",
+    "phoneLabel": "الهاتف",
+    "photoUrlLabel": "رابط الصورة",
+    "ptSection": "الملف الشخصي للمدرب",
+    "bioLabel": "نبذة تعريفية",
+    "specializationsLabel": "التخصصات",
+    "languagesLabel": "اللغات",
+    "certificationsSection": "الشهادات",
+    "addCertification": "+ إضافة شهادة",
+    "removeCertification": "إزالة",
+    "saved": "تم تحديث الملف الشخصي.",
+    "error": "حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.",
+    "deleteAccount": "حذف الحساب",
+    "deleteAccountBody": "تواصل مع الدعم لحذف حسابك. لا يتوفر حذف ذاتي للحساب حاليًا — هذا يفتح رسالة فقط، ولا يحذف أي شيء.",
+    "deleteAccountContact": "تواصل مع الدعم",
+    "deleteAccountClose": "إغلاق"
   }
 }

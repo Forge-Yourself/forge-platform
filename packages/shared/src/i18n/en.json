@@ -16,7 +16,12 @@
   "common": {
     "retry": "Retry",
     "cancel": "Cancel",
-    "back": "Back"
+    "back": "Back",
+    "skip": "Skip",
+    "continue": "Continue",
+    "save": "Save",
+    "finish": "Finish",
+    "close": "Close"
   },
   "auth": {
     "signIn": {
@@ -100,5 +105,94 @@
       "network": "Couldn't reach the server. Check your connection and try again.",
       "generic": "Something went wrong. Please try again."
     }
+  },
+  "onboarding": {
+    "role": {
+      "step": "Step 1 of 3",
+      "title": "Who are you?",
+      "subtitle": "Choose how you'll use Forge.",
+      "ptTitle": "I'm a personal trainer",
+      "ptSubtitle": "Manage clients, programs, payments.",
+      "clientTitle": "I train with a coach",
+      "clientSubtitle": "Track my workouts and progress.",
+      "continue": "Continue",
+      "error": "Something went wrong. Please try again."
+    },
+    "ptProfile": {
+      "stepOf": "Step {{step}} of {{total}}",
+      "step1": {
+        "title": "Who you are",
+        "addPhoto": "Add a photo",
+        "addPhotoNote": "Photo uploads are coming in a future update.",
+        "displayNameLabel": "Display name",
+        "bioLabel": "Bio",
+        "bioPlaceholder": "Tell clients a bit about your coaching style."
+      },
+      "step2": {
+        "title": "Certifications",
+        "addCertification": "+ Add a certification",
+        "nameLabel": "Certification name",
+        "issuerLabel": "Issuing organization",
+        "expiresLabel": "Expiry date (YYYY-MM-DD)",
+        "saveCertification": "Add",
+        "empty": "No certifications added yet.",
+        "statusUnverified": "Unverified",
+        "nameRequired": "Certification name is required"
+      },
+      "step3": {
+        "title": "What you offer",
+        "specializationsLabel": "Specializations",
+        "pricingNote": "Forge never handles session pricing. You agree rates with your clients directly."
+      },
+      "step4": {
+        "title": "Where and how",
+        "languagesLabel": "Languages you coach in",
+        "summaryTitle": "You're all set",
+        "summaryBody": "Tap Finish to start using Forge. You can always fill in more from your profile later.",
+        "finish": "Finish"
+      },
+      "error": "Something went wrong saving that. Please try again."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "loadFailed": "Couldn't load your profile.",
+    "emailLabel": "Email",
+    "roleLabel": "Role",
+    "roles": {
+      "pt": "Personal trainer",
+      "client": "Client",
+      "gym_account": "Gym account",
+      "admin": "Platform admin"
+    },
+    "bioLabel": "Bio",
+    "bioEmpty": "No bio yet.",
+    "specializationsLabel": "Specializations",
+    "specializationsEmpty": "No specializations added yet.",
+    "languagesLabel": "Languages",
+    "languagesEmpty": "No languages added yet.",
+    "certificationsLabel": "Certifications",
+    "certificationsEmpty": "No certifications added yet.",
+    "editButton": "Edit profile"
+  },
+  "profileEdit": {
+    "title": "Edit profile",
+    "accountSection": "Account",
+    "displayNameLabel": "Display name",
+    "phoneLabel": "Phone",
+    "photoUrlLabel": "Photo URL",
+    "ptSection": "PT profile",
+    "bioLabel": "Bio",
+    "specializationsLabel": "Specializations",
+    "languagesLabel": "Languages",
+    "certificationsSection": "Certifications",
+    "addCertification": "+ Add a certification",
+    "removeCertification": "Remove",
+    "saved": "Profile updated.",
+    "error": "Something went wrong saving that. Please try again.",
+    "deleteAccount": "Delete account",
+    "deleteAccountBody": "Contact support to delete your account. We don't support self-service account deletion yet — this only opens a message, it doesn't delete anything.",
+    "deleteAccountContact": "Contact support",
+    "deleteAccountClose": "Close"
   }
 }

@@ -30,8 +30,15 @@ function LoadingScreen() {
  *      'signedOut' throughout signup until the email is confirmed).
  *   3. Signed in, AAL still aal1 with an aal2 step pending (an MFA factor is enrolled
  *      but this session hasn't cleared the challenge) -> (auth)/mfa-challenge.
- *   4. onboarding not completed -> (onboarding)/role.
- *   5. Role is pt with no pt_profiles row yet -> (onboarding)/pt-profile.
+ *   4. onboarding not completed -> (onboarding)/role, UNLESS the user has already
+ *      picked role='pt' (Task 10's (onboarding)/role screen, via set_initial_role()),
+ *      in which case they belong on (onboarding)/pt-profile instead — see the Task 10
+ *      note below on why this can't be a separate, later check the way it looks like
+ *      it should be.
+ *   5. Post-onboarding defensive check: role is pt with no pt_profiles row (should be
+ *      unreachable in normal operation — pt-profile's finish step always creates the
+ *      row before setting onboarding_completed=true — but cheap to keep as a fallback
+ *      for a manually-edited row) -> (onboarding)/pt-profile.
  *   6. Otherwise: render whatever route is currently matched (Slot) — this is
  *      deliberately passive, not a forced redirect into (app)/index, so that
  *      lib/deepLinks.ts's explicit router.replace('/(auth)/reset-password') during a
@@ -119,9 +126,32 @@ function Gate() {
     ) {
       return <Slot />;
     }
+
+    // (Task 10) A PT who has already selected 'pt' on (onboarding)/role belongs on
+    // (onboarding)/pt-profile next, not bounced back to role.tsx by the catch-all
+    // redirect below. This can't be expressed as a separate `!auth.ptProfile` check
+    // reached only once onboarding_completed flips true (the shape the original
+    // step-5 comment implied): `users.role` always has a value — it defaults to
+    // 'client' at signup (see (auth)/sign-up.tsx's SIGNUP_ROLE) before the role
+    // picker ever runs — so a user who genuinely hasn't chosen yet is
+    // indistinguishable from one who chose 'client', and pt_profiles not existing
+    // yet is the normal, expected state through all four pt-profile steps (the row
+    // is created/updated progressively as the user moves through them, not only at
+    // the end) — so routing here can't depend on whether that row exists yet, only
+    // on the role itself.
+    if (auth.user.role === 'pt') {
+      if (segments[0] === '(onboarding)' && (segments as readonly string[])[1] === 'pt-profile') {
+        return <Slot />;
+      }
+      return <Redirect href="/(onboarding)/pt-profile" />;
+    }
+
     return <Redirect href="/(onboarding)/role" />;
   }
 
+  // Defensive fallback only — see step 5 in the doc comment above. Normal operation
+  // never reaches this with a null ptProfile, since pt-profile.tsx's finish step
+  // always creates the row before setting onboarding_completed=true.
   if (auth.user?.role === 'pt' && !auth.ptProfile) {
     return <Redirect href="/(onboarding)/pt-profile" />;
   }
