@@ -411,5 +411,28 @@
       "viewDocument": "View document",
       "backToHome": "Back to home"
     }
+  },
+  "clientHome": {
+    "greeting": "Hi {{name}}",
+    "trainerLabel": "Your trainer",
+    "noTrainerTitle": "No trainer linked yet",
+    "noTrainerBody": "Ask your trainer to invite this address:",
+    "copyEmail": "Copy my email",
+    "emailCopied": "Copied",
+    "intake": {
+      "notStarted": "Start your intake",
+      "notStartedBody": "A few questions before your first session — about 10 minutes.",
+      "startButton": "Start",
+      "inProgress": "Continue your intake",
+      "resumeButton": "Resume",
+      "waitingReview": "Submitted — waiting on your trainer",
+      "signWaiver": "Sign your waiver",
+      "signWaiverButton": "Sign now",
+      "done": "Intake complete"
+    },
+    "waiver": {
+      "rowTitle": "Liability waiver",
+      "rowSubtitle": "Signed {{date}}"
+    }
   }
 }

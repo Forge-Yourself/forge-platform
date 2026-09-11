@@ -411,5 +411,28 @@
       "viewDocument": "عرض المستند",
       "backToHome": "العودة إلى الرئيسية"
     }
+  },
+  "clientHome": {
+    "greeting": "مرحبًا {{name}}",
+    "trainerLabel": "مدربك",
+    "noTrainerTitle": "لم يتم ربطك بمدرب بعد",
+    "noTrainerBody": "اطلب من مدربك دعوة هذا العنوان:",
+    "copyEmail": "نسخ بريدي الإلكتروني",
+    "emailCopied": "تم النسخ",
+    "intake": {
+      "notStarted": "ابدأ استمارتك التمهيدية",
+      "notStartedBody": "بضعة أسئلة قبل جلستك الأولى — حوالي 10 دقائق.",
+      "startButton": "ابدأ",
+      "inProgress": "تابع استمارتك التمهيدية",
+      "resumeButton": "متابعة",
+      "waitingReview": "تم الإرسال — في انتظار مدربك",
+      "signWaiver": "وقّع إخلاء المسؤولية",
+      "signWaiverButton": "وقّع الآن",
+      "done": "اكتملت الاستمارة التمهيدية"
+    },
+    "waiver": {
+      "rowTitle": "إخلاء المسؤولية",
+      "rowSubtitle": "تم التوقيع في {{date}}"
+    }
   }
 }
