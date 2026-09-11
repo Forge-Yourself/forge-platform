@@ -84,8 +84,8 @@
 
 <main>
   <h2 class="kicker">Documents</h2>
-  <h3>Six things to read.</h3>
-  <p class="lead">Start with <b>Architecture &amp; Flows</b> if you are an engineer joining the project. Start with <b>Brief</b> if you are a stakeholder. Start with <b>Brand</b> or <b>Design System</b> if you are a designer.</p>
+  <h3>Ten things to read.</h3>
+  <p class="lead">Start with <b>Architecture &amp; Flows</b> if you are an engineer joining the project, then <b>v1 Implementation Design</b> for the stack actually deployed. Start with <b>Brief</b> if you are a stakeholder. Start with <b>Brand</b> or <b>Design System</b> if you are a designer, and see the <b>Design Brief</b> and <b>Prototype</b> for the M1–M4 screens.</p>
 
   <div class="grid">
 
@@ -110,22 +110,50 @@
       <div class="meta"><span>Forge_DesignSystem.html</span><span class="arrow">Open →</span></div>
     </a>
 
+    <a class="doc" href="superpowers/specs/2026-09-09-forge-v1-implementation-design.md">
+      <div class="id">04 · Build plan</div>
+      <h4>v1 Implementation Design</h4>
+      <p>The authoritative current stack and build sequence: Supabase (Postgres, Auth, Storage, Realtime) + Next.js on Vercel + Expo, replacing the originally documented NestJS/Redis/S3/Whish+Areeba plan. Milestones M0 through M10, schema-change table, deviations from the architecture doc, and risk register updates.</p>
+      <div class="meta"><span>docs/superpowers/specs/2026-09-09-forge-v1-implementation-design.md</span><span class="arrow">Open →</span></div>
+    </a>
+
+    <a class="doc" href="Forge_DesignBrief_M1-M4.md">
+      <div class="id">05 · Design brief</div>
+      <h4>Design Brief — M1 to M4</h4>
+      <p>The design brief covering the first four build milestones: auth &amp; identity, client intake, programming, and logging. Companion to the clickable prototype below.</p>
+      <div class="meta"><span>Forge_DesignBrief_M1-M4.md</span><span class="arrow">Open →</span></div>
+    </a>
+
+    <a class="doc" href="Forge_Prototype.html">
+      <div class="id">06 · Clickable prototype</div>
+      <h4>Prototype (M1–M4)</h4>
+      <p>The Claude Design export — a working clickable prototype, not static artboards. Covers 11 M1 screens, 8 M2, 10 M3, 3 M4, each carrying the designer's own notes and, where a component does not exist yet, an explicit design-system gap flag. This is the specification screens are built against.</p>
+      <div class="meta"><span>Forge_Prototype.html</span><span class="arrow">Open →</span></div>
+    </a>
+
     <a class="doc" href="Forge_Specification_v1.6.docx">
-      <div class="id">04 · Canonical spec</div>
+      <div class="id">07 · Canonical spec</div>
       <h4>Product Specification v1.6</h4>
       <p>The source-of-truth product spec. Nineteen sections, twenty epics with user stories and acceptance criteria, eighty features inventoried, twenty-seven data-model entities, four-phase roadmap, pricing, NFR, compliance, KPIs, risks, open decisions. Word document, ready for engineering, design, and QA breakdown.</p>
       <div class="meta"><span>Forge_Specification_v1.6.docx</span><span class="arrow">Download →</span></div>
     </a>
 
     <a class="doc" href="Forge_Brief_v6.docx">
-      <div class="id">05 · Stakeholder overview</div>
+      <div class="id">08 · Stakeholder overview</div>
       <h4>Product Brief v6</h4>
       <p>Reader-friendly narrative of what Forge is, for trainers and for clients. Use this for non-technical reviewers, partner conversations, founding-member outreach, and waitlist signup messaging.</p>
       <div class="meta"><span>Forge_Brief_v6.docx</span><span class="arrow">Download →</span></div>
     </a>
 
+    <a class="doc" href="DESIGN_SYSTEM_GAPS.md">
+      <div class="id">09 · Tracking</div>
+      <h4>Design System Gaps</h4>
+      <p>Components the prototype calls for that are not yet in the design system — what got built in M1 (password-strength meter, numeric keypad) and what's still outstanding for M2/M3 (step-progress, yes/no card, signature pad, superset builder row).</p>
+      <div class="meta"><span>DESIGN_SYSTEM_GAPS.md</span><span class="arrow">Open →</span></div>
+    </a>
+
     <a class="doc" href="../README.md">
-      <div class="id">06 · Repo root</div>
+      <div class="id">10 · Repo root</div>
       <h4>README</h4>
       <p>One paragraph at the root of the project. Points back here. If you have just cloned the repository, that is the file you saw first.</p>
       <div class="meta"><span>../README.md</span><span class="arrow">Open →</span></div>

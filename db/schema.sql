@@ -1,4 +1,28 @@
 -- =============================================================================
+-- ⚠ NOT THE DEPLOYED SCHEMA — supabase/migrations/ is authoritative. ⚠
+-- =============================================================================
+-- This file is the original hand-written DDL and predates migration 0002
+-- (2026-09-10, "feat(db): key public.users to auth.users"). It still declares:
+--   - table public.user_sessions (dropped — Supabase Auth owns sessions)
+--   - six columns on public.users that no longer exist:
+--       password_hash, mfa_enabled, mfa_method, mfa_key_id,
+--       failed_login_count, locked_until
+--     (Supabase Auth owns credentials and MFA state now; public.users is a
+--     profile table keyed 1:1 to auth.users(id))
+-- It also predates migration 0003 (RLS enabled on all tables + policies) and
+-- migration 0004 (M1 identity: partition extensions, pt_certifications,
+-- set_initial_role, log_account_event, notification_preferences policy).
+--
+-- Running `psql -f db/schema.sql` against a real environment produces a
+-- pre-auth, pre-RLS database that does NOT match what is actually deployed.
+-- To stand up or update a real environment, use the ordered migrations in
+-- supabase/migrations/ instead: `supabase db push`.
+--
+-- This file is kept as a readable, consolidated reference for the original
+-- 54-table domain design. Treat it as historical background, not a source
+-- you can apply directly.
+-- =============================================================================
+--
 -- Forge Platform — PostgreSQL Database Schema
 -- 54 tables across 15 domains | ~600 columns
 -- Generated from Architecture Doc (D11-D15, D16-D32, D33-D39, EP-01–EP-21)

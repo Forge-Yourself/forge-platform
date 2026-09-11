@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Forge** is a PT-first (personal trainer) SaaS platform for trainers, studios, and the people they coach. Lebanon-first market, expanding to UAE.
 
-- **Phase:** Pre-development (documentation and database schema only)
-- **Repository:** Monorepo (planned)
-- **Status:** No application code yet — architecture docs and DB schema are the deliverables so far
+- **Phase:** In development. M0 (foundation) and M1 (auth & identity) are complete on `develop`. M2 (clients & intake) is next.
+- **Repository:** pnpm + Turborepo monorepo — `apps/mobile` (Expo), `apps/web` (Next.js admin + API), `packages/shared` (tokens, i18n, zod schemas, generated DB types), `supabase/migrations`, `db/` (schema source + RLS harness).
+- **Status:** Application code exists and is deployed. Expo app boots themed/RTL-capable with working Supabase Auth (email/password + Google), TOTP MFA, password reset, onboarding, profile, and settings. Next.js admin is live on Vercel with staff login and user search. Supabase Postgres project is live in Frankfurt with 4 migrations applied (baseline, Supabase Auth wiring, RLS, M1 identity) and RLS enabled on all tables. CI runs typecheck/lint/test on GitHub Actions.
 
 ## Documentation
 
@@ -21,20 +21,21 @@ All product documentation lives in `docs/`. Start at `docs/index.html` for the h
 | `docs/Forge_DesignSystem.html` | Component library, spacing, dark mode tokens |
 | `docs/superpowers/specs/*.md` | Design decision specs (gym tier, PT hierarchy) |
 
-## Tech Stack (Planned)
+## Tech Stack (Actual — see `docs/superpowers/specs/2026-09-09-forge-v1-implementation-design.md`)
+
+This supersedes the stack described in `docs/Forge_Architecture.html` Section 05, which predates the Supabase/RevenueCat decision.
 
 | Layer | Technology |
 |---|---|
-| Mobile | React Native (Expo) |
-| Web dashboard | Next.js 14+ (App Router) |
-| API | NestJS or Fastify (Node.js) |
-| Database | PostgreSQL 15+ with pgcrypto, citext, pg_trgm, postgis, btree_gist |
-| Cache / Queues | Redis |
-| Object Storage | S3 (progress photos, videos, voice notes) |
-| Payments (v1) | Whish + Areeba (Lebanon), Apple/Google IAP |
-| Payments (v2) | Stripe (UAE expansion) |
-| Real-time | WebSockets (set logging, notifications) |
-| AI | Claude API (program drafts, meal plans, monthly recaps) |
+| Mobile | React Native (Expo), all four personas, iOS/Android/iPad |
+| Web dashboard | Next.js 14+ (App Router) on Vercel — internal admin UI plus `/api/*` routes |
+| Backend | Supabase (hybrid: Supabase owns auth/storage/realtime/RLS; Next.js API routes own logic needing secrets or rules too complex for SQL) |
+| Database | Supabase Postgres 15+ (project `qkmgmzhrwduvigccwgcz`, Frankfurt) with pgcrypto, citext, pg_trgm, postgis, btree_gist. Managed via `supabase/migrations/`, not raw `psql -f db/schema.sql` |
+| Auth | Supabase Auth — email/password + Google (Apple written provider-agnostic, pending a developer account), TOTP MFA, custom SMTP via Resend |
+| Storage | Supabase Storage (progress photos, videos, PDFs) — not yet used before M4 |
+| Real-time | Supabase Realtime (live mirror, from M5) |
+| Payments | RevenueCat over Apple IAP + Google Play Billing, planned for M6. Replaces the originally documented Whish + Areeba plan — removes PCI scope and KYC delay for a solo developer |
+| AI | Claude API (program drafts, meal plans, monthly recaps) — from M3 |
 
 ## Four Personas
 
@@ -76,12 +77,20 @@ Located in `db/`:
 - **Application-enforced FKs** from partitioned tables (PostgreSQL limitation)
 - **No inter-party payments** — Forge is always merchant of record (PT/Client pay Forge only)
 
-### Running the Schema Locally
+### Running the Schema
+
+There is no local Postgres (no Docker) — migrations apply directly to the live Frankfurt Supabase project. **`db/schema.sql` predates migration `0002` and is out of date** (see the header warning in that file); `supabase/migrations/` is authoritative. Do not run `psql -f db/schema.sql` against a real environment.
 
 ```bash
-psql -U postgres -c "CREATE DATABASE forge;"
-psql -U postgres -d forge -f db/schema.sql
-psql -U postgres -d forge -f db/seed.sql
+supabase db push          # apply pending migrations to the linked remote project
+supabase migration list   # confirm local and remote agree
+pnpm types:gen             # regenerate packages/shared/src/database.types.ts after any schema change
+```
+
+After any migration touching RLS policies, run the security harness and expect every assertion to pass:
+
+```bash
+"/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -v ON_ERROR_STOP=1 -f db/rls_assertions.sql
 ```
 
 ## Phase Roadmap
