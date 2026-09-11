@@ -1361,6 +1361,7 @@ export type Database = {
           id: string
           invite_email: string | null
           invite_expires_at: string | null
+          invite_name: string | null
           is_premium_self_serve: boolean
           notes: string | null
           pt_mode_id: string | null
@@ -1376,6 +1377,7 @@ export type Database = {
           id?: string
           invite_email?: string | null
           invite_expires_at?: string | null
+          invite_name?: string | null
           is_premium_self_serve?: boolean
           notes?: string | null
           pt_mode_id?: string | null
@@ -1391,6 +1393,7 @@ export type Database = {
           id?: string
           invite_email?: string | null
           invite_expires_at?: string | null
+          invite_name?: string | null
           is_premium_self_serve?: boolean
           notes?: string | null
           pt_mode_id?: string | null
@@ -6387,6 +6390,7 @@ export type Database = {
             }
             Returns: string
           }
+      claim_client_invites: { Args: never; Returns: number }
       current_user_role: { Args: never; Returns: string }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
@@ -6520,6 +6524,19 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       gettransactionid: { Args: never; Returns: unknown }
+      intake_progress: {
+        Args: { p_client_id: string }
+        Returns: {
+          answered_sections: number
+          state: string
+          total_sections: number
+          updated_at: string
+        }[]
+      }
+      invite_client: {
+        Args: { p_email: string; p_name?: string; p_tags?: string[] }
+        Returns: string
+      }
       is_admin: { Args: never; Returns: boolean }
       is_client_record_owner: {
         Args: { p_client_id: string }
@@ -6573,6 +6590,15 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      resend_invite: {
+        Args: { p_client_id: string; p_email?: string }
+        Returns: undefined
+      }
+      revoke_invite: { Args: { p_client_id: string }; Returns: undefined }
+      set_client_state: {
+        Args: { p_client_id: string; p_state: string }
+        Returns: undefined
+      }
       set_initial_role: { Args: { p_role: string }; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
@@ -7156,6 +7182,10 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      submit_intake: {
+        Args: { p_intake_id: string; p_responses: Json }
+        Returns: undefined
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
