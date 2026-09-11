@@ -93,11 +93,38 @@ After any migration touching RLS policies, run the security harness and expect e
 "/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -v ON_ERROR_STOP=1 -f db/rls_assertions.sql
 ```
 
-## Phase Roadmap
+## Build Order (M0–M10)
+
+v1 (below) is reached through ordered milestones, each independently usable —
+not one big-bang launch. See
+`docs/superpowers/specs/2026-09-09-forge-v1-implementation-design.md` §5 for
+the full definition of each; plans for completed/in-flight milestones live in
+`docs/superpowers/plans/`.
+
+| Milestone | Scope | Status |
+|---|---|---|
+| M0 | Foundation — monorepo, auth/RLS migrations, themed RTL app boot | ✅ done |
+| M1 | Auth & identity — EP-01, EP-02 Solo profile | ✅ done |
+| M2 | Clients & intake — EP-03 | next |
+| M3 | Programming — EP-04, EP-15 (AI draft) | |
+| M4 | Logging — EP-05, EP-06 (offline sync, Storage) | |
+| M5 | Scheduling — EP-09, EP-10 (Realtime) | |
+| M6 | Money — EP-11 (RevenueCat) | |
+| M7 | Hierarchy & gyms — EP-02 remainder | |
+| M8 | Nutrition — EP-08 | |
+| M9 | Comms & insights — EP-12, EP-14, EP-18, EP-19 | |
+| M10 | Launch gate — EP-20 remainder, EP-13 | |
+
+## Phase Roadmap (product scope, by version)
+
+The table below is the original architecture doc's version-scope split — what
+ships in v1 vs. later versions, by table count. It's a different axis from
+the M0–M10 build order above: v1 is the *destination* the M0–M10 milestones
+build toward, not a milestone itself. v1.5/v2/v3 are all post-M10.
 
 | Phase | Scope |
 |---|---|
-| v1 | Core: auth, client management, program builder, set logging, scheduling, billing, notifications (40 tables) |
+| v1 | Core: auth, client management, program builder, set logging, scheduling, billing, notifications (40 tables) — this is what M0–M10 build |
 | v1.5 | Challenges, gamification enhancements (2 tables) |
 | v2 | Group classes, video sessions, marketplace listings (3 tables) |
 | v3 | Events, tickets, Forge Shop (4 tables) |

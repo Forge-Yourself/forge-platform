@@ -12,10 +12,9 @@
 
 ## Close-out addendum (2026-09-11, Task 13)
 
-All 13 tasks and their sub-steps are ticked `[x]` **except** the steps and
-verification-table rows that require a human on a real device — those stay
-`[ ]` because they have not happened yet, not because the surrounding work is
-incomplete:
+All 13 tasks and their sub-steps are ticked `[x]` **except** the items below,
+which stay `[ ]` because they have not happened yet — not because the
+surrounding work is incomplete:
 
 - Task 7, Step 8 — sign up with a real address, tap the Resend email link on
   device, land verified and signed in; reset password end to end.
@@ -25,14 +24,24 @@ incomplete:
   in, get challenged, get in; unenroll and confirm the challenge stops.
 - Task 10, Step 7 — complete a PT profile from a cold signup and time it
   (target: ≤5 minutes).
+- **Task 12, Step 8 — the code/build half is done** (`pnpm --filter web
+  build` passes, re-verified repeatedly), **but the Vercel-preview admin
+  sign-in has not run**: no admin account has ever been promoted (the
+  README's admin-promotion SQL exists but was never executed against a real
+  account), so "sign in as admin, confirm a PT is rejected" is genuinely
+  unverified, not just device-pending like the four items above.
+- Task 13, Step 8 — "open the PR." No feature branch exists to open one
+  from: every M1 commit landed directly on `develop` (see the git-state note
+  below), and `origin/develop` is currently unpushed relative to local. This
+  is a process/repo-state gap, not a testing one.
 - Verification table rows 13–17 (sign-up→home loop, Google sign-in, TOTP
   round-trip, password reset by email, Arabic/dark-mode screen parity) — all
   four "You" rows above plus the RTL/dark-mode visual check.
 
-Everything machine-checkable (migrations, RLS assertions, types, contrast
-tests, zod tests, typecheck/lint/build) was re-run for real during Task 13
-and passed — see the Verification section at the end of this file for actual
-output, and the Task 13 close-out report for the full transcript.
+Everything else machine-checkable (migrations, RLS assertions, types,
+contrast tests, zod tests, typecheck/lint/build) was re-run for real during
+Task 13 and passed — see the Verification section at the end of this file
+for actual output, and the Task 13 close-out report for the full transcript.
 
 Also: **no PR was opened.** Every M1 task through Task 12 was committed
 directly onto `develop` — there is no feature branch this milestone's work
@@ -343,7 +352,7 @@ Three `SectionCard`s — Preferences, Quiet hours, Account — exactly as drawn.
 - [x] **Step 5 — `/admin`** — user search by email or display name over the anon key under the admin's own session. `users_select` already grants admins full read via `is_admin()` ([`0003_rls.sql:128-130`](supabase/migrations/0003_rls.sql#L128-L130)), so **no service-role key is needed and none should be used.** `ilike` rides the existing `idx_users_email_trgm`. Paginate; PostgREST's `max_rows = 1000` applies.
 - [x] **Step 6 — `/admin/users/[id]`** — read-only detail: role, provider, locale, consents, quarantine flags, created date, PT profile and certifications if present. No mutations in M1; quarantine tooling is M10.
 - [x] **Step 7 — Replace the placeholder** on `app/page.tsx` — the line promising M1 is the thing being delivered. Reuse the generated CSS vars; never hand-edit `globals.css`.
-- [x] **Step 8 — Verify:** `pnpm --filter web build`, then the Vercel preview on `develop`, then sign in as admin and find a real user. Confirm a PT account is rejected at `/login`.
+- [ ] **Step 8 — Verify:** `pnpm --filter web build`, then the Vercel preview on `develop`, then sign in as admin and find a real user. Confirm a PT account is rejected at `/login`. **Partially done:** `pnpm --filter web build` passes locally and has been re-verified repeatedly through Task 13. The Vercel preview / real admin sign-in has NOT happened — no admin account has ever been created or promoted (see the README's admin-promotion SQL, never run). Pending the same device/deploy testing as the mobile "Verify (yours)" steps below.
 - [x] **Step 9 — Commit:** `feat(web): staff login and user search`
 
 ## Task 13 · Close-out
