@@ -8,7 +8,18 @@ import {
   INTAKE_TEMPLATE_V1,
   PARQ_QUESTIONS,
   parqResponsesSchema,
+  type ParqQuestionId,
 } from './intake';
+
+/**
+ * `Object.fromEntries` on its own infers a plain `{ [k: string]: boolean }`,
+ * which doesn't structurally satisfy the exact 7-required-key `ParqResponses`
+ * type zod infers — this cast is the same one `intake.ts` itself uses to
+ * build the schema's field map.
+ */
+function allParq(value: boolean): Record<ParqQuestionId, boolean> {
+  return Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, value])) as Record<ParqQuestionId, boolean>;
+}
 
 describe('PARQ_QUESTIONS', () => {
   it('has exactly the seven fixed PAR-Q ids the submit_intake RPC also checks', () => {
@@ -38,7 +49,7 @@ describe('INTAKE_TEMPLATE_V1', () => {
 
 describe('evaluateParq', () => {
   it('flags nothing when every answer is false', () => {
-    const allFalse = Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, false]));
+    const allFalse = allParq(false);
     expect(evaluateParq(allFalse)).toEqual([]);
   });
 
@@ -50,7 +61,7 @@ describe('evaluateParq', () => {
   });
 
   it('flags all seven when every answer is true', () => {
-    const allTrue = Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, true]));
+    const allTrue = allParq(true);
     expect(evaluateParq(allTrue)).toEqual([...PARQ_QUESTIONS]);
   });
 
@@ -61,18 +72,18 @@ describe('evaluateParq', () => {
 
 describe('parqResponsesSchema', () => {
   it('requires all seven questions to be booleans', () => {
-    const allFalse = Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, false]));
+    const allFalse = allParq(false);
     expect(parqResponsesSchema.safeParse(allFalse).success).toBe(true);
   });
 
   it('rejects a missing question', () => {
-    const { parq_heart: _drop, ...rest } = Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, false]));
+    const { parq_heart: _drop, ...rest } = allParq(false);
     expect(parqResponsesSchema.safeParse(rest).success).toBe(false);
   });
 });
 
 describe('intakeResponsesSchema', () => {
-  const allFalse = Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, false]));
+  const allFalse = allParq(false);
 
   it('accepts PAR-Q alone — nothing else is required', () => {
     const result = intakeResponsesSchema.safeParse({ parq: allFalse });
@@ -103,7 +114,7 @@ describe('goalsResponsesSchema', () => {
 
 describe('intakeCompletion', () => {
   it('reports 0 of 5 sections on an empty parq-only response with nothing else', () => {
-    const allFalse = Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, false]));
+    const allFalse = allParq(false);
     const result = intakeCompletion({ parq: allFalse });
     expect(result.answered).toBe(1);
     expect(result.total).toBe(5);
@@ -117,7 +128,7 @@ describe('intakeCompletion', () => {
   });
 
   it('reports 5 of 5 once every top-level key is present, regardless of how thorough each section is', () => {
-    const allFalse = Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, false]));
+    const allFalse = allParq(false);
     const result = intakeCompletion({
       parq: allFalse,
       goals: {},
@@ -131,7 +142,7 @@ describe('intakeCompletion', () => {
 });
 
 describe('intakeSummary', () => {
-  const allFalse = Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, false]));
+  const allFalse = allParq(false);
 
   it('passes metric values through unchanged', () => {
     const summary = intakeSummary(
