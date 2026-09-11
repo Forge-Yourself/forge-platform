@@ -204,8 +204,8 @@ The harness already has `clients`/`intake_forms` fixtures and isolation cases at
 
 Written test-first, same rationale as M1 Task 4: this is the one genuinely unit-testable piece of the milestone (D8: no integration harness), and PAR-Q flag derivation is a patient-safety calculation that must not silently drift.
 
-- [ ] **Step 1 — Failing tests first**, covering: `PARQ_QUESTIONS` has exactly 7 entries; `evaluateParq` flags every question independently when answered `true` and flags nothing when all are `false`; `intakeCompletion` reports 0/5 sections on an empty response object and 5/5 once all five top-level keys are present, regardless of how thoroughly each section was filled; `intakeSummary` converts `weight_kg`/`height_cm` to `lb`/`in` when `unitSystem = 'imperial'` and passes them through unchanged for `'metric'`; `inviteClientSchema` rejects an invalid email and accepts a valid one with `name` omitted.
-- [ ] **Step 2 — `PARQ_QUESTIONS`** — the seven stable ids used by both the SQL in Task 1 Step 12 and this file, so they can never drift independently:
+- [x] **Step 1 — Failing tests first**, covering: `PARQ_QUESTIONS` has exactly 7 entries; `evaluateParq` flags every question independently when answered `true` and flags nothing when all are `false`; `intakeCompletion` reports 0/5 sections on an empty response object and 5/5 once all five top-level keys are present, regardless of how thoroughly each section was filled; `intakeSummary` converts `weight_kg`/`height_cm` to `lb`/`in` when `unitSystem = 'imperial'` and passes them through unchanged for `'metric'`; `inviteClientSchema` rejects an invalid email and accepts a valid one with `name` omitted.
+- [x] **Step 2 — `PARQ_QUESTIONS`** — the seven stable ids used by both the SQL in Task 1 Step 12 and this file, so they can never drift independently:
   ```ts
   export const PARQ_QUESTIONS = [
     'parq_heart',
@@ -218,7 +218,7 @@ Written test-first, same rationale as M1 Task 4: this is the one genuinely unit-
   ] as const;
   export type ParqQuestionId = (typeof PARQ_QUESTIONS)[number];
   ```
-- [ ] **Step 3 — `INTAKE_TEMPLATE_V1`** — the literal five-section array, byte-identical in shape to the JSONB in Task 1 Step 7:
+- [x] **Step 3 — `INTAKE_TEMPLATE_V1`** — the literal five-section array, byte-identical in shape to the JSONB in Task 1 Step 7:
   ```ts
   export const INTAKE_TEMPLATE_V1 = [
     { id: 'parq', title: 'PAR-Q' },
@@ -229,7 +229,7 @@ Written test-first, same rationale as M1 Task 4: this is the one genuinely unit-
   ] as const;
   ```
   Comment noting this and the SQL literal are pinned together by `template_version = '1.0'` — a future template change is a new version, never an edit in place to this array.
-- [ ] **Step 4 — Per-section zod schemas.** Only `parq` is required, per the prototype annotation ("nothing is required except PAR-Q"):
+- [x] **Step 4 — Per-section zod schemas.** Only `parq` is required, per the prototype annotation ("nothing is required except PAR-Q"):
   ```ts
   export const parqResponsesSchema = z.object(
     Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, z.boolean()])) as Record<ParqQuestionId, z.ZodBoolean>,
@@ -265,11 +265,11 @@ Written test-first, same rationale as M1 Task 4: this is the one genuinely unit-
   export type IntakeResponses = z.infer<typeof intakeResponsesSchema>;
   ```
   The `dietary.restrictions` enum matches EP-08's dietary tags list from `Forge_Architecture.html` (veg, vegan, halal, kosher, GF, DF, nut-allergy) so M8's nutrition work reads the same values without a migration.
-- [ ] **Step 5 — `evaluateParq(parq: Partial<Record<ParqQuestionId, boolean>>): ParqQuestionId[]`** — pure function, the client-side twin of Task 1 Step 12's SQL loop, used for the inline flag treatment as the client taps Yes (must never be the source of truth for what the PT sees — that's always server-derived by `submit_intake`).
-- [ ] **Step 6 — `intakeSummary(responses: IntakeResponses, unitSystem: 'metric' | 'imperial')`** — returns `{ ageYears, sex, height, weight, primaryGoal, flagCount }` for the client-detail essentials card, converting `height_cm`/`weight_kg` to `in`/`lb` when `unitSystem === 'imperial'` (`cm / 2.54`, `kg * 2.20462`, both rounded to one decimal). `ageYears` derived from `date_of_birth` against the current date; all fields nullable when their source is missing.
-- [ ] **Step 7 — `intakeCompletion(responses: IntakeResponses)`** — returns `{ answered: number, total: number, stepStatus: Record<string, boolean> }` where `stepStatus` marks each of the five `INTAKE_TEMPLATE_V1` ids `true` once its top-level key exists in `responses` (regardless of how complete that section's own fields are) — the honest "step count is the signal" behavior the annotation calls for, same shape `intake_progress()`'s SQL returns.
-- [ ] **Step 8 — Verify:** `pnpm --filter @forge/shared test` green, all new cases included.
-- [ ] **Step 9 — Commit:** `feat(shared): intake schemas, PAR-Q derivation, and completion math`
+- [x] **Step 5 — `evaluateParq(parq: Partial<Record<ParqQuestionId, boolean>>): ParqQuestionId[]`** — pure function, the client-side twin of Task 1 Step 12's SQL loop, used for the inline flag treatment as the client taps Yes (must never be the source of truth for what the PT sees — that's always server-derived by `submit_intake`).
+- [x] **Step 6 — `intakeSummary(responses: IntakeResponses, unitSystem: 'metric' | 'imperial')`** — returns `{ ageYears, sex, height, weight, primaryGoal, flagCount }` for the client-detail essentials card, converting `height_cm`/`weight_kg` to `in`/`lb` when `unitSystem === 'imperial'` (`cm / 2.54`, `kg * 2.20462`, both rounded to one decimal). `ageYears` derived from `date_of_birth` against the current date; all fields nullable when their source is missing.
+- [x] **Step 7 — `intakeCompletion(responses: IntakeResponses)`** — returns `{ answered: number, total: number, stepStatus: Record<string, boolean> }` where `stepStatus` marks each of the five `INTAKE_TEMPLATE_V1` ids `true` once its top-level key exists in `responses` (regardless of how complete that section's own fields are) — the honest "step count is the signal" behavior the annotation calls for, same shape `intake_progress()`'s SQL returns.
+- [x] **Step 8 — Verify:** `pnpm --filter @forge/shared test` green, all new cases included.
+- [x] **Step 9 — Commit:** `feat(shared): intake schemas, PAR-Q derivation, and completion math`
 
 ## Task 4 · `packages/shared` — clients domain
 
