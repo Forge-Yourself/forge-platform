@@ -42,6 +42,48 @@ BEGIN
 END;
 $$;
 
+-- Runs `sql` and expects an RLS policy violation (a WITH CHECK failure on a
+-- row that WAS visible via USING, not just a USING-filtered no-op update).
+-- Built as a function taking `sql` as a real parameter — rather than a DO
+-- block with a psql variable inlined in its body — because psql does NOT
+-- interpolate `:'var'` inside dollar-quoted ($$...$$) text, only in plain
+-- top-level statements; building `sql` via format() at the call site (where
+-- substitution does apply) and passing it in here sidesteps that entirely.
+CREATE FUNCTION pg_temp.expect_rls_block(label TEXT, sql TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  BEGIN
+    EXECUTE sql;
+    RAISE EXCEPTION 'FAIL % — statement was not blocked', label;
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'pass  %', label;
+  END;
+END;
+$$;
+
+-- Runs `sql` (typically a SELECT of a SECURITY DEFINER RPC) and expects it to
+-- raise ANY exception — for this milestone's own RAISE EXCEPTION guards
+-- (e.g. "not authorized"), which aren't RLS violations, so `insufficient_privilege`
+-- doesn't apply. Same psql-substitution reasoning as expect_rls_block above.
+CREATE FUNCTION pg_temp.expect_raises(label TEXT, sql TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  BEGIN
+    EXECUTE sql;
+    RAISE EXCEPTION 'FAIL % — statement was not blocked', label;
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'FAIL %' THEN
+      RAISE;
+    END IF;
+    RAISE NOTICE 'pass  %', label;
+  END;
+END;
+$$;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Fixtures. Inserting into auth.users fires the signup trigger, so the profile
 -- rows below are created the same way a real signup creates them.
@@ -53,22 +95,62 @@ $$;
 \set client_row '55555555-5555-4555-8555-555555555555'
 \set intake_row '66666666-6666-4666-8666-666666666666'
 
-INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data)
+-- email_confirmed_at is set for all four (NOW()) — M2's claim_client_invites()
+-- only links a VERIFIED email, so the fixtures need to represent real
+-- confirmed accounts for that block below to mean anything.
+INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at)
 VALUES
   (:'pt_a',     '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'rls-pt-a@forge-test.local',     '{"role":"pt","display_name":"PT A"}'),
+   'rls-pt-a@forge-test.local',     '{"role":"pt","display_name":"PT A"}', NOW()),
   (:'pt_b',     '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'rls-pt-b@forge-test.local',     '{"role":"pt","display_name":"PT B"}'),
+   'rls-pt-b@forge-test.local',     '{"role":"pt","display_name":"PT B"}', NOW()),
   (:'client_a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'rls-client-a@forge-test.local', '{"role":"client","display_name":"Client A"}'),
+   'rls-client-a@forge-test.local', '{"role":"client","display_name":"Client A"}', NOW()),
   (:'client_b', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'rls-client-b@forge-test.local', '{"role":"client","display_name":"Client B"}');
+   'rls-client-b@forge-test.local', '{"role":"client","display_name":"Client B"}', NOW());
 
 INSERT INTO public.clients (id, pt_user_id, client_user_id, state)
 VALUES (:'client_row', :'pt_a', :'client_a', 'active');
 
 INSERT INTO public.intake_forms (id, client_id, state)
 VALUES (:'intake_row', :'client_row', 'in_progress');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- M2 — the client's promise: a PT cannot read intake answers before submit,
+-- and a client cannot forge that submission by writing the row directly.
+-- Run BEFORE intake_row is flipped to 'completed' below, so every downstream
+-- M0/M1 positive control still finds a submitted-looking form.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A cannot read an in-progress intake', 0,
+  'SELECT count(*) FROM public.intake_forms');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect_rls_block('client cannot advance intake state past in_progress directly',
+  format('UPDATE public.intake_forms SET state = ''completed'' WHERE id = %L', :'intake_row'));
+SELECT pg_temp.expect_rls_block('client cannot set red_flags directly',
+  format('UPDATE public.intake_forms SET red_flags = ''["x"]''::jsonb WHERE id = %L', :'intake_row'));
+SELECT pg_temp.expect('Client A can still save legitimate progress', 1,
+  format('WITH u AS (
+            UPDATE public.intake_forms SET responses = ''{"parq":{}}''::jsonb WHERE id = %L
+            RETURNING 1
+          ) SELECT count(*) FROM u', :'intake_row'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('Client A cannot update their own clients row directly', 0,
+  format('WITH u AS (
+            UPDATE public.clients SET state = ''deactivated'' WHERE id = %L
+            RETURNING 1
+          ) SELECT count(*) FROM u', :'client_row'));
+RESET ROLE;
+
+-- Restore the baseline every M0/M1 assertion below expects: a submitted form.
+UPDATE public.intake_forms SET state = 'completed' WHERE id = :'intake_row';
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- anon — the unauthenticated key. Should see nothing at all.
@@ -150,6 +232,102 @@ BEGIN
   END;
 END;
 $$;
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- M2 — invite_client / claim_client_invites / set_client_state / submit_intake,
+-- exercised end to end through the real RPCs on a fresh client so client_row /
+-- intake_row (still needed by M0/M1 assertions below) are never touched.
+-- ─────────────────────────────────────────────────────────────────────────────
+\set client_c '99999999-9999-4999-8999-999999999999'
+INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at)
+VALUES (:'client_c', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+        'rls-client-c@forge-test.local', '{"role":"client","display_name":"Client C"}', NOW());
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.invite_client('rls-client-c@forge-test.local', 'Client C', '{}') AS new_client_id \gset
+RESET ROLE;
+
+SELECT id AS new_intake_id FROM public.intake_forms WHERE client_id = :'new_client_id' \gset
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('intake_progress reports state without exposing content, pre-accept', 1,
+  format('SELECT count(*) FROM public.intake_progress(%L) WHERE state = ''pending''', :'new_client_id'));
+RESET ROLE;
+
+-- claim_client_invites — verified-email match, then idempotent on a repeat call.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_c');
+SELECT public.claim_client_invites();
+RESET ROLE;
+SELECT pg_temp.expect('claim_client_invites links Client C to the new invite', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id = %L AND state = ''accepted''',
+         :'new_client_id', :'client_c'));
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_c');
+SELECT public.claim_client_invites();
+RESET ROLE;
+SELECT pg_temp.expect('claim_client_invites is idempotent on a second call', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id = %L AND state = ''accepted''',
+         :'new_client_id', :'client_c'));
+
+-- claim_client_invites — a non-matching or expired invite links nothing.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.invite_client('rls-client-b@forge-test.local', 'Client B Late', '{}') AS expired_client_id \gset
+RESET ROLE;
+UPDATE public.clients SET invite_expires_at = NOW() - INTERVAL '1 day' WHERE id = :'expired_client_id';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT public.claim_client_invites();
+RESET ROLE;
+SELECT pg_temp.expect('claim_client_invites ignores an expired invite', 0,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id IS NOT NULL', :'expired_client_id'));
+
+-- set_client_state — authorization.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect_raises('PT B cannot change PT A''s client state',
+  format('SELECT public.set_client_state(%L::uuid, ''paused'')', :'new_client_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.set_client_state(:'new_client_id'::uuid, 'paused');
+RESET ROLE;
+SELECT pg_temp.expect('PT A can pause their own client', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND state = ''paused''', :'new_client_id'));
+
+-- submit_intake — authorization, PAR-Q flag derivation, and one-shot.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('Client B cannot submit Client C''s intake',
+  format('SELECT public.submit_intake(%L::uuid, ''{"parq":{}}''::jsonb)', :'new_intake_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_c');
+SELECT public.submit_intake(:'new_intake_id'::uuid,
+  '{"parq":{"parq_heart":true,"parq_chest_pain":false,"parq_dizziness":false,"parq_chronic_condition":false,"parq_medication":false,"parq_musculoskeletal":false,"parq_supervised":false}}'::jsonb);
+RESET ROLE;
+SELECT pg_temp.expect('submit_intake flags the row for review on a PAR-Q yes', 1,
+  format('SELECT count(*) FROM public.intake_forms
+           WHERE id = %L AND state = ''red_flag_review'' AND red_flags @> ''["parq_heart"]''::jsonb',
+         :'new_intake_id'));
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_c');
+SELECT pg_temp.expect_raises('submit_intake refuses a second submission',
+  format('SELECT public.submit_intake(%L::uuid, ''{"parq":{}}''::jsonb)', :'new_intake_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A can now read Client C''s submitted intake', 1,
+  format('SELECT count(*) FROM public.intake_forms WHERE id = %L', :'new_intake_id'));
 RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
