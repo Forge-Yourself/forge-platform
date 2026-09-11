@@ -386,9 +386,9 @@ Do **not** touch the gate in `apps/mobile/src/app/_layout.tsx` — it carries a 
 
 **Files:** modify `apps/mobile/src/lib/deepLinks.ts`, `apps/mobile/src/app/(auth)/sign-up.tsx`.
 
-- [ ] **Step 1 — `deepLinks.ts`**: add a branch for `queryParams.email` present with no `type` (or `type === 'join'` if the web page sends it explicitly — decide to match whatever Task 15's redirect actually emits, and keep both sides consistent) → `router.push({ pathname: '/(auth)/sign-up', params: { email } })`.
-- [ ] **Step 2 — `sign-up.tsx`**: read `useLocalSearchParams<{ email?: string }>()` and seed the `email` state from it when present, still fully editable — this is a convenience prefill, not a lock, since the client might reasonably need to correct it.
-- [ ] **Step 3 — Commit:** `feat(mobile): prefill sign-up from a /join deep link`
+- [x] **Step 1 — `deepLinks.ts`**: add a branch for `queryParams.email` present with no `type` (or `type === 'join'` if the web page sends it explicitly — decide to match whatever Task 15's redirect actually emits, and keep both sides consistent) → `router.push({ pathname: '/(auth)/sign-up', params: { email } })`.
+- [x] **Step 2 — `sign-up.tsx`**: read `useLocalSearchParams<{ email?: string }>()` and seed the `email` state from it when present, still fully editable — this is a convenience prefill, not a lock, since the client might reasonably need to correct it.
+- [x] **Step 3 — Commit:** `feat(mobile): prefill sign-up from a /join deep link`
 
 ## Task 15 · `apps/web` — waiver rendering and Storage
 

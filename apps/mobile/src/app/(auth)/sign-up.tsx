@@ -1,5 +1,5 @@
 import { passwordStrength, signUpSchema } from '@forge/shared';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -35,9 +35,13 @@ const SIGNUP_ROLE = 'client' as const;
 export default function SignUp() {
   const { t } = useTranslation();
   const theme = useTheme();
+  // Prefilled from a /join deep link (M2, lib/deepLinks.ts) — a convenience,
+  // not a lock; the client can still edit it. Linking itself happens by
+  // verified-email match (claim_client_invites()), not by this param.
+  const params = useLocalSearchParams<{ email?: string }>();
 
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(params.email ?? '');
   const [password, setPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [touched, setTouched] = useState<Touched>({});
