@@ -61,6 +61,15 @@ export default async function AdminUserDetailPage({
     slug: string | null;
   } | null = null;
 
+  type PtCertification = {
+    id: string;
+    name: string;
+    issuer: string | null;
+    expires_on: string | null;
+    status: string;
+  };
+  let ptCertifications: PtCertification[] = [];
+
   if (target.role === 'pt') {
     const { data } = await supabase
       .from('pt_profiles')
@@ -68,6 +77,17 @@ export default async function AdminUserDetailPage({
       .eq('user_id', id)
       .maybeSingle();
     ptProfile = data ?? null;
+
+    // pt_profiles.certifications (TEXT[], above) is the older column — the app's
+    // only certification-editing UI (apps/mobile CertificationsEditor, Task 10)
+    // writes exclusively to this newer pt_certifications table instead, so THIS
+    // is what actually reflects what a PT has on file, status included.
+    const { data: certs } = await supabase
+      .from('pt_certifications')
+      .select('id, name, issuer, expires_on, status')
+      .eq('pt_user_id', id)
+      .order('created_at', { ascending: true });
+    ptCertifications = certs ?? [];
   }
 
   return (
@@ -123,10 +143,6 @@ export default async function AdminUserDetailPage({
             <>
               <Field label="Bio" value={ptProfile.bio ?? '—'} />
               <Field
-                label="Certifications"
-                value={ptProfile.certifications.length > 0 ? ptProfile.certifications.join(', ') : '—'}
-              />
-              <Field
                 label="Specializations"
                 value={ptProfile.specializations.length > 0 ? ptProfile.specializations.join(', ') : '—'}
               />
@@ -137,6 +153,26 @@ export default async function AdminUserDetailPage({
             </>
           ) : (
             <p style={ui.muted}>No PT profile row yet.</p>
+          )}
+        </section>
+      ) : null}
+
+      {target.role === 'pt' ? (
+        <section style={ui.card}>
+          <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Certifications</h2>
+          {ptCertifications.length === 0 ? (
+            <p style={ui.muted}>No certifications added yet.</p>
+          ) : (
+            ptCertifications.map((cert) => (
+              <div key={cert.id} style={ui.fieldRow}>
+                <span>
+                  {cert.name}
+                  {cert.issuer ? ` · ${cert.issuer}` : ''}
+                  {cert.expires_on ? ` · expires ${cert.expires_on}` : ''}
+                </span>
+                <span style={ui.muted}>{cert.status}</span>
+              </div>
+            ))
           )}
         </section>
       ) : null}
