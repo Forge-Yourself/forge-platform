@@ -106,7 +106,7 @@ iOS build profiles are deliberately absent until the Apple Developer account exi
 | `SUPABASE_DB_PASSWORD` | root `.env` | migrations only |
 | `EXPO_PUBLIC_SUPABASE_*` | `apps/mobile/.env` | public by design, RLS is the boundary |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `NEXT_PUBLIC_SUPABASE_*` | `apps/web/.env.local`, Vercel project env | admin web reads under the signed-in admin's own session, anon key only |
-| `SUPABASE_SERVICE_ROLE_KEY` | Vercel project env | bypasses RLS, server only — not used anywhere in `apps/web` today |
+| `SUPABASE_SERVICE_ROLE_KEY` | Vercel project env | bypasses RLS, server only — read by `apps/web/lib/supabase/service.ts` (M2's waiver API routes: Storage upload/signed-URL, and the two `intake_forms` columns a client's own session is deliberately forbidden from writing) |
 | `RESEND_API_KEY` | root `.env` | Supabase Auth's custom SMTP password (`env(RESEND_API_KEY)` in `supabase/config.toml`), applied with `supabase config push`. Get it from resend.com → API Keys |
 | `CLIENT_ID` / `CLIENT_SECRECT` | Supabase dashboard → Authentication → Providers → Google (typo in the var name — `CLIENT_SECRECT`, not `_SECRET` — is preserved from `supabase/config.toml`'s `[auth.external.google]` block, not a documentation error) | Google OAuth web client credentials. Create in Google Cloud Console → Credentials → OAuth client ID (Web application), redirect URI `https://qkmgmzhrwduvigccwgcz.supabase.co/auth/v1/callback` |
 | `VERCEL_TOKEN` / `EXPO_TOKEN` | root `.env` | CLI automation |

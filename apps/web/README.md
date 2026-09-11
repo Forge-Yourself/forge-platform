@@ -1,17 +1,23 @@
 # Forge Admin Web
 
-Internal-only Next.js App Router app for Forge staff: sign-in and read-only
-user search/detail. English-only, no i18n. Not customer-facing.
+Internal-only Next.js App Router app for Forge staff (sign-in, read-only
+user search/detail, English-only, no i18n) plus two customer-facing surfaces
+added in M2: the waiver PDF API (`/api/waiver/*`) the Expo app calls
+directly, and the public `/join` invite-link landing page.
 
 ## Setup
 
 ```bash
 cp .env.example .env.local
-# fill in NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY
-# (SUPABASE_SERVICE_ROLE_KEY is not used by anything in this app — leave it
-# unset locally unless another route needs it later)
+# fill in NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY and
+# SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY
 pnpm --filter web dev
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY` is read by `lib/supabase/service.ts` — the
+waiver routes' Storage upload/signed-URL and the `intake_forms` columns a
+client's own session can't write itself. The admin pages still never use it
+(they read under the signed-in admin's own session, anon key only).
 
 ## Auth model
 
