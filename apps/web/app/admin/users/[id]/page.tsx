@@ -67,6 +67,60 @@ export default async function AdminUserDetailPage({
     ptCertifications = certs ?? [];
   }
 
+  // M2 (Task 17): a PT's roster and a client's intake state, for support
+  // cases. Read-only, same posture as the rest of this page — the admin's
+  // own session already has full read via is_admin() in every relevant
+  // policy (0003_rls.sql, 0005_m2_clients_intake.sql), so this never uses
+  // SUPABASE_SERVICE_ROLE_KEY, matching this page's existing convention.
+  type RosterRow = Pick<
+    Database['public']['Tables']['clients']['Row'],
+    'id' | 'invite_email' | 'invite_name' | 'state' | 'created_at'
+  >;
+  let roster: RosterRow[] = [];
+
+  type IntakeStatus = {
+    ptName: string | null;
+    intakeState: string | null;
+    flagCount: number;
+    waiverSigned: boolean;
+  };
+  let intakeStatus: IntakeStatus | null = null;
+
+  if (target.role === 'pt') {
+    const { data } = await supabase
+      .from('clients')
+      .select('id, invite_email, invite_name, state, created_at')
+      .eq('pt_user_id', id)
+      .order('created_at', { ascending: false });
+    roster = data ?? [];
+  }
+
+  if (target.role === 'client') {
+    const { data: clientRow } = await supabase
+      .from('clients')
+      .select('id, pt_user_id')
+      .eq('client_user_id', id)
+      .maybeSingle();
+
+    if (clientRow) {
+      const [{ data: ptUser }, { data: intake }] = await Promise.all([
+        supabase.from('users').select('display_name').eq('id', clientRow.pt_user_id).maybeSingle(),
+        supabase
+          .from('intake_forms')
+          .select('state, red_flags, waiver_pdf_url')
+          .eq('client_id', clientRow.id)
+          .maybeSingle(),
+      ]);
+
+      intakeStatus = {
+        ptName: ptUser?.display_name ?? null,
+        intakeState: intake?.state ?? null,
+        flagCount: Array.isArray(intake?.red_flags) ? intake.red_flags.length : 0,
+        waiverSigned: !!intake?.waiver_pdf_url,
+      };
+    }
+  }
+
   return (
     <main style={ui.page}>
       <p style={ui.kicker}>Forge</p>
@@ -150,6 +204,40 @@ export default async function AdminUserDetailPage({
                 <span style={ui.muted}>{cert.status}</span>
               </div>
             ))
+          )}
+        </section>
+      ) : null}
+
+      {target.role === 'pt' ? (
+        <section style={ui.card}>
+          <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Client roster</h2>
+          {roster.length === 0 ? (
+            <p style={ui.muted}>No clients invited yet.</p>
+          ) : (
+            roster.map((c) => (
+              <div key={c.id} style={ui.fieldRow}>
+                <span>{c.invite_name ?? c.invite_email ?? c.id}</span>
+                <span style={ui.muted}>
+                  {c.state} · {new Date(c.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            ))
+          )}
+        </section>
+      ) : null}
+
+      {target.role === 'client' ? (
+        <section style={ui.card}>
+          <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Intake</h2>
+          {intakeStatus ? (
+            <>
+              <Field label="Trainer" value={intakeStatus.ptName ?? '—'} />
+              <Field label="Intake state" value={intakeStatus.intakeState ?? 'not started'} />
+              <Field label="Red flags" value={intakeStatus.flagCount.toString()} />
+              <Field label="Waiver signed" value={intakeStatus.waiverSigned ? 'Yes' : 'No'} />
+            </>
+          ) : (
+            <p style={ui.muted}>Not linked to a trainer yet.</p>
           )}
         </section>
       ) : null}

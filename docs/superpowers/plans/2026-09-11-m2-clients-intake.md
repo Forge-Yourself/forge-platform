@@ -418,10 +418,10 @@ This is the first business logic in `apps/web/app/api/*` (the only precedent is 
 
 **Files:** modify `apps/web/app/admin/users/[id]/page.tsx`.
 
-- [ ] **Step 1 — When `target.role === 'pt'`**, add a read-only roster block: a table of that PT's `clients` rows (name/email, state, `created_at`) — admin already has full read via `is_admin()` in every relevant policy from Task 1, so this is a plain `SELECT`, no service-role key involved, matching the existing page's own stated convention (*"the admin surface never uses `SUPABASE_SERVICE_ROLE_KEY`"*).
-- [ ] **Step 2 — When `target.role === 'client'`**, add an intake-state block: which PT they're linked to, their `intake_forms.state`, `red_flags` count (not the response content — support staff reading raw PAR-Q answers is a bigger privacy question than M2 needs to answer; state and flag count are enough for a support case), and `waiver_pdf_url` presence as a boolean "Waiver signed" row.
-- [ ] **Step 3 — No mutations** — same posture as the rest of the admin surface today; quarantine/support actions remain M10.
-- [ ] **Step 4 — Commit:** `feat(web): admin roster and intake visibility`
+- [x] **Step 1 — When `target.role === 'pt'`**, add a read-only roster block: a table of that PT's `clients` rows (name/email, state, `created_at`) — admin already has full read via `is_admin()` in every relevant policy from Task 1, so this is a plain `SELECT`, no service-role key involved, matching the existing page's own stated convention (*"the admin surface never uses `SUPABASE_SERVICE_ROLE_KEY`"*).
+- [x] **Step 2 — When `target.role === 'client'`**, add an intake-state block: which PT they're linked to, their `intake_forms.state`, `red_flags` count (not the response content — support staff reading raw PAR-Q answers is a bigger privacy question than M2 needs to answer; state and flag count are enough for a support case), and `waiver_pdf_url` presence as a boolean "Waiver signed" row.
+- [x] **Step 3 — No mutations** — same posture as the rest of the admin surface today; quarantine/support actions remain M10.
+- [x] **Step 4 — Commit:** `feat(web): admin roster and intake visibility`
 
 ## Task 18 · Close-out
 
