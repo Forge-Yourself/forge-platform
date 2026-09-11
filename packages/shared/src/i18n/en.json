@@ -239,5 +239,177 @@
       "aiTrainingSubtitle": "Allow anonymized data to improve Forge's AI features."
     },
     "signOut": "Sign out"
+  },
+  "clients": {
+    "title": "Clients",
+    "searchPlaceholder": "Search clients",
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "paused": "Paused",
+      "invited": "Invited"
+    },
+    "stateLabels": {
+      "invited": "Invited",
+      "accepted": "Accepted",
+      "active": "Active",
+      "paused": "Paused",
+      "deactivated": "Deactivated"
+    },
+    "empty": {
+      "title": "No clients yet",
+      "body": "Invite your first client to get started.",
+      "inviteButton": "Invite your first client"
+    },
+    "noMatch": {
+      "title": "No clients match \"{{query}}\"",
+      "body": "Try a different search, or invite a new client.",
+      "inviteButton": "Invite a client"
+    },
+    "offlineError": {
+      "title": "Couldn't load your clients",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "inviteAction": "Invite",
+    "invite": {
+      "title": "Invite a client",
+      "nameLabel": "Name (optional)",
+      "namePlaceholder": "Maya Khoury",
+      "emailLabel": "Email",
+      "emailPlaceholder": "client@example.com",
+      "copyLink": "Copy link",
+      "sendInvite": "Share invite",
+      "expiryNote": "Expires in 7 days.",
+      "singleUseNote": "This link works once.",
+      "linkCopied": "Link copied",
+      "successTitle": "Invite sent",
+      "successBody": "{{name}} will show up in your client list once they accept.",
+      "error": "Couldn't send the invite. Please try again.",
+      "duplicateError": "An invite to this address is already pending."
+    },
+    "detail": {
+      "essentialsTitle": "Essentials",
+      "ageLabel": "Age",
+      "sexLabel": "Sex",
+      "heightLabel": "Height",
+      "weightLabel": "Weight",
+      "goalLabel": "Primary goal",
+      "redFlagBanner_one": "1 answer needs your attention before their first session.",
+      "redFlagBanner_other": "{{count}} answers need your attention before their first session.",
+      "intakeTitle": "Intake",
+      "intakeNotStarted": "Not started yet",
+      "intakeProgress": "{{answered}} of {{total}} sections saved",
+      "reviewIntake": "Review intake",
+      "waiverSigned": "Waiver signed",
+      "waiverUnsigned": "Waiver not signed yet",
+      "startSession": "Start session",
+      "startSessionComingSoon": "Session logging arrives in a later update.",
+      "startSessionBlocked": "Available once intake is submitted.",
+      "pause": "Pause",
+      "reactivate": "Reactivate",
+      "deactivate": "Deactivate",
+      "pauseConfirmTitle": "Pause this client?",
+      "pauseConfirmBody": "You can reactivate them anytime.",
+      "deactivateConfirmTitle": "Deactivate this client?",
+      "deactivateConfirmBody": "They'll stay on your roster but marked inactive.",
+      "reactivateConfirmTitle": "Reactivate this client?",
+      "confirm": "Confirm",
+      "resendInvite": "Resend invite",
+      "revokeInvite": "Revoke invite",
+      "revokeConfirmTitle": "Revoke this invite?",
+      "revokeConfirmBody": "The link will stop working immediately.",
+      "changeEmail": "Change invite email",
+      "actionError": "Something went wrong. Please try again."
+    }
+  },
+  "intake": {
+    "stepOf": "Step {{step}} of {{total}}",
+    "steps": {
+      "parq": "PAR-Q",
+      "goals": "Goals",
+      "history": "Training history",
+      "anthropometrics": "Anthropometrics",
+      "dietary": "Dietary restrictions"
+    },
+    "saveAndExit": "Save & exit",
+    "continue": "Continue",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "submitError": "Something went wrong submitting your intake. Please try again.",
+    "parq": {
+      "intro": "A few questions about your health before we get started. Answer honestly — your trainer only sees this after you submit.",
+      "yes": "Yes",
+      "no": "No",
+      "flaggedNote": "Worth a quick chat with your trainer before your first session.",
+      "parq_heart": "Has a doctor ever said you have a heart condition and recommended only medically supervised physical activity?",
+      "parq_chest_pain": "Do you feel pain in your chest during physical activity?",
+      "parq_dizziness": "Have you experienced chest pain, dizziness, or fainting in the past month, at rest or during activity?",
+      "parq_chronic_condition": "Do you have a chronic condition such as diabetes, asthma, or high blood pressure?",
+      "parq_medication": "Are you currently taking medication for a heart condition or blood pressure?",
+      "parq_musculoskeletal": "Do you have a bone or joint problem that could be made worse by exercise?",
+      "parq_supervised": "Has a doctor ever recommended you only exercise under medical supervision?"
+    },
+    "goals": {
+      "primaryGoalLabel": "What's your main goal?",
+      "primaryGoalPlaceholder": "e.g. Lose fat, build strength, run a 10k",
+      "targetDateLabel": "Target date (optional)",
+      "motivationLabel": "What's motivating this? (optional)"
+    },
+    "history": {
+      "yearsTrainingLabel": "Years of training experience",
+      "injuriesLabel": "Past injuries or surgeries",
+      "previousProgramsLabel": "Programs you've followed before"
+    },
+    "anthropometrics": {
+      "dateOfBirthLabel": "Date of birth",
+      "sexLabel": "Sex",
+      "sexMale": "Male",
+      "sexFemale": "Female",
+      "heightLabel": "Height",
+      "weightLabel": "Weight"
+    },
+    "dietary": {
+      "restrictionsLabel": "Dietary restrictions",
+      "restriction_vegetarian": "Vegetarian",
+      "restriction_vegan": "Vegan",
+      "restriction_halal": "Halal",
+      "restriction_kosher": "Kosher",
+      "restriction_gluten_free": "Gluten-free",
+      "restriction_dairy_free": "Dairy-free",
+      "restriction_nut_allergy": "Nut allergy",
+      "notesLabel": "Anything else your trainer should know?"
+    },
+    "resume": {
+      "title": "Welcome back",
+      "checklistNote": "What you've saved so far",
+      "privacyNote": "Your trainer can't see your answers until you submit.",
+      "continueButton": "Continue"
+    },
+    "review": {
+      "title": "Intake review",
+      "flaggedLabel": "Needs attention",
+      "notSubmittedYet": "This client hasn't submitted their intake yet.",
+      "sectionsTitle": "All answers"
+    }
+  },
+  "waiver": {
+    "title": "Liability waiver",
+    "body": "I acknowledge that participation in physical training carries inherent risk of injury. I have disclosed my health history accurately and completely in the intake form above. I release Forge and my trainer from liability for injuries arising from ordinary negligence, to the fullest extent permitted by law. I understand I may stop any activity at any time and should tell my trainer immediately if I feel unwell.",
+    "signatureLabel": "Sign here",
+    "signatureInstructions": "Use your finger to sign in the box above.",
+    "clear": "Clear",
+    "submit": "Sign and submit",
+    "submitting": "Submitting...",
+    "submitDisabledNote": "Sign above to continue.",
+    "submitError": "Something went wrong. Your signature is still here — please try again.",
+    "done": {
+      "title": "Waiver signed",
+      "subtitle": "Thanks — you're all set for your first session.",
+      "documentTitle": "Liability waiver",
+      "documentSubtitle": "Signed {{date}}",
+      "viewDocument": "View document",
+      "backToHome": "Back to home"
+    }
   }
 }

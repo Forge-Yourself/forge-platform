@@ -239,5 +239,177 @@
       "aiTrainingSubtitle": "السماح باستخدام بيانات مجهولة المصدر لتحسين ميزات الذكاء الاصطناعي في Forge."
     },
     "signOut": "تسجيل الخروج"
+  },
+  "clients": {
+    "title": "العملاء",
+    "searchPlaceholder": "ابحث عن عميل",
+    "filters": {
+      "all": "الكل",
+      "active": "نشط",
+      "paused": "متوقف مؤقتًا",
+      "invited": "مدعو"
+    },
+    "stateLabels": {
+      "invited": "مدعو",
+      "accepted": "قبِل الدعوة",
+      "active": "نشط",
+      "paused": "متوقف مؤقتًا",
+      "deactivated": "غير نشط"
+    },
+    "empty": {
+      "title": "لا يوجد عملاء بعد",
+      "body": "ادعُ أول عميل لك للبدء.",
+      "inviteButton": "ادعُ أول عميل"
+    },
+    "noMatch": {
+      "title": "لا يوجد عملاء مطابقون لـ \"{{query}}\"",
+      "body": "جرّب بحثًا مختلفًا، أو ادعُ عميلاً جديدًا.",
+      "inviteButton": "ادعُ عميلاً"
+    },
+    "offlineError": {
+      "title": "تعذّر تحميل قائمة عملائك",
+      "body": "تحقق من اتصالك وأعد المحاولة.",
+      "retry": "إعادة المحاولة"
+    },
+    "inviteAction": "دعوة",
+    "invite": {
+      "title": "ادعُ عميلاً",
+      "nameLabel": "الاسم (اختياري)",
+      "namePlaceholder": "مايا خوري",
+      "emailLabel": "البريد الإلكتروني",
+      "emailPlaceholder": "client@example.com",
+      "copyLink": "نسخ الرابط",
+      "sendInvite": "مشاركة الدعوة",
+      "expiryNote": "تنتهي صلاحية الدعوة خلال 7 أيام.",
+      "singleUseNote": "يعمل هذا الرابط مرة واحدة فقط.",
+      "linkCopied": "تم نسخ الرابط",
+      "successTitle": "تم إرسال الدعوة",
+      "successBody": "سيظهر {{name}} في قائمة عملائك بمجرد قبول الدعوة.",
+      "error": "تعذّر إرسال الدعوة. يرجى المحاولة مرة أخرى.",
+      "duplicateError": "توجد دعوة معلّقة بالفعل لهذا البريد الإلكتروني."
+    },
+    "detail": {
+      "essentialsTitle": "المعلومات الأساسية",
+      "ageLabel": "العمر",
+      "sexLabel": "الجنس",
+      "heightLabel": "الطول",
+      "weightLabel": "الوزن",
+      "goalLabel": "الهدف الرئيسي",
+      "redFlagBanner_one": "إجابة واحدة تحتاج إلى انتباهك قبل جلستهم الأولى.",
+      "redFlagBanner_other": "{{count}} إجابات تحتاج إلى انتباهك قبل جلستهم الأولى.",
+      "intakeTitle": "الاستمارة التمهيدية",
+      "intakeNotStarted": "لم تبدأ بعد",
+      "intakeProgress": "تم حفظ {{answered}} من {{total}} أقسام",
+      "reviewIntake": "مراجعة الاستمارة",
+      "waiverSigned": "تم توقيع الإخلاء",
+      "waiverUnsigned": "لم يتم توقيع الإخلاء بعد",
+      "startSession": "بدء الجلسة",
+      "startSessionComingSoon": "تسجيل الجلسات يصل في تحديث لاحق.",
+      "startSessionBlocked": "متاح بعد تقديم الاستمارة التمهيدية.",
+      "pause": "إيقاف مؤقت",
+      "reactivate": "إعادة التفعيل",
+      "deactivate": "إلغاء التفعيل",
+      "pauseConfirmTitle": "إيقاف هذا العميل مؤقتًا؟",
+      "pauseConfirmBody": "يمكنك إعادة تفعيله في أي وقت.",
+      "deactivateConfirmTitle": "إلغاء تفعيل هذا العميل؟",
+      "deactivateConfirmBody": "سيبقى في قائمة عملائك لكن معلَّمًا كغير نشط.",
+      "reactivateConfirmTitle": "إعادة تفعيل هذا العميل؟",
+      "confirm": "تأكيد",
+      "resendInvite": "إعادة إرسال الدعوة",
+      "revokeInvite": "إلغاء الدعوة",
+      "revokeConfirmTitle": "إلغاء هذه الدعوة؟",
+      "revokeConfirmBody": "سيتوقف الرابط عن العمل فورًا.",
+      "changeEmail": "تغيير بريد الدعوة",
+      "actionError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    }
+  },
+  "intake": {
+    "stepOf": "الخطوة {{step}} من {{total}}",
+    "steps": {
+      "parq": "استبيان الجاهزية الصحية",
+      "goals": "الأهداف",
+      "history": "تاريخ التدريب",
+      "anthropometrics": "القياسات الجسدية",
+      "dietary": "القيود الغذائية"
+    },
+    "saveAndExit": "حفظ والخروج",
+    "continue": "متابعة",
+    "submit": "إرسال",
+    "submitting": "جارٍ الإرسال...",
+    "submitError": "حدث خطأ أثناء إرسال استمارتك. يرجى المحاولة مرة أخرى.",
+    "parq": {
+      "intro": "بضعة أسئلة عن صحتك قبل أن نبدأ. أجب بصدق — لن يرى مدربك هذه الإجابات إلا بعد إرسالها.",
+      "yes": "نعم",
+      "no": "لا",
+      "flaggedNote": "يستحق نقاشًا سريعًا مع مدربك قبل جلستك الأولى.",
+      "parq_heart": "هل سبق لطبيب أن أخبرك بأن لديك مشكلة في القلب ونصحك بممارسة النشاط البدني تحت إشراف طبي فقط؟",
+      "parq_chest_pain": "هل تشعر بألم في الصدر أثناء النشاط البدني؟",
+      "parq_dizziness": "هل شعرت بألم في الصدر أو دوار أو إغماء خلال الشهر الماضي، سواء في الراحة أو أثناء النشاط؟",
+      "parq_chronic_condition": "هل لديك حالة مزمنة مثل السكري أو الربو أو ارتفاع ضغط الدم؟",
+      "parq_medication": "هل تتناول حاليًا أدوية لمشكلة في القلب أو ضغط الدم؟",
+      "parq_musculoskeletal": "هل لديك مشكلة في العظام أو المفاصل قد تتفاقم بسبب التمرين؟",
+      "parq_supervised": "هل سبق لطبيب أن أوصى بأن تمارس الرياضة تحت إشراف طبي فقط؟"
+    },
+    "goals": {
+      "primaryGoalLabel": "ما هو هدفك الرئيسي؟",
+      "primaryGoalPlaceholder": "مثال: خسارة الدهون، بناء القوة، الجري لمسافة 10 كم",
+      "targetDateLabel": "التاريخ المستهدف (اختياري)",
+      "motivationLabel": "ما الذي يحفزك على ذلك؟ (اختياري)"
+    },
+    "history": {
+      "yearsTrainingLabel": "سنوات الخبرة في التدريب",
+      "injuriesLabel": "إصابات أو عمليات جراحية سابقة",
+      "previousProgramsLabel": "برامج تدريب اتبعتها من قبل"
+    },
+    "anthropometrics": {
+      "dateOfBirthLabel": "تاريخ الميلاد",
+      "sexLabel": "الجنس",
+      "sexMale": "ذكر",
+      "sexFemale": "أنثى",
+      "heightLabel": "الطول",
+      "weightLabel": "الوزن"
+    },
+    "dietary": {
+      "restrictionsLabel": "القيود الغذائية",
+      "restriction_vegetarian": "نباتي",
+      "restriction_vegan": "نباتي صرف",
+      "restriction_halal": "حلال",
+      "restriction_kosher": "كوشير",
+      "restriction_gluten_free": "خالٍ من الغلوتين",
+      "restriction_dairy_free": "خالٍ من الألبان",
+      "restriction_nut_allergy": "حساسية من المكسرات",
+      "notesLabel": "أي شيء آخر يجب أن يعرفه مدربك؟"
+    },
+    "resume": {
+      "title": "مرحبًا بعودتك",
+      "checklistNote": "ما قمت بحفظه حتى الآن",
+      "privacyNote": "لن يرى مدربك إجاباتك حتى تقوم بالإرسال.",
+      "continueButton": "متابعة"
+    },
+    "review": {
+      "title": "مراجعة الاستمارة التمهيدية",
+      "flaggedLabel": "يحتاج إلى انتباه",
+      "notSubmittedYet": "لم يقدّم هذا العميل استمارته التمهيدية بعد.",
+      "sectionsTitle": "جميع الإجابات"
+    }
+  },
+  "waiver": {
+    "title": "إخلاء المسؤولية",
+    "body": "أقرّ بأن المشاركة في التدريب البدني تنطوي على مخاطر إصابة متأصلة. لقد أفصحت عن تاريخي الصحي بدقة واكتمال في استمارة الإدخال أعلاه. أُعفي Forge ومدربي من المسؤولية عن الإصابات الناتجة عن الإهمال العادي، إلى أقصى حد يسمح به القانون. أتفهّم أنه يمكنني إيقاف أي نشاط في أي وقت وأنه يجب عليّ إخبار مدربي فورًا إذا شعرت بتوعك.",
+    "signatureLabel": "وقّع هنا",
+    "signatureInstructions": "استخدم إصبعك للتوقيع في المربع أعلاه.",
+    "clear": "مسح",
+    "submit": "التوقيع والإرسال",
+    "submitting": "جارٍ الإرسال...",
+    "submitDisabledNote": "وقّع أعلاه للمتابعة.",
+    "submitError": "حدث خطأ ما. توقيعك لا يزال موجودًا — يرجى المحاولة مرة أخرى.",
+    "done": {
+      "title": "تم توقيع الإخلاء",
+      "subtitle": "شكرًا — أنت جاهز لجلستك الأولى.",
+      "documentTitle": "إخلاء المسؤولية",
+      "documentSubtitle": "تم التوقيع في {{date}}",
+      "viewDocument": "عرض المستند",
+      "backToHome": "العودة إلى الرئيسية"
+    }
   }
 }
