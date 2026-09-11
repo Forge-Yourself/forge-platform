@@ -19,7 +19,12 @@ All product documentation lives in `docs/`. Start at `docs/index.html` for the h
 | `docs/Forge_Architecture.html` | **Primary source of truth.** 14 sections, 51 Mermaid diagrams: ERD (D11-D15), runtime flows (D16-D32), lifecycles (D33-D39), epics (EP-01 to EP-21), pricing, NFR, compliance |
 | `docs/Forge_Brand.html` | Brand guidelines, colors, typography |
 | `docs/Forge_DesignSystem.html` | Component library, spacing, dark mode tokens |
-| `docs/superpowers/specs/*.md` | Design decision specs (gym tier, PT hierarchy) |
+| `docs/superpowers/specs/2026-09-09-forge-v1-implementation-design.md` | **Build plan source of truth.** Real stack, M0–M10 milestone definitions, decisions log |
+| `docs/superpowers/specs/*.md` | Other design decision specs (gym tier, PT hierarchy) |
+| `docs/superpowers/plans/*.md` | Per-milestone implementation plans, one per completed/in-flight milestone |
+| `docs/Forge_DesignBrief_M1-M4.md` | Screen-by-screen design brief for the first four build milestones |
+| `docs/Forge_Prototype.html` | Claude Design clickable prototype (M1–M4 screens + designer annotations) |
+| `docs/DESIGN_SYSTEM_GAPS.md` | Components the prototype needs that the design system doesn't have yet — built vs. outstanding |
 
 ## Tech Stack (Actual — see `docs/superpowers/specs/2026-09-09-forge-v1-implementation-design.md`)
 
@@ -62,7 +67,7 @@ Located in `db/`:
 
 | File | Content |
 |---|---|
-| `db/schema.sql` | Complete DDL: 54 tables, indexes, constraints, partitions, triggers |
+| `db/schema.sql` | Baseline DDL: 54 tables, indexes, constraints, partitions, triggers. **Predates migration 0002 — see the header warning.** `pt_certifications` (55th table) was added by migration `0004`, not reflected here |
 | `db/seed.sql` | Reference data: badge definitions, exercise stubs |
 | `db/README.md` | Domain map, table inventory, relationship diagram |
 
