@@ -161,6 +161,7 @@ additional_redirect_urls = [
   "forge://auth/confirm",
   "forge://auth/reset",
   "exp://*",
+  "exp://**",
   "http://localhost:3000/**",
   "https://forge-admin-one.vercel.app/**",
 ]
