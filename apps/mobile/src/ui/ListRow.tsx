@@ -10,10 +10,12 @@ export type ListRowProps = {
   onPress?: () => void;
   /** Suppresses the bottom divider — SectionCard sets this on the last child. */
   isLast?: boolean;
+  /** Default 60 (the settings-row height). M2's client list rows are 68. */
+  minHeight?: number;
 };
 
 /** Settings-screen row. Pressable when onPress is given, otherwise a static info row. */
-export function ListRow({ title, subtitle, trailing, onPress, isLast }: ListRowProps) {
+export function ListRow({ title, subtitle, trailing, onPress, isLast, minHeight = 60 }: ListRowProps) {
   const t = useTheme();
   const Container = onPress ? Pressable : View;
 
@@ -23,7 +25,7 @@ export function ListRow({ title, subtitle, trailing, onPress, isLast }: ListRowP
         ? { accessibilityRole: 'button' as const, accessibilityLabel: title, onPress }
         : {})}
       style={{
-        minHeight: 60,
+        minHeight,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
