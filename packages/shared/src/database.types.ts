@@ -6543,6 +6543,7 @@ export type Database = {
         Returns: boolean
       }
       is_master_of: { Args: { p_pt_user_id: string }; Returns: boolean }
+      is_my_pt: { Args: { p_pt_user_id: string }; Returns: boolean }
       is_pt_of_client: { Args: { p_client_id: string }; Returns: boolean }
       is_pt_of_user: { Args: { p_user_id: string }; Returns: boolean }
       log_account_event: {

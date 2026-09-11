@@ -218,6 +218,22 @@ SELECT pg_temp.expect('Client A can edit their own display name', 1,
 RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- M2 (0006) — a client can read their own PT's user row (for ClientHome's
+-- name/avatar), but not an unrelated PT's.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('Client A can read PT A''s user row (their own trainer)', 1,
+  format('SELECT count(*) FROM public.users WHERE id = %L', :'pt_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect('Client B cannot read PT A''s user row (not their trainer)', 0,
+  format('SELECT count(*) FROM public.users WHERE id = %L', :'pt_a'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Privilege escalation — column grants, not row policies, are what stop this.
 -- ─────────────────────────────────────────────────────────────────────────────
 SET LOCAL ROLE authenticated;
