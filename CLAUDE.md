@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Forge** is a PT-first (personal trainer) SaaS platform for trainers, studios, and the people they coach. Lebanon-first market, expanding to UAE.
 
-- **Phase:** In development. M0 (foundation) and M1 (auth & identity) are complete on `develop`. M2 (clients & intake) is next.
+- **Phase:** In development. M0 (foundation), M1 (auth & identity), and M2 (clients & intake) are complete on `develop`. M3 (programming) is next.
 - **Repository:** pnpm + Turborepo monorepo — `apps/mobile` (Expo), `apps/web` (Next.js admin + API), `packages/shared` (tokens, i18n, zod schemas, generated DB types), `supabase/migrations`, `db/` (schema source + RLS harness).
-- **Status:** Application code exists and is deployed. Expo app boots themed/RTL-capable with working Supabase Auth (email/password + Google), TOTP MFA, password reset, onboarding, profile, and settings. Next.js admin is live on Vercel with staff login and user search. Supabase Postgres project is live in Frankfurt with 4 migrations applied (baseline, Supabase Auth wiring, RLS, M1 identity) and RLS enabled on all tables. CI runs typecheck/lint/test on GitHub Actions.
+- **Status:** Application code exists and is deployed. Expo app boots themed/RTL-capable with working Supabase Auth (email/password + Google), TOTP MFA, password reset, onboarding, profile, settings, a client roster with invite/claim/pause/deactivate, a resumable 5-step intake with PAR-Q red-flag detection, and waiver e-signature. Next.js admin is live on Vercel with staff login, user search, a PT's client roster, and a client's intake status; it also serves the waiver PDF API and the public `/join` invite-link page. Supabase Postgres project is live in Frankfurt with 6 migrations applied (baseline, Supabase Auth wiring, RLS, M1 identity, M2 clients/intake/waiver, a client-reads-own-PT RLS fix) and RLS enabled on all tables. CI runs typecheck/lint/test on GitHub Actions.
 
 ## Documentation
 
@@ -37,7 +37,7 @@ This supersedes the stack described in `docs/Forge_Architecture.html` Section 05
 | Backend | Supabase (hybrid: Supabase owns auth/storage/realtime/RLS; Next.js API routes own logic needing secrets or rules too complex for SQL) |
 | Database | Supabase Postgres 15+ (project `qkmgmzhrwduvigccwgcz`, Frankfurt) with pgcrypto, citext, pg_trgm, postgis, btree_gist. Managed via `supabase/migrations/`, not raw `psql -f db/schema.sql` |
 | Auth | Supabase Auth — email/password + Google (Apple written provider-agnostic, pending a developer account), TOTP MFA, custom SMTP via Resend |
-| Storage | Supabase Storage (progress photos, videos, PDFs) — not yet used before M4 |
+| Storage | Supabase Storage — in use from M2 (private `waivers` bucket, service-role only); progress photos and videos are M4 |
 | Real-time | Supabase Realtime (live mirror, from M5) |
 | Payments | RevenueCat over Apple IAP + Google Play Billing, planned for M6. Replaces the originally documented Whish + Areeba plan — removes PCI scope and KYC delay for a solo developer |
 | AI | Claude API (program drafts, meal plans, monthly recaps) — from M3 |
@@ -110,8 +110,8 @@ the full definition of each; plans for completed/in-flight milestones live in
 |---|---|---|
 | M0 | Foundation — monorepo, auth/RLS migrations, themed RTL app boot | ✅ done |
 | M1 | Auth & identity — EP-01, EP-02 Solo profile | ✅ done |
-| M2 | Clients & intake — EP-03 | next |
-| M3 | Programming — EP-04, EP-15 (AI draft) | |
+| M2 | Clients & intake — EP-03 | ✅ done |
+| M3 | Programming — EP-04, EP-15 (AI draft) | next |
 | M4 | Logging — EP-05, EP-06 (offline sync, Storage) | |
 | M5 | Scheduling — EP-09, EP-10 (Realtime) | |
 | M6 | Money — EP-11 (RevenueCat) | |

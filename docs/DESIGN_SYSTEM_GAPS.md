@@ -17,14 +17,26 @@ later milestones surface new gaps.
   `apps/mobile/src/ui/NumericKeypad.tsx`. Not yet documented as a component
   in `Forge_DesignSystem.html`.
 
+## Built (M2)
+
+- **Segmented step-progress** — `StepProgress` gained an optional
+  `segments?: number`; when given, renders that many separate 4pt bars
+  instead of one continuous fill ("step count is the honest signal of
+  remaining work", per the intake annotation). M1's continuous-bar callers
+  (`pt-profile.tsx`) are unaffected. Implemented at
+  `apps/mobile/src/ui/StepProgress.tsx`. Not yet documented as a component
+  in `Forge_DesignSystem.html`.
+- **Yes/no question card** — the PAR-Q question card: two 44pt Yes/No
+  targets, an inline warn (not danger) flag treatment. Implemented at
+  `apps/mobile/src/ui/YesNoCard.tsx`. Not yet documented in
+  `Forge_DesignSystem.html`.
+- **Signature pad** — 150pt `PanResponder`-driven SVG path capture, fully
+  controlled, no native module. Implemented at
+  `apps/mobile/src/ui/SignaturePad.tsx`. Not yet documented in
+  `Forge_DesignSystem.html`.
+
 ## Outstanding
 
-- **Segmented step-progress** + **yes/no question card** — needed for M2
-  (client intake / PAR-Q flow).
-- **Signature pad** — needed for M2 (waiver e-signature).
-- **Superset / 4-cell builder row** — needed for M3 (program builder).
-
-These three are not yet built and are not yet documented in the design
-system. They should be designed and added to `Forge_DesignSystem.html`
-before the milestones that need them (M2 for the first two, M3 for the
-third).
+- **Superset / 4-cell builder row** — needed for M3 (program builder). Not
+  yet built and not yet documented in the design system; should be designed
+  and added to `Forge_DesignSystem.html` before M3 needs it.

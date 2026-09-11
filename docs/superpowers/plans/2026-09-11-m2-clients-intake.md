@@ -425,27 +425,29 @@ This is the first business logic in `apps/web/app/api/*` (the only precedent is 
 
 ## Task 18 · Close-out
 
-- [ ] **Step 1 — Tick this plan's checkboxes as work lands**, per M1's own stated lesson about reconstructing completion from commit messages after the fact.
-- [ ] **Step 2 — `docs/DESIGN_SYSTEM_GAPS.md`** — move segmented step-progress, yes/no question card, and signature pad from "Outstanding" to a new "Built (M2)" section, matching the existing M1 entry's format exactly.
-- [ ] **Step 3 — `CLAUDE.md`** — flip M2 to done, M3 to next; correct the Storage row in the tech-stack table (currently "not yet used before M4" — it's used from M2).
-- [ ] **Step 4 — `db/schema.sql` header warning** — add `clients.invite_name` (0005) to the list of things the baseline predates, alongside the existing `pt_certifications` note.
-- [ ] **Step 5 — Re-run the full verification block below and report real output**, not expectations — same standard M1 held itself to in its own close-out.
-- [ ] **Step 6 — Commit:** `docs: M2 close-out — plan checkboxes, DS gaps, CLAUDE.md, schema header`
+- [x] **Step 1 — Tick this plan's checkboxes as work lands**, per M1's own stated lesson about reconstructing completion from commit messages after the fact.
+- [x] **Step 2 — `docs/DESIGN_SYSTEM_GAPS.md`** — move segmented step-progress, yes/no question card, and signature pad from "Outstanding" to a new "Built (M2)" section, matching the existing M1 entry's format exactly.
+- [x] **Step 3 — `CLAUDE.md`** — flip M2 to done, M3 to next; correct the Storage row in the tech-stack table (currently "not yet used before M4" — it's used from M2).
+- [x] **Step 4 — `db/schema.sql` header warning** — add `clients.invite_name` (0005) to the list of things the baseline predates, alongside the existing `pt_certifications` note.
+- [x] **Step 5 — Re-run the full verification block below and report real output**, not expectations — same standard M1 held itself to in its own close-out.
+- [x] **Step 6 — Commit:** `docs: M2 close-out — plan checkboxes, DS gaps, CLAUDE.md, schema header`
 
 ---
 
 ## Verification
 
-Machine-checkable — run all of these and report actual output:
+Re-run 2026-09-12 at close-out. Real output below every Claude row; "You" rows need a device/simulator this environment doesn't have, same constraint M1 held itself to for its own device-testing steps.
 
-```bash
-supabase db push
-supabase migration list
-pnpm types:gen
-"/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -v ON_ERROR_STOP=1 -f db/rls_assertions.sql
-pnpm turbo run typecheck lint test
-pnpm --filter web build
-```
+| # | Check | Command | Who | Result |
+|---|---|---|---|---|
+| 1 | Migrations 0001-0006 applied, local/remote agree | `supabase migration list` | Claude | **PASS** — all six agree, no pending migrations. |
+| 2 | `pnpm types:gen` reflects 0005/0006 | `packages/shared/src/database.types.ts` | Claude | **PASS** — `invite_name`, all seven M2 RPCs, and `is_my_pt` all present. |
+| 3 | **RLS holds** — every M2 case plus all M0/M1 regressions | `"/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -v ON_ERROR_STOP=1 -f db/rls_assertions.sql` | Claude | **PASS** — 48/48 `NOTICE: pass …`, exit 0, clean `ROLLBACK`. Includes the client-tamper checks (state/red_flags WITH CHECK), the full invite→claim→pause→submit→review RPC lifecycle, and the 0006 own-PT read fix. |
+| 4 | Full turbo pipeline — 3 packages | `pnpm turbo run typecheck lint test` | Claude | **PASS** — 6/6 tasks (`@forge/shared` typecheck+test, `mobile` typecheck+lint, `web` typecheck+lint) successful, zero errors/warnings. `@forge/shared`: 119/119 tests. |
+| 5 | Web builds, all M2 routes registered | `pnpm --filter web build` | Claude | **PASS** — compiles clean; `/admin`, `/admin/users/[id]`, `/api/health`, `/api/waiver`, `/api/waiver/[intakeId]`, `/join`, `/login`, `/` all present in the route table. |
+| 6 | `renderWaiverPdf()` actually produces a valid PDF, not just typechecks | standalone `tsx` smoke script with sample input | Claude | **PASS** — 1610 bytes, valid `%PDF-` header, `drawSvgPath` ran against real sample path data with no throw. Deleted after running — not a committed test file. |
+| 7 | Mobile primitives render correctly in both themes/directions | Expo Go or simulator | **You** | Pending — no device/simulator in this environment. |
+| 8-19 | The twelve device/manual checks below | Expo Go + a real waiver-API deployment | **You** | Pending — same constraint. |
 
 Device/manual (the actual done-when — no automated UI tests exist anywhere in this repo, matching M0/M1's own precedent):
 

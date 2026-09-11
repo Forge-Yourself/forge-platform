@@ -9,9 +9,14 @@
 --       failed_login_count, locked_until
 --     (Supabase Auth owns credentials and MFA state now; public.users is a
 --     profile table keyed 1:1 to auth.users(id))
--- It also predates migration 0003 (RLS enabled on all tables + policies) and
+-- It also predates migration 0003 (RLS enabled on all tables + policies),
 -- migration 0004 (M1 identity: partition extensions, pt_certifications,
--- set_initial_role, log_account_event, notification_preferences policy).
+-- set_initial_role, log_account_event, notification_preferences policy),
+-- migration 0005 (M2: clients.invite_name, four new audit_logs actions, the
+-- five-policy intake_forms split, the private waivers Storage bucket, and
+-- seven RPCs — invite_client, resend_invite, revoke_invite,
+-- claim_client_invites, set_client_state, submit_intake, intake_progress),
+-- and migration 0006 (a client can read their own PT's users row).
 --
 -- Running `psql -f db/schema.sql` against a real environment produces a
 -- pre-auth, pre-RLS database that does NOT match what is actually deployed.
