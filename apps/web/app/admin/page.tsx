@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 import * as ui from '@/lib/ui/styles';
 import { AdminUserSearch } from './user-search';
 
@@ -7,29 +7,9 @@ import { AdminUserSearch } from './user-search';
 // statically prerender it.
 export const dynamic = 'force-dynamic';
 
-/**
- * The re-check middleware promises but doesn't perform: middleware only
- * confirms a session exists, so every /admin page independently verifies
- * `users.role = 'admin'` for the signed-in caller before rendering anything.
- * A PT session that made it past middleware gets bounced here.
- */
 export default async function AdminPage() {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-
-  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
-
-  if (!profile || profile.role !== 'admin') {
-    await supabase.auth.signOut();
-    redirect('/login');
-  }
+  await requireAdmin(supabase);
 
   return (
     <main style={ui.page}>

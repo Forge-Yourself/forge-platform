@@ -1,6 +1,8 @@
+import type { Database } from '@forge/shared';
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 import * as ui from '@/lib/ui/styles';
 
 // Every admin page depends on the caller's live session/role — never
@@ -19,25 +21,7 @@ export default async function AdminUserDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-
-  const { data: viewerProfile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!viewerProfile || viewerProfile.role !== 'admin') {
-    await supabase.auth.signOut();
-    redirect('/login');
-  }
+  await requireAdmin(supabase);
 
   const { data: target, error } = await supabase
     .from('users')
@@ -51,23 +35,16 @@ export default async function AdminUserDetailPage({
     notFound();
   }
 
-  let ptProfile: {
-    bio: string | null;
-    certifications: string[];
-    specializations: string[];
-    languages: string[];
-    years_experience: number | null;
-    is_published: boolean;
-    slug: string | null;
-  } | null = null;
+  type PtProfileFields = Pick<
+    Database['public']['Tables']['pt_profiles']['Row'],
+    'bio' | 'certifications' | 'specializations' | 'languages' | 'years_experience' | 'is_published' | 'slug'
+  >;
+  let ptProfile: PtProfileFields | null = null;
 
-  type PtCertification = {
-    id: string;
-    name: string;
-    issuer: string | null;
-    expires_on: string | null;
-    status: string;
-  };
+  type PtCertification = Pick<
+    Database['public']['Tables']['pt_certifications']['Row'],
+    'id' | 'name' | 'issuer' | 'expires_on' | 'status'
+  >;
   let ptCertifications: PtCertification[] = [];
 
   if (target.role === 'pt') {
