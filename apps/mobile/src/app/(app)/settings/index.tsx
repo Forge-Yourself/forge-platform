@@ -190,6 +190,7 @@ export default function Settings() {
 
   async function handleLocaleChange(next: Locale) {
     setLocaleState(next);
+    setError(null);
     await run(async () => {
       const result = userProfileSchema.safeParse({ locale: next });
       if (!result.success) {
@@ -203,6 +204,7 @@ export default function Settings() {
 
   async function handleUnitSystemChange(next: string) {
     setUnitSystem(next);
+    setError(null);
     await run(async () => {
       const result = userProfileSchema.safeParse({ unit_system: next });
       if (!result.success) {
@@ -219,6 +221,7 @@ export default function Settings() {
     next: boolean,
   ) {
     setter(next);
+    setError(null);
     await run(async () => {
       const result = userProfileSchema.safeParse({ [key]: next });
       if (!result.success) {
@@ -231,6 +234,7 @@ export default function Settings() {
 
   async function saveQuietHours(enabled: boolean, from: string, until: string) {
     if (!userId) return;
+    setError(null);
     await run(async () => {
       if (enabled) {
         const result = quietHoursSchema.safeParse({ quiet_start: from, quiet_end: until });
@@ -298,6 +302,7 @@ export default function Settings() {
   }
 
   async function handleSignOut() {
+    setError(null);
     await run(async () => {
       // Must happen BEFORE signOut() — log_account_event needs an authenticated
       // session, which is gone the instant signOut() resolves.
