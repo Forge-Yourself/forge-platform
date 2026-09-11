@@ -410,9 +410,9 @@ This is the first business logic in `apps/web/app/api/*` (the only precedent is 
 
 **Files:** create `apps/web/app/join/page.tsx`.
 
-- [ ] **Step 1 — Server Component**, no auth required (confirm `middleware.ts`'s matcher already excludes it by not matching `/admin/*` specifically — it currently matches everything except static assets, so verify this route doesn't get pulled into any session-refresh assumption that breaks for a signed-out visitor; if `updateSession` itself is a no-op for a request with no cookies, no change is needed there).
-- [ ] **Step 2 — Reads `?email=`**, renders a client-side redirect to `forge://join?email=<email>` (a plain `<meta http-equiv="refresh">` or a tiny inline script — Next.js Server Components can still emit a client `<script>` for this one-shot redirect) and, beneath it, a static fallback: "Get the Forge app" copy plus the same email address shown in the page (for the case the redirect doesn't fire because the app isn't installed). No store badges yet — there is no store listing until M10 (spec risk #1) — so the fallback names Expo Go / TestFlight explicitly rather than linking to app stores that don't exist yet.
-- [ ] **Step 3 — Commit:** `feat(web): /join deep-link landing page`
+- [x] **Step 1 — Server Component**, no auth required (confirm `middleware.ts`'s matcher already excludes it by not matching `/admin/*` specifically — it currently matches everything except static assets, so verify this route doesn't get pulled into any session-refresh assumption that breaks for a signed-out visitor; if `updateSession` itself is a no-op for a request with no cookies, no change is needed there).
+- [x] **Step 2 — Reads `?email=`**, renders a client-side redirect to `forge://join?email=<email>` (a plain `<meta http-equiv="refresh">` or a tiny inline script — Next.js Server Components can still emit a client `<script>` for this one-shot redirect) and, beneath it, a static fallback: "Get the Forge app" copy plus the same email address shown in the page (for the case the redirect doesn't fire because the app isn't installed). No store badges yet — there is no store listing until M10 (spec risk #1) — so the fallback names Expo Go / TestFlight explicitly rather than linking to app stores that don't exist yet.
+- [x] **Step 3 — Commit:** `feat(web): /join deep-link landing page`
 
 ## Task 17 · `apps/web` — admin roster and intake view
 
