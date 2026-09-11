@@ -275,12 +275,12 @@ Written test-first, same rationale as M1 Task 4: this is the one genuinely unit-
 
 **Files:** create `src/schemas/clients.ts`, `src/schemas/clients.test.ts`; modify `src/schemas/index.ts`.
 
-- [ ] **Step 1 — Failing tests first:** `clientStateSchema` accepts exactly `invited|accepted|active|paused|deactivated` and rejects anything else; `inviteClientSchema` trims/lowercases email, rejects an empty string name (but accepts `undefined`), caps `tags` items and count sanely.
-- [ ] **Step 2 — `clientStateSchema`** — `z.enum(['invited', 'accepted', 'active', 'paused', 'deactivated'])`, mirroring `chk_clients_state` (`db/schema.sql:359`) exactly, same convention as `localeSchema` in `profile.ts`.
-- [ ] **Step 3 — `inviteClientSchema`** — `{ email: z.string().trim().toLowerCase().email(), name: z.string().trim().min(1).max(120).optional(), tags: z.array(z.string().trim().min(1).max(30)).max(10).optional() }`. `.strict()`.
-- [ ] **Step 4 — `resendInviteSchema`** — `{ clientId: z.string().uuid(), email: z.string().trim().toLowerCase().email().optional() }`.
-- [ ] **Step 5 — Verify:** `pnpm --filter @forge/shared test` green.
-- [ ] **Step 6 — Commit:** `feat(shared): client invite and state schemas`
+- [x] **Step 1 — Failing tests first:** `clientStateSchema` accepts exactly `invited|accepted|active|paused|deactivated` and rejects anything else; `inviteClientSchema` trims/lowercases email, rejects an empty string name (but accepts `undefined`), caps `tags` items and count sanely.
+- [x] **Step 2 — `clientStateSchema`** — `z.enum(['invited', 'accepted', 'active', 'paused', 'deactivated'])`, mirroring `chk_clients_state` (`db/schema.sql:359`) exactly, same convention as `localeSchema` in `profile.ts`.
+- [x] **Step 3 — `inviteClientSchema`** — `{ email: z.string().trim().toLowerCase().email(), name: z.string().trim().min(1).max(120).optional(), tags: z.array(z.string().trim().min(1).max(30)).max(10).optional() }`. `.strict()`.
+- [x] **Step 4 — `resendInviteSchema`** — `{ clientId: z.string().uuid(), email: z.string().trim().toLowerCase().email().optional() }`.
+- [x] **Step 5 — Verify:** `pnpm --filter @forge/shared test` green.
+- [x] **Step 6 — Commit:** `feat(shared): client invite and state schemas`
 
 ## Task 5 · `packages/shared` — i18n
 
