@@ -155,7 +155,24 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "forge://auth/callback",
+  "forge://auth/confirm",
+  "forge://auth/reset",
+  # The three exact entries above are what the app aims for. This wildcard is the
+  # safety net: expo-linking's createURL() can emit an empty authority
+  # (forge:///auth/callback, three slashes) depending on how the scheme resolves in a
+  # standalone build, and Supabase matches these exactly — so an extra slash would
+  # silently break the Google OAuth return with no error the app could surface.
+  "forge://**",
+  "exp://*",
+  "exp://**",
+  "http://localhost:3000/**",
+  # Covers the /auth/confirm and /auth/reset https bounce pages the email templates
+  # now link to (apps/web/app/auth/[flow]/page.tsx).
+  "https://forge-admin-one.vercel.app/**",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -174,10 +191,10 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
-password_requirements = ""
+password_requirements = "lower_upper_letters_digits"
 
 # Configure passkey sign-ins.
 # [auth.passkey]
@@ -191,7 +208,13 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# 2/hour is Supabase's default for its built-in shared SMTP — a sender-reputation
+# guard that stops applying once you bring your own. Forge sends through Resend
+# ([auth.email.smtp] below), which has its own quota, and 2/hour is low enough that a
+# single signup-plus-resend plus one password reset exhausts it mid-test and the
+# failure looks like a broken flow rather than a quota. Raise for real usage, not just
+# for testing: a trainer inviting three clients in an afternoon hits 2/hour too.
+email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -218,30 +241,43 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = false
+secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# Number of seconds before the email OTP expires (defaults to 1 hour). Shared by all email OTP
+# flows (signup confirmation, password recovery, magic link, email change) — 30 minutes.
+otp_expiry = 1800
 
 # Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 587
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "noreply@forge.app"
+sender_name = "Forge"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
+
+# Signup confirmation — deep-links straight into the mobile app instead of round-tripping
+# through site_url; see supabase/templates/confirm.html.
+[auth.email.template.confirmation]
+subject = "Confirm your Forge account"
+content_path = "./supabase/templates/confirm.html"
+
+# Password recovery — deep-links straight into the mobile app instead of round-tripping
+# through site_url; see supabase/templates/recovery.html.
+[auth.email.template.recovery]
+subject = "Reset your Forge password"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
@@ -295,8 +331,8 @@ max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]
@@ -319,6 +355,21 @@ enabled = false
 client_id = ""
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
 secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
+# Overrides the default auth callback URL derived from auth.external_url.
+redirect_uri = ""
+# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
+# or any other third-party OIDC providers.
+url = ""
+# If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
+skip_nonce_check = false
+# If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
+email_optional = false
+
+[auth.external.google]
+enabled = true
+client_id = "env(CLIENT_ID)"
+# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+secret = "env(CLIENT_SECRECT)"
 # Overrides the default auth callback URL derived from auth.external_url.
 redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,

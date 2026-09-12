@@ -15,6 +15,750 @@
   },
   "common": {
     "retry": "إعادة المحاولة",
-    "cancel": "إلغاء"
+    "cancel": "إلغاء",
+    "back": "رجوع",
+    "skip": "تخطٍ",
+    "continue": "متابعة",
+    "save": "حفظ",
+    "finish": "إنهاء",
+    "close": "إغلاق",
+    "tabs": {
+      "today": "اليوم",
+      "clients": "العملاء",
+      "programs": "البرامج",
+      "library": "المكتبة"
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "أهلاً بعودتك.",
+      "emailLabel": "البريد الإلكتروني",
+      "passwordLabel": "كلمة المرور",
+      "submit": "تسجيل الدخول",
+      "forgotPassword": "نسيت كلمة المرور؟",
+      "noAccount": "ليس لديك حساب؟ أنشئ حسابًا"
+    },
+    "google": {
+      "continue": "المتابعة باستخدام جوجل"
+    },
+    "signUp": {
+      "title": "أنشئ حسابك",
+      "subtitle": "دقيقتان فقط. ثم أنت جاهز.",
+      "fullNameLabel": "الاسم الكامل",
+      "emailLabel": "البريد الإلكتروني",
+      "passwordLabel": "كلمة المرور",
+      "termsLabel": "أوافق على شروط الخدمة وسياسة الخصوصية",
+      "submit": "إنشاء حساب",
+      "haveAccount": "لديك حساب بالفعل؟ سجّل الدخول"
+    },
+    "verifyPending": {
+      "title": "تحقق من بريدك الإلكتروني",
+      "body": "أرسلنا رابط تأكيد إلى",
+      "expiry": "ينتهي صلاحية الرابط خلال {{minutes}} دقيقة.",
+      "waiting": "بانتظار التأكيد",
+      "continue": "لقد تأكّدت — متابعة",
+      "stillPending": "لا يزال قيد الانتظار — تحقق من بريدك الوارد، أو افتح الرابط من هذا الجهاز.",
+      "resend": "إعادة إرسال الرابط",
+      "resendCooldown": "يمكنك إعادة الإرسال خلال {{seconds}} ثانية",
+      "resent": "تم إرسال الرابط. تحقق من بريدك الوارد.",
+      "changeEmail": "عنوان خاطئ؟ غيّره",
+      "mailIcon": "بريد"
+    },
+    "verifySuccess": {
+      "title": "تم تأكيد البريد الإلكتروني",
+      "setupMfa": "تفعيل التحقق بخطوتين",
+      "skip": "تخطَّ الآن"
+    },
+    "mfaEnroll": {
+      "title": "المصادقة الثنائية",
+      "subtitle": "اختر طريقة تأكيد هويتك.",
+      "authenticator": "تطبيق المصادقة",
+      "sms": "رسالة نصية",
+      "smsComingSoon": "قريبًا",
+      "qrInstructions": "امسح رمز الاستجابة السريعة هذا باستخدام تطبيق المصادقة.",
+      "manualEntryLabel": "لا يمكنك المسح؟ أدخل هذا الرمز يدويًا:",
+      "codeLabel": "أدخل الرمز المكوّن من 6 أرقام من تطبيقك",
+      "recoveryWarning": "إذا فقدت الوصول إلى تطبيق المصادقة، ستحتاج إلى التواصل مع الدعم لاستعادة الوصول إلى حسابك — لا يوجد حاليًا مسار استرداد ذاتي.",
+      "settingUp": "جارٍ إعداد المصادقة الثنائية…"
+    },
+    "mfaChallenge": {
+      "title": "أدخل الرمز",
+      "subtitle": "افتح تطبيق المصادقة للحصول على الرمز المكوّن من 6 أرقام."
+    },
+    "forgotPassword": {
+      "title": "إعادة تعيين كلمة المرور",
+      "subtitle": "سنرسل لك رابطًا عبر البريد الإلكتروني. ينتهي خلال {{minutes}} دقيقة.",
+      "emailLabel": "البريد الإلكتروني",
+      "submit": "إرسال رابط إعادة التعيين",
+      "confirmation": "إذا كان هناك حساب مرتبط بهذا العنوان، فسيصلك رابط إعادة التعيين قريبًا. ينتهي خلال {{minutes}} دقيقة."
+    },
+    "resetPassword": {
+      "title": "عيّن كلمة مرور جديدة",
+      "warning": "حفظ كلمة مرور جديدة يسجّل خروجك من كل جهاز آخر — يبقى هذا الجهاز مسجّلاً للدخول.",
+      "passwordLabel": "كلمة المرور الجديدة",
+      "confirmLabel": "تأكيد كلمة المرور",
+      "match": "كلمتا المرور متطابقتان.",
+      "submit": "حفظ كلمة المرور الجديدة",
+      "success": "تم تحديث كلمة المرور. تم تسجيل خروجك من كل جهاز آخر."
+    },
+    "errors": {
+      "invalidCredentials": "البريد الإلكتروني وكلمة المرور غير متطابقين مع سجلاتنا.",
+      "emailNotConfirmed": "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.",
+      "userAlreadyExists": "يوجد حساب بهذا البريد الإلكتروني بالفعل.",
+      "weakPassword": "يرجى اختيار كلمة مرور أقوى.",
+      "samePassword": "يجب أن تختلف كلمة المرور الجديدة عن الحالية.",
+      "rateLimited": "محاولات كثيرة جدًا. يرجى الانتظار قليلاً والمحاولة مرة أخرى.",
+      "sessionExpired": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى.",
+      "network": "تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.",
+      "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    }
+  },
+  "onboarding": {
+    "role": {
+      "step": "الخطوة 1 من 3",
+      "title": "من أنت؟",
+      "subtitle": "اختر كيف ستستخدم Forge.",
+      "ptTitle": "أنا مدرب شخصي",
+      "ptSubtitle": "إدارة العملاء والبرامج والمدفوعات.",
+      "clientTitle": "أتدرب مع مدرب",
+      "clientSubtitle": "تتبّع تمارينك وتقدّمك.",
+      "continue": "متابعة",
+      "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    },
+    "ptProfile": {
+      "stepOf": "الخطوة {{step}} من {{total}}",
+      "step1": {
+        "title": "من أنت",
+        "addPhoto": "إضافة صورة",
+        "addPhotoNote": "رفع الصور قادم في تحديث مستقبلي.",
+        "displayNameLabel": "الاسم المعروض",
+        "bioLabel": "نبذة تعريفية",
+        "bioPlaceholder": "أخبر عملاءك قليلاً عن أسلوبك في التدريب."
+      },
+      "step2": {
+        "title": "الشهادات",
+        "addCertification": "+ إضافة شهادة",
+        "nameLabel": "اسم الشهادة",
+        "issuerLabel": "الجهة المانحة",
+        "expiresLabel": "تاريخ الانتهاء (YYYY-MM-DD)",
+        "saveCertification": "إضافة",
+        "empty": "لم تتم إضافة أي شهادات بعد.",
+        "statusUnverified": "غير موثّقة",
+        "nameRequired": "اسم الشهادة مطلوب"
+      },
+      "step3": {
+        "title": "ما الذي تقدّمه",
+        "specializationsLabel": "التخصصات",
+        "pricingNote": "لا تتعامل Forge مع أسعار الجلسات إطلاقًا. تتفق على الأسعار مع عملائك مباشرة."
+      },
+      "step4": {
+        "title": "أين وكيف",
+        "languagesLabel": "اللغات التي تدرّب بها",
+        "summaryTitle": "أنت جاهز تمامًا",
+        "summaryBody": "اضغط إنهاء لبدء استخدام Forge. يمكنك دائمًا إكمال المزيد من ملفك الشخصي لاحقًا.",
+        "finish": "إنهاء"
+      },
+      "error": "حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى."
+    }
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "loadFailed": "تعذّر تحميل ملفك الشخصي.",
+    "emailLabel": "البريد الإلكتروني",
+    "roleLabel": "الدور",
+    "roles": {
+      "pt": "مدرب شخصي",
+      "client": "عميل",
+      "gym_account": "حساب نادٍ رياضي",
+      "admin": "مسؤول المنصة"
+    },
+    "bioLabel": "نبذة تعريفية",
+    "bioEmpty": "لا توجد نبذة بعد.",
+    "specializationsLabel": "التخصصات",
+    "specializationsEmpty": "لم تتم إضافة تخصصات بعد.",
+    "languagesLabel": "اللغات",
+    "languagesEmpty": "لم تتم إضافة لغات بعد.",
+    "certificationsLabel": "الشهادات",
+    "certificationsEmpty": "لم تتم إضافة شهادات بعد.",
+    "editButton": "تعديل الملف الشخصي"
+  },
+  "profileEdit": {
+    "title": "تعديل الملف الشخصي",
+    "accountSection": "الحساب",
+    "displayNameLabel": "الاسم المعروض",
+    "phoneLabel": "الهاتف",
+    "photoUrlLabel": "رابط الصورة",
+    "ptSection": "الملف الشخصي للمدرب",
+    "bioLabel": "نبذة تعريفية",
+    "specializationsLabel": "التخصصات",
+    "languagesLabel": "اللغات",
+    "certificationsSection": "الشهادات",
+    "addCertification": "+ إضافة شهادة",
+    "removeCertification": "إزالة",
+    "saved": "تم تحديث الملف الشخصي.",
+    "error": "حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.",
+    "deleteAccount": "حذف الحساب",
+    "deleteAccountBody": "تواصل مع الدعم لحذف حسابك. لا يتوفر حذف ذاتي للحساب حاليًا — هذا يفتح رسالة فقط، ولا يحذف أي شيء.",
+    "deleteAccountContact": "تواصل مع الدعم",
+    "deleteAccountClose": "إغلاق",
+    "accountPhotoUrlLabel": "رابط صورة الحساب",
+    "ptPhotoUrlLabel": "رابط صورة ملف المدرّب"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "error": "حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.",
+    "preferences": {
+      "heading": "التفضيلات",
+      "languageLabel": "اللغة",
+      "languageSubtitle": "يعكس التخطيط بالكامل أيضًا",
+      "languageNote": "الاتجاه إعداد أصلي — سينعكس التخطيط في المرة القادمة التي تفتح فيها Forge.",
+      "unitsLabel": "الوحدات",
+      "appearanceLabel": "المظهر",
+      "appearanceSubtitle": "أرضيات الصالات الرياضية داكنة",
+      "appearanceLight": "فاتح",
+      "appearanceDark": "داكن",
+      "appearanceSystem": "النظام"
+    },
+    "quietHours": {
+      "heading": "ساعات الهدوء",
+      "muteLabel": "ساعات الهدوء",
+      "muteSubtitle": "تصلك تذكيرات الحصص دائمًا. كل شيء آخر ينتظر.",
+      "from": "من",
+      "until": "حتى"
+    },
+    "account": {
+      "heading": "الحساب",
+      "editProfile": "تعديل الملف الشخصي",
+      "twoFactor": "التحقق بخطوتين",
+      "twoFactorOn": "مفعّل",
+      "twoFactorOff": "غير مفعّل",
+      "unenrollTitle": "إيقاف التحقق بخطوتين؟",
+      "unenrollBody": "سيحتاج حسابك إلى كلمة المرور فقط لتسجيل الدخول. يمكنك إعادة تفعيل التحقق بخطوتين في أي وقت.",
+      "unenrollConfirm": "إيقاف",
+      "unenrollCancel": "إلغاء",
+      "unenrollError": "تعذّر إيقاف التحقق بخطوتين. يرجى المحاولة مرة أخرى."
+    },
+    "consents": {
+      "heading": "الخصوصية",
+      "analyticsLabel": "تحليلات الاستخدام",
+      "analyticsSubtitle": "ساعدنا في تحسين Forge ببيانات استخدام مجهولة المصدر.",
+      "marketingLabel": "رسائل تسويقية",
+      "marketingSubtitle": "أخبار المنتج والعروض.",
+      "aiTrainingLabel": "تدريب الذكاء الاصطناعي",
+      "aiTrainingSubtitle": "السماح باستخدام بيانات مجهولة المصدر لتحسين ميزات الذكاء الاصطناعي في Forge."
+    },
+    "signOut": "تسجيل الخروج"
+  },
+  "clients": {
+    "title": "العملاء",
+    "searchPlaceholder": "ابحث عن عميل",
+    "filters": {
+      "all": "الكل",
+      "active": "نشط",
+      "paused": "متوقف مؤقتًا",
+      "invited": "مدعو"
+    },
+    "stateLabels": {
+      "invited": "مدعو",
+      "accepted": "قبِل الدعوة",
+      "active": "نشط",
+      "paused": "متوقف مؤقتًا",
+      "deactivated": "غير نشط"
+    },
+    "empty": {
+      "title": "لا يوجد عملاء بعد",
+      "body": "ادعُ أول عميل لك للبدء.",
+      "inviteButton": "ادعُ أول عميل"
+    },
+    "noMatch": {
+      "title": "لا يوجد عملاء مطابقون لـ \"{{query}}\"",
+      "body": "جرّب بحثًا مختلفًا، أو ادعُ عميلاً جديدًا.",
+      "inviteButton": "ادعُ عميلاً"
+    },
+    "offlineError": {
+      "title": "تعذّر تحميل قائمة عملائك",
+      "body": "تحقق من اتصالك وأعد المحاولة.",
+      "retry": "إعادة المحاولة"
+    },
+    "inviteAction": "دعوة",
+    "invite": {
+      "title": "ادعُ عميلاً",
+      "nameLabel": "الاسم (اختياري)",
+      "namePlaceholder": "مايا خوري",
+      "emailLabel": "البريد الإلكتروني",
+      "emailPlaceholder": "client@example.com",
+      "copyLink": "نسخ الرابط",
+      "sendInvite": "مشاركة الدعوة",
+      "expiryNote": "تنتهي صلاحية الدعوة خلال 7 أيام.",
+      "singleUseNote": "يعمل هذا الرابط مرة واحدة فقط.",
+      "linkCopied": "تم نسخ الرابط",
+      "successTitle": "رابط الدعوة جاهز",
+      "successBody": "أرسل هذا الرابط إلى {{name}}. سيظهر في قائمة عملائك بمجرد قبوله.",
+      "error": "تعذّر إرسال الدعوة. يرجى المحاولة مرة أخرى.",
+      "duplicateError": "توجد دعوة معلّقة بالفعل لهذا البريد الإلكتروني.",
+      "submit": "إنشاء رابط دعوة",
+      "noEmailNote": "لا يرسل Forge هذا الرابط نيابةً عنك — انسخه أو شاركه بنفسك."
+    },
+    "detail": {
+      "essentialsTitle": "المعلومات الأساسية",
+      "ageLabel": "العمر",
+      "sexLabel": "الجنس",
+      "heightLabel": "الطول",
+      "weightLabel": "الوزن",
+      "goalLabel": "الهدف الرئيسي",
+      "redFlagBanner_one": "إجابة واحدة تحتاج إلى انتباهك قبل جلستهم الأولى.",
+      "redFlagBanner_other": "{{count}} إجابات تحتاج إلى انتباهك قبل جلستهم الأولى.",
+      "intakeTitle": "الاستمارة التمهيدية",
+      "intakeNotStarted": "لم تبدأ بعد",
+      "intakeProgress": "تم حفظ {{answered}} من {{total}} أقسام",
+      "reviewIntake": "مراجعة الاستمارة",
+      "waiverSigned": "تم توقيع الإخلاء",
+      "waiverUnsigned": "لم يتم توقيع الإخلاء بعد",
+      "startSession": "بدء الجلسة",
+      "startSessionComingSoon": "تسجيل الجلسات يصل في تحديث لاحق.",
+      "startSessionBlocked": "متاح بعد تقديم الاستمارة التمهيدية.",
+      "pause": "إيقاف مؤقت",
+      "reactivate": "إعادة التفعيل",
+      "deactivate": "إلغاء التفعيل",
+      "pauseConfirmTitle": "إيقاف هذا العميل مؤقتًا؟",
+      "pauseConfirmBody": "يمكنك إعادة تفعيله في أي وقت.",
+      "deactivateConfirmTitle": "إلغاء تفعيل هذا العميل؟",
+      "deactivateConfirmBody": "سيبقى في قائمة عملائك لكن معلَّمًا كغير نشط.",
+      "reactivateConfirmTitle": "إعادة تفعيل هذا العميل؟",
+      "confirm": "تأكيد",
+      "resendInvite": "إعادة إرسال الدعوة",
+      "revokeInvite": "إلغاء الدعوة",
+      "revokeConfirmTitle": "إلغاء هذه الدعوة؟",
+      "revokeConfirmBody": "سيتوقف الرابط عن العمل فورًا.",
+      "changeEmail": "تغيير بريد الدعوة",
+      "actionError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    }
+  },
+  "intake": {
+    "stepOf": "الخطوة {{step}} من {{total}}",
+    "steps": {
+      "parq": "استبيان الجاهزية الصحية",
+      "goals": "الأهداف",
+      "history": "تاريخ التدريب",
+      "anthropometrics": "القياسات الجسدية",
+      "dietary": "القيود الغذائية"
+    },
+    "saveAndExit": "حفظ والخروج",
+    "continue": "متابعة",
+    "submit": "إرسال",
+    "submitting": "جارٍ الإرسال...",
+    "submitError": "حدث خطأ أثناء إرسال استمارتك. يرجى المحاولة مرة أخرى.",
+    "parq": {
+      "intro": "بضعة أسئلة عن صحتك قبل أن نبدأ. أجب بصدق — لن يرى مدربك هذه الإجابات إلا بعد إرسالها.",
+      "yes": "نعم",
+      "no": "لا",
+      "flaggedNote": "يستحق نقاشًا سريعًا مع مدربك قبل جلستك الأولى.",
+      "parq_heart": "هل سبق لطبيب أن أخبرك بأن لديك مشكلة في القلب ونصحك بممارسة النشاط البدني تحت إشراف طبي فقط؟",
+      "parq_chest_pain": "هل تشعر بألم في الصدر أثناء النشاط البدني؟",
+      "parq_dizziness": "هل شعرت بألم في الصدر أو دوار أو إغماء خلال الشهر الماضي، سواء في الراحة أو أثناء النشاط؟",
+      "parq_chronic_condition": "هل لديك حالة مزمنة مثل السكري أو الربو أو ارتفاع ضغط الدم؟",
+      "parq_medication": "هل تتناول حاليًا أدوية لمشكلة في القلب أو ضغط الدم؟",
+      "parq_musculoskeletal": "هل لديك مشكلة في العظام أو المفاصل قد تتفاقم بسبب التمرين؟",
+      "parq_supervised": "هل سبق لطبيب أن أوصى بأن تمارس الرياضة تحت إشراف طبي فقط؟"
+    },
+    "goals": {
+      "primaryGoalLabel": "ما هو هدفك الرئيسي؟",
+      "primaryGoalPlaceholder": "مثال: خسارة الدهون، بناء القوة، الجري لمسافة 10 كم",
+      "targetDateLabel": "التاريخ المستهدف (اختياري)",
+      "motivationLabel": "ما الذي يحفزك على ذلك؟ (اختياري)"
+    },
+    "history": {
+      "yearsTrainingLabel": "سنوات الخبرة في التدريب",
+      "injuriesLabel": "إصابات أو عمليات جراحية سابقة",
+      "previousProgramsLabel": "برامج تدريب اتبعتها من قبل"
+    },
+    "anthropometrics": {
+      "dateOfBirthLabel": "تاريخ الميلاد",
+      "sexLabel": "الجنس",
+      "sexMale": "ذكر",
+      "sexFemale": "أنثى",
+      "heightLabel": "الطول",
+      "weightLabel": "الوزن"
+    },
+    "dietary": {
+      "restrictionsLabel": "القيود الغذائية",
+      "restriction_vegetarian": "نباتي",
+      "restriction_vegan": "نباتي صرف",
+      "restriction_halal": "حلال",
+      "restriction_kosher": "كوشير",
+      "restriction_gluten_free": "خالٍ من الغلوتين",
+      "restriction_dairy_free": "خالٍ من الألبان",
+      "restriction_nut_allergy": "حساسية من المكسرات",
+      "notesLabel": "أي شيء آخر يجب أن يعرفه مدربك؟"
+    },
+    "resume": {
+      "title": "مرحبًا بعودتك",
+      "checklistNote": "ما قمت بحفظه حتى الآن",
+      "privacyNote": "لن يرى مدربك إجاباتك حتى تقوم بالإرسال.",
+      "continueButton": "متابعة"
+    },
+    "review": {
+      "title": "مراجعة الاستمارة التمهيدية",
+      "flaggedLabel": "يحتاج إلى انتباه",
+      "notSubmittedYet": "لم يقدّم هذا العميل استمارته التمهيدية بعد.",
+      "sectionsTitle": "جميع الإجابات"
+    }
+  },
+  "waiver": {
+    "title": "إخلاء المسؤولية",
+    "body": "أقرّ بأن المشاركة في التدريب البدني تنطوي على مخاطر إصابة متأصلة. لقد أفصحت عن تاريخي الصحي بدقة واكتمال في استمارة الإدخال أعلاه. أُعفي Forge ومدربي من المسؤولية عن الإصابات الناتجة عن الإهمال العادي، إلى أقصى حد يسمح به القانون. أتفهّم أنه يمكنني إيقاف أي نشاط في أي وقت وأنه يجب عليّ إخبار مدربي فورًا إذا شعرت بتوعك.",
+    "signatureLabel": "وقّع هنا",
+    "signatureInstructions": "استخدم إصبعك للتوقيع في المربع أعلاه.",
+    "clear": "مسح",
+    "submit": "التوقيع والإرسال",
+    "submitting": "جارٍ الإرسال...",
+    "submitDisabledNote": "وقّع أعلاه للمتابعة.",
+    "submitError": "حدث خطأ ما. توقيعك لا يزال موجودًا — يرجى المحاولة مرة أخرى.",
+    "done": {
+      "title": "تم توقيع الإخلاء",
+      "subtitle": "شكرًا — أنت جاهز لجلستك الأولى.",
+      "documentTitle": "إخلاء المسؤولية",
+      "documentSubtitle": "تم التوقيع في {{date}}",
+      "viewDocument": "عرض المستند",
+      "backToHome": "العودة إلى الرئيسية"
+    }
+  },
+  "clientHome": {
+    "greeting": "مرحبًا {{name}}",
+    "trainerLabel": "مدربك",
+    "noTrainerTitle": "لم يتم ربطك بمدرب بعد",
+    "noTrainerBody": "اطلب من مدربك دعوة هذا العنوان:",
+    "copyEmail": "نسخ بريدي الإلكتروني",
+    "emailCopied": "تم النسخ",
+    "intake": {
+      "notStarted": "ابدأ استمارتك التمهيدية",
+      "notStartedBody": "بضعة أسئلة قبل جلستك الأولى — حوالي 10 دقائق.",
+      "startButton": "ابدأ",
+      "inProgress": "تابع استمارتك التمهيدية",
+      "resumeButton": "متابعة",
+      "waitingReview": "تم الإرسال — في انتظار مدربك",
+      "signWaiver": "وقّع إخلاء المسؤولية",
+      "signWaiverButton": "وقّع الآن",
+      "done": "اكتملت الاستمارة التمهيدية"
+    },
+    "waiver": {
+      "rowTitle": "إخلاء المسؤولية",
+      "rowSubtitle": "تم التوقيع في {{date}}"
+    },
+    "program": {
+      "cardLabel": "برنامجك",
+      "none": "لم يُسند إليك مدربك برنامجًا بعد.",
+      "weekOf": "الأسبوع {{week}} من {{total}}",
+      "view": "عرض البرنامج"
+    }
+  },
+  "library": {
+    "title": "المكتبة",
+    "searchPlaceholder": "ابحث في {{count}} تمرين",
+    "mineTag": "تماريني",
+    "filterGroups": {
+      "muscle": "العضلة",
+      "equipment": "المعدات",
+      "pattern": "النمط"
+    },
+    "muscleLabels": {
+      "chest": "الصدر",
+      "back": "الظهر",
+      "shoulders": "الأكتاف",
+      "biceps": "العضلة ذات الرأسين",
+      "triceps": "العضلة ثلاثية الرؤوس",
+      "forearms": "الساعدان",
+      "quadriceps": "الرباعية",
+      "hamstrings": "أوتار الركبة",
+      "glutes": "الألوية",
+      "calves": "السمانة",
+      "abs": "البطن",
+      "obliques": "الخصر الجانبي",
+      "traps": "شبه المنحرفة",
+      "lats": "الظهرية العريضة",
+      "hip_flexors": "قابضات الورك",
+      "adductors": "المقربات",
+      "abductors": "المبعدات",
+      "full_body": "الجسم كامل",
+      "cardio": "كارديو",
+      "other": "أخرى"
+    },
+    "equipmentLabels": {
+      "barbell": "بار",
+      "dumbbell": "دمبل",
+      "kettlebell": "كيتل بيل",
+      "machine": "جهاز",
+      "cable": "كابل",
+      "bodyweight": "وزن الجسم",
+      "resistance_band": "شريط مقاومة",
+      "smith_machine": "جهاز سميث",
+      "trx": "تي آر إكس",
+      "medicine_ball": "كرة طبية",
+      "foam_roller": "أسطوانة فوم",
+      "bench": "بنش",
+      "pull_up_bar": "عقلة",
+      "cardio_machine": "جهاز كارديو",
+      "other": "أخرى",
+      "none": "بدون معدات"
+    },
+    "patternLabels": {
+      "push": "دفع",
+      "pull": "سحب",
+      "squat": "قرفصاء",
+      "hinge": "ثني الورك",
+      "lunge": "طعن",
+      "carry": "حمل",
+      "rotation": "دوران",
+      "isometric": "ثابت",
+      "plyometric": "قفز",
+      "cardio": "كارديو",
+      "stretch": "إطالة",
+      "other": "أخرى"
+    },
+    "difficultyLabels": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم"
+    },
+    "empty": {
+      "title": "لا تمارين بعد",
+      "body": "مكتبتك فارغة. أنشئ الحركة التي تحتاجها.",
+      "createButton": "إنشاء تمرين خاص"
+    },
+    "noMatch": {
+      "title": "لا نتائج لـ \"{{query}}\"",
+      "body": "أزل أحد الفلاتر، أو أنشئ الحركة بنفسك.",
+      "createButton": "إنشاء تمرين خاص"
+    },
+    "offlineError": {
+      "title": "تعذّر تحميل المكتبة",
+      "body": "تحقق من اتصالك وحاول مجددًا.",
+      "retry": "إعادة المحاولة"
+    },
+    "detail": {
+      "videoPlaceholder": "فيديو الشرح قريبًا",
+      "cuesTitle": "إرشادات التنفيذ",
+      "noCues": "لا توجد إرشادات مكتوبة لهذه الحركة بعد.",
+      "historyTitle": "سجل هذا العميل",
+      "historyEmpty": "لا سجل بعد — هذه أول مرة تبرمج فيها هذه الحركة.",
+      "addToProgram": "أضف إلى البرنامج",
+      "addFromBuilderHint": "افتح هذا من داخل برنامج لإضافته."
+    },
+    "custom": {
+      "title": "تمرين خاص",
+      "nameLabel": "الاسم",
+      "namePlaceholder": "تجديف بالبار الأرضي",
+      "muscleLabel": "المجموعة العضلية",
+      "equipmentLabel": "المعدات",
+      "patternLabel": "نمط الحركة (اختياري)",
+      "difficultyLabel": "المستوى (اختياري)",
+      "videoLabel": "رابط الفيديو (اختياري)",
+      "cuesLabel": "إرشادات التنفيذ (اختياري)",
+      "addCue": "أضف إرشادًا",
+      "removeCue": "حذف الإرشاد",
+      "save": "حفظ في مكتبتي",
+      "successTitle": "تم الحفظ في مكتبتك",
+      "error": "تعذّر حفظ التمرين. حاول مجددًا."
+    }
+  },
+  "programs": {
+    "title": "البرامج",
+    "tabs": {
+      "assigned": "المُسندة",
+      "templates": "القوالب"
+    },
+    "meta": "{{weeks}} أسابيع · {{days}} أيام/أسبوع · {{exercises}} تمرين",
+    "weekTag": "الأسبوع {{week}}",
+    "draftTag": "مسودة",
+    "aiDraftMeta": "{{weeks}} أسابيع · مسودة بالذكاء الاصطناعي",
+    "newProgram": "برنامج جديد",
+    "assignAction": "إسناد",
+    "empty": {
+      "title": "لا برامج بعد",
+      "body": "ابنِ برنامجًا من الصفر، أو دع الذكاء الاصطناعي يكتب النسخة الأولى.",
+      "createButton": "برنامج جديد"
+    },
+    "emptyTemplates": {
+      "title": "لا قوالب بعد",
+      "body": "احفظ أي برنامج كقالب لإعادة استخدامه مع عملاء آخرين.",
+      "createButton": "برنامج جديد"
+    },
+    "noMatch": {
+      "title": "لا نتائج لـ \"{{query}}\"",
+      "body": "جرّب بحثًا آخر.",
+      "createButton": "برنامج جديد"
+    },
+    "offlineError": {
+      "title": "تعذّر تحميل برامجك",
+      "body": "تحقق من اتصالك وحاول مجددًا.",
+      "retry": "إعادة المحاولة"
+    },
+    "create": {
+      "title": "برنامج جديد",
+      "nameLabel": "اسم البرنامج",
+      "namePlaceholder": "مرحلة القوة",
+      "weeksLabel": "المدة",
+      "weeksValue_one": "أسبوع واحد",
+      "weeksValue_other": "{{count}} أسابيع",
+      "clientLabel": "لـ (اختياري)",
+      "templateLabel": "احفظه كقالب",
+      "create": "إنشاء البرنامج",
+      "error": "تعذّر إنشاء البرنامج. حاول مجددًا."
+    }
+  },
+  "builder": {
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ",
+    "saved": "تم الحفظ",
+    "weekLabel": "الأسبوع {{week}}",
+    "dayLabel": "اليوم {{day}}",
+    "addDay": "أضف يومًا",
+    "addBlock": "أضف مقطعًا",
+    "addExercise": "أضف تمرينًا",
+    "removeExercise": "حذف التمرين",
+    "restLabel": "راحة {{rest}}",
+    "cells": {
+      "sets": "مجموعات",
+      "reps": "تكرارات",
+      "rpe": "الجهد",
+      "tempo": "الإيقاع"
+    },
+    "blockTypeLabels": {
+      "warmup": "إحماء",
+      "working": "عمل",
+      "cooldown": "تهدئة",
+      "superset": "سوبرست",
+      "circuit": "دائري",
+      "straight": "مجموعات مباشرة",
+      "emom": "كل دقيقة",
+      "amrap": "أكبر عدد ممكن",
+      "drop_set": "دروب ست"
+    },
+    "keypad": {
+      "done": "تم",
+      "next": "التالي",
+      "clear": "مسح",
+      "tempoCustom": "مخصص"
+    },
+    "empty": {
+      "title": "لا شيء مبرمج بعد",
+      "body": "أضف أول تمرين لهذا اليوم."
+    },
+    "offlineError": {
+      "title": "تعذّر تحميل هذا البرنامج",
+      "body": "تحقق من اتصالك وحاول مجددًا.",
+      "retry": "إعادة المحاولة"
+    },
+    "saveError": "تعذّر الحفظ. تعديلاتك ما زالت هنا — حاول مجددًا.",
+    "unsaved": {
+      "title": "الخروج دون حفظ؟",
+      "body": "ستفقد تعديلاتك على هذا البرنامج.",
+      "confirm": "تجاهل التعديلات",
+      "cancel": "متابعة التعديل"
+    },
+    "copyWeek": {
+      "action": "نسخ الأسبوع",
+      "title": "نسخ الأسبوع {{week}}",
+      "body": "اختر وجهة النسخ. محتوى الأسبوع الهدف سيُستبدل بالكامل.",
+      "targetLabel": "الأسبوع {{week}}",
+      "confirm": "نسخ الأسبوع",
+      "cancel": "إلغاء",
+      "error": "تعذّر نسخ الأسبوع. حاول مجددًا.",
+      "saveFirst": "احفظ تغييراتك أولاً. نسخ أسبوع يعيد تحميل البرنامج من الخادم، ما يؤدي إلى فقدان أي تعديلات لم تُحفظ."
+    },
+    "assign": {
+      "title": "إسناد إلى عميل",
+      "clientsLabel": "إسناد إلى",
+      "startDateLabel": "البداية",
+      "startNextMonday": "الاثنين القادم",
+      "startToday": "اليوم",
+      "startCustom": "اختر تاريخًا",
+      "replaceWarning": "برنامج {{name}} الحالي متبقٍ منه {{weeks}} أسابيع. الإسناد سيستبدله.",
+      "confirm": "إسناد البرنامج",
+      "empty": "لا يوجد عملاء نشطون للإسناد إليهم بعد.",
+      "error": "تعذّر إسناد البرنامج. حاول مجددًا."
+    }
+  },
+  "ai": {
+    "draftAction": "مسودة بالذكاء الاصطناعي",
+    "creditCost": "إنشاء المسودة · رصيد واحد",
+    "intro": "أجب عن ثلاثة أسئلة. أنت تراجع وتعدّل كل مجموعة قبل أن يصل أي شيء إلى {{name}}.",
+    "goalLabel": "الهدف",
+    "goalLabels": {
+      "strength": "القوة",
+      "hypertrophy": "الكتلة العضلية",
+      "fat_loss": "خسارة الدهون",
+      "endurance": "التحمل",
+      "general_fitness": "لياقة عامة",
+      "rehab_return": "العودة من إصابة"
+    },
+    "equipmentLabel": "المعدات المتاحة",
+    "experienceLabel": "الخبرة",
+    "experienceLabels": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم"
+    },
+    "avoidLabel": "ما يجب تجنبه",
+    "avoidPlaceholder": "لا ضغط علوي — إصابة في الكتف الأيسر.",
+    "generating": {
+      "title": "جارٍ كتابة أربعة أسابيع",
+      "body": "عادةً أقل من 12 ثانية. أبقِ هذه الشاشة مفتوحة.",
+      "step1": "قراءة استبيان {{name}} وسجله",
+      "step2": "اختيار الحركات المناسبة للمعدات المتاحة",
+      "step3": "ضبط الأحمال والتكرارات والجهد",
+      "step4": "مراجعة التدرّج الأسبوعي"
+    },
+    "result": {
+      "warning": "مسودة فقط. لا شيء يُسند حتى تحفظه بنفسك.",
+      "reviewInBuilder": "مراجعة في المحرر",
+      "redraft": "إعادة الإنشاء",
+      "discard": "تجاهل",
+      "discardTitle": "تجاهل هذه المسودة؟",
+      "discardBody": "رصيد هذه المسودة قد استُهلك بالفعل. التجاهل لا يعيده.",
+      "discardConfirm": "تجاهل المسودة",
+      "discardCancel": "متابعة المراجعة"
+    },
+    "errors": {
+      "unauthorized": "انتهت جلستك. سجّل الدخول وحاول مجددًا.",
+      "forbidden": "أنت لست مدرب هذا العميل.",
+      "insufficientCredits": "نفد رصيدك من الذكاء الاصطناعي. لم يُخصم أي رصيد.",
+      "model": "تعذّر إنشاء المسودة. لم يُخصم أي رصيد.",
+      "timeout": "استغرق الأمر وقتًا طويلًا. لم يُخصم أي رصيد — حاول مجددًا.",
+      "refunded": "حدث خطأ بعد إنشاء المسودة. تمت إعادة رصيدك.",
+      "generic": "تعذّر إنشاء البرنامج. لم يُخصم أي رصيد."
+    },
+    "needsClient": "أسنِد هذا البرنامج إلى عميل أولاً — تُكتب المسودة لشخص واحد بعينه."
+  },
+  "credits": {
+    "balanceLabel": "أرصدة الذكاء الاصطناعي",
+    "remaining_one": "بقي رصيد واحد",
+    "remaining_other": "بقي {{count}} أرصدة",
+    "enoughForOne": "يكفي لمسودة واحدة أخرى",
+    "empty": "نفد رصيدك من الذكاء الاصطناعي",
+    "body": "الأرصدة تغطي مسودات الذكاء الاصطناعي فقط. بناء البرامج يدويًا مجاني دائمًا وبلا حدود.",
+    "packs": {
+      "starter": "يكفي لنحو 20 مسودة",
+      "standard": "الأفضل قيمة · اختيار معظم المدربين",
+      "power": "للاستوديوهات"
+    },
+    "comingSoon": "قريبًا",
+    "dismiss": "ليس الآن"
+  },
+  "myProgram": {
+    "title": "برنامجك",
+    "empty": "لم يُسند إليك مدربك برنامجًا بعد.",
+    "readOnlyNote": "مدربك هو من يكتب هذا البرنامج. ستسجّل تمارينك عليه في الإصدار القادم.",
+    "offlineError": {
+      "title": "تعذّر تحميل برنامجك",
+      "body": "تحقق من اتصالك وحاول مجددًا.",
+      "retry": "إعادة المحاولة"
+    }
+  },
+  "units": {
+    "cm": "سم",
+    "inch": "بوصة",
+    "kg": "كغ",
+    "lb": "رطل"
   }
 }

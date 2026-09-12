@@ -15,6 +15,750 @@
   },
   "common": {
     "retry": "Retry",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "back": "Back",
+    "skip": "Skip",
+    "continue": "Continue",
+    "save": "Save",
+    "finish": "Finish",
+    "close": "Close",
+    "tabs": {
+      "today": "Today",
+      "clients": "Clients",
+      "programs": "Programs",
+      "library": "Library"
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "Welcome back.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "No account? Sign up"
+    },
+    "google": {
+      "continue": "Continue with Google"
+    },
+    "signUp": {
+      "title": "Create your account",
+      "subtitle": "Two minutes. Then you're in.",
+      "fullNameLabel": "Full name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "termsLabel": "I agree to the Terms of Service and Privacy Policy",
+      "submit": "Create account",
+      "haveAccount": "Already have an account? Sign in"
+    },
+    "verifyPending": {
+      "title": "Check your email",
+      "body": "We sent a confirmation link to",
+      "expiry": "The link expires in {{minutes}} minutes.",
+      "waiting": "Waiting for confirmation",
+      "continue": "I've verified — continue",
+      "stillPending": "Still waiting — check your inbox, or open the link from this device.",
+      "resend": "Resend link",
+      "resendCooldown": "Resend available in {{seconds}}s",
+      "resent": "Link sent. Check your inbox.",
+      "changeEmail": "Wrong address? Change it",
+      "mailIcon": "Mail"
+    },
+    "verifySuccess": {
+      "title": "Email verified",
+      "setupMfa": "Set up two-factor",
+      "skip": "Skip for now"
+    },
+    "mfaEnroll": {
+      "title": "Two-factor authentication",
+      "subtitle": "Pick how you want to confirm it's you.",
+      "authenticator": "Authenticator",
+      "sms": "SMS",
+      "smsComingSoon": "Coming soon",
+      "qrInstructions": "Scan this QR code with your authenticator app.",
+      "manualEntryLabel": "Can't scan? Enter this code manually:",
+      "codeLabel": "Enter the 6-digit code from your app",
+      "recoveryWarning": "If you lose access to your authenticator app, you'll need to contact support to regain access to your account — there is no self-service recovery yet.",
+      "settingUp": "Setting up two-factor…"
+    },
+    "mfaChallenge": {
+      "title": "Enter your code",
+      "subtitle": "Open your authenticator app for the 6-digit code."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "We'll email you a link. It expires in {{minutes}} minutes.",
+      "emailLabel": "Email",
+      "submit": "Send reset link",
+      "confirmation": "If an account exists for this address, a reset link is on its way. It expires in {{minutes}} minutes."
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "warning": "Saving a new password signs you out of every other device — this one stays signed in.",
+      "passwordLabel": "New password",
+      "confirmLabel": "Confirm password",
+      "match": "Passwords match.",
+      "submit": "Save new password",
+      "success": "Password updated. You're signed out on every other device."
+    },
+    "errors": {
+      "invalidCredentials": "That email and password combination doesn't match our records.",
+      "emailNotConfirmed": "Confirm your email before signing in.",
+      "userAlreadyExists": "An account with this email already exists.",
+      "weakPassword": "Choose a stronger password.",
+      "samePassword": "Your new password must be different from your current one.",
+      "rateLimited": "Too many attempts. Please wait a moment and try again.",
+      "sessionExpired": "Your session expired. Please sign in again.",
+      "network": "Couldn't reach the server. Check your connection and try again.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "onboarding": {
+    "role": {
+      "step": "Step 1 of 3",
+      "title": "Who are you?",
+      "subtitle": "Choose how you'll use Forge.",
+      "ptTitle": "I'm a personal trainer",
+      "ptSubtitle": "Manage clients, programs, payments.",
+      "clientTitle": "I train with a coach",
+      "clientSubtitle": "Track my workouts and progress.",
+      "continue": "Continue",
+      "error": "Something went wrong. Please try again."
+    },
+    "ptProfile": {
+      "stepOf": "Step {{step}} of {{total}}",
+      "step1": {
+        "title": "Who you are",
+        "addPhoto": "Add a photo",
+        "addPhotoNote": "Photo uploads are coming in a future update.",
+        "displayNameLabel": "Display name",
+        "bioLabel": "Bio",
+        "bioPlaceholder": "Tell clients a bit about your coaching style."
+      },
+      "step2": {
+        "title": "Certifications",
+        "addCertification": "+ Add a certification",
+        "nameLabel": "Certification name",
+        "issuerLabel": "Issuing organization",
+        "expiresLabel": "Expiry date (YYYY-MM-DD)",
+        "saveCertification": "Add",
+        "empty": "No certifications added yet.",
+        "statusUnverified": "Unverified",
+        "nameRequired": "Certification name is required"
+      },
+      "step3": {
+        "title": "What you offer",
+        "specializationsLabel": "Specializations",
+        "pricingNote": "Forge never handles session pricing. You agree rates with your clients directly."
+      },
+      "step4": {
+        "title": "Where and how",
+        "languagesLabel": "Languages you coach in",
+        "summaryTitle": "You're all set",
+        "summaryBody": "Tap Finish to start using Forge. You can always fill in more from your profile later.",
+        "finish": "Finish"
+      },
+      "error": "Something went wrong saving that. Please try again."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "loadFailed": "Couldn't load your profile.",
+    "emailLabel": "Email",
+    "roleLabel": "Role",
+    "roles": {
+      "pt": "Personal trainer",
+      "client": "Client",
+      "gym_account": "Gym account",
+      "admin": "Platform admin"
+    },
+    "bioLabel": "Bio",
+    "bioEmpty": "No bio yet.",
+    "specializationsLabel": "Specializations",
+    "specializationsEmpty": "No specializations added yet.",
+    "languagesLabel": "Languages",
+    "languagesEmpty": "No languages added yet.",
+    "certificationsLabel": "Certifications",
+    "certificationsEmpty": "No certifications added yet.",
+    "editButton": "Edit profile"
+  },
+  "profileEdit": {
+    "title": "Edit profile",
+    "accountSection": "Account",
+    "displayNameLabel": "Display name",
+    "phoneLabel": "Phone",
+    "photoUrlLabel": "Photo URL",
+    "ptSection": "PT profile",
+    "bioLabel": "Bio",
+    "specializationsLabel": "Specializations",
+    "languagesLabel": "Languages",
+    "certificationsSection": "Certifications",
+    "addCertification": "+ Add a certification",
+    "removeCertification": "Remove",
+    "saved": "Profile updated.",
+    "error": "Something went wrong saving that. Please try again.",
+    "deleteAccount": "Delete account",
+    "deleteAccountBody": "Contact support to delete your account. We don't support self-service account deletion yet — this only opens a message, it doesn't delete anything.",
+    "deleteAccountContact": "Contact support",
+    "deleteAccountClose": "Close",
+    "accountPhotoUrlLabel": "Account photo URL",
+    "ptPhotoUrlLabel": "Trainer profile photo URL"
+  },
+  "settings": {
+    "title": "Settings",
+    "error": "Something went wrong saving that. Please try again.",
+    "preferences": {
+      "heading": "Preferences",
+      "languageLabel": "Language",
+      "languageSubtitle": "Also flips the whole layout",
+      "languageNote": "Direction is a native setting — the layout mirrors next time you open Forge.",
+      "unitsLabel": "Units",
+      "appearanceLabel": "Appearance",
+      "appearanceSubtitle": "Gym floors are dark",
+      "appearanceLight": "Light",
+      "appearanceDark": "Dark",
+      "appearanceSystem": "System"
+    },
+    "quietHours": {
+      "heading": "Quiet hours",
+      "muteLabel": "Quiet hours",
+      "muteSubtitle": "Session reminders still come through. Everything else waits.",
+      "from": "FROM",
+      "until": "UNTIL"
+    },
+    "account": {
+      "heading": "Account",
+      "editProfile": "Edit profile",
+      "twoFactor": "Two-factor",
+      "twoFactorOn": "ON",
+      "twoFactorOff": "OFF",
+      "unenrollTitle": "Turn off two-factor?",
+      "unenrollBody": "Your account will only need a password to sign in. You can set two-factor up again anytime.",
+      "unenrollConfirm": "Turn off",
+      "unenrollCancel": "Cancel",
+      "unenrollError": "Couldn't turn off two-factor. Please try again."
+    },
+    "consents": {
+      "heading": "Privacy",
+      "analyticsLabel": "Usage analytics",
+      "analyticsSubtitle": "Help us improve Forge with anonymized usage data.",
+      "marketingLabel": "Marketing emails",
+      "marketingSubtitle": "Product news and offers.",
+      "aiTrainingLabel": "AI training",
+      "aiTrainingSubtitle": "Allow anonymized data to improve Forge's AI features."
+    },
+    "signOut": "Sign out"
+  },
+  "clients": {
+    "title": "Clients",
+    "searchPlaceholder": "Search clients",
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "paused": "Paused",
+      "invited": "Invited"
+    },
+    "stateLabels": {
+      "invited": "Invited",
+      "accepted": "Accepted",
+      "active": "Active",
+      "paused": "Paused",
+      "deactivated": "Deactivated"
+    },
+    "empty": {
+      "title": "No clients yet",
+      "body": "Invite your first client to get started.",
+      "inviteButton": "Invite your first client"
+    },
+    "noMatch": {
+      "title": "No clients match \"{{query}}\"",
+      "body": "Try a different search, or invite a new client.",
+      "inviteButton": "Invite a client"
+    },
+    "offlineError": {
+      "title": "Couldn't load your clients",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "inviteAction": "Invite",
+    "invite": {
+      "title": "Invite a client",
+      "nameLabel": "Name (optional)",
+      "namePlaceholder": "Maya Khoury",
+      "emailLabel": "Email",
+      "emailPlaceholder": "client@example.com",
+      "copyLink": "Copy link",
+      "sendInvite": "Share invite",
+      "expiryNote": "Expires in 7 days.",
+      "singleUseNote": "This link works once.",
+      "linkCopied": "Link copied",
+      "successTitle": "Invite link ready",
+      "successBody": "Send this link to {{name}}. They'll show up in your client list once they accept.",
+      "error": "Couldn't send the invite. Please try again.",
+      "duplicateError": "An invite to this address is already pending.",
+      "submit": "Create invite link",
+      "noEmailNote": "Forge doesn't email this for you — copy or share the link yourself."
+    },
+    "detail": {
+      "essentialsTitle": "Essentials",
+      "ageLabel": "Age",
+      "sexLabel": "Sex",
+      "heightLabel": "Height",
+      "weightLabel": "Weight",
+      "goalLabel": "Primary goal",
+      "redFlagBanner_one": "1 answer needs your attention before their first session.",
+      "redFlagBanner_other": "{{count}} answers need your attention before their first session.",
+      "intakeTitle": "Intake",
+      "intakeNotStarted": "Not started yet",
+      "intakeProgress": "{{answered}} of {{total}} sections saved",
+      "reviewIntake": "Review intake",
+      "waiverSigned": "Waiver signed",
+      "waiverUnsigned": "Waiver not signed yet",
+      "startSession": "Start session",
+      "startSessionComingSoon": "Session logging arrives in a later update.",
+      "startSessionBlocked": "Available once intake is submitted.",
+      "pause": "Pause",
+      "reactivate": "Reactivate",
+      "deactivate": "Deactivate",
+      "pauseConfirmTitle": "Pause this client?",
+      "pauseConfirmBody": "You can reactivate them anytime.",
+      "deactivateConfirmTitle": "Deactivate this client?",
+      "deactivateConfirmBody": "They'll stay on your roster but marked inactive.",
+      "reactivateConfirmTitle": "Reactivate this client?",
+      "confirm": "Confirm",
+      "resendInvite": "Resend invite",
+      "revokeInvite": "Revoke invite",
+      "revokeConfirmTitle": "Revoke this invite?",
+      "revokeConfirmBody": "The link will stop working immediately.",
+      "changeEmail": "Change invite email",
+      "actionError": "Something went wrong. Please try again."
+    }
+  },
+  "intake": {
+    "stepOf": "Step {{step}} of {{total}}",
+    "steps": {
+      "parq": "PAR-Q",
+      "goals": "Goals",
+      "history": "Training history",
+      "anthropometrics": "Anthropometrics",
+      "dietary": "Dietary restrictions"
+    },
+    "saveAndExit": "Save & exit",
+    "continue": "Continue",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "submitError": "Something went wrong submitting your intake. Please try again.",
+    "parq": {
+      "intro": "A few questions about your health before we get started. Answer honestly — your trainer only sees this after you submit.",
+      "yes": "Yes",
+      "no": "No",
+      "flaggedNote": "Worth a quick chat with your trainer before your first session.",
+      "parq_heart": "Has a doctor ever said you have a heart condition and recommended only medically supervised physical activity?",
+      "parq_chest_pain": "Do you feel pain in your chest during physical activity?",
+      "parq_dizziness": "Have you experienced chest pain, dizziness, or fainting in the past month, at rest or during activity?",
+      "parq_chronic_condition": "Do you have a chronic condition such as diabetes, asthma, or high blood pressure?",
+      "parq_medication": "Are you currently taking medication for a heart condition or blood pressure?",
+      "parq_musculoskeletal": "Do you have a bone or joint problem that could be made worse by exercise?",
+      "parq_supervised": "Has a doctor ever recommended you only exercise under medical supervision?"
+    },
+    "goals": {
+      "primaryGoalLabel": "What's your main goal?",
+      "primaryGoalPlaceholder": "e.g. Lose fat, build strength, run a 10k",
+      "targetDateLabel": "Target date (optional)",
+      "motivationLabel": "What's motivating this? (optional)"
+    },
+    "history": {
+      "yearsTrainingLabel": "Years of training experience",
+      "injuriesLabel": "Past injuries or surgeries",
+      "previousProgramsLabel": "Programs you've followed before"
+    },
+    "anthropometrics": {
+      "dateOfBirthLabel": "Date of birth",
+      "sexLabel": "Sex",
+      "sexMale": "Male",
+      "sexFemale": "Female",
+      "heightLabel": "Height",
+      "weightLabel": "Weight"
+    },
+    "dietary": {
+      "restrictionsLabel": "Dietary restrictions",
+      "restriction_vegetarian": "Vegetarian",
+      "restriction_vegan": "Vegan",
+      "restriction_halal": "Halal",
+      "restriction_kosher": "Kosher",
+      "restriction_gluten_free": "Gluten-free",
+      "restriction_dairy_free": "Dairy-free",
+      "restriction_nut_allergy": "Nut allergy",
+      "notesLabel": "Anything else your trainer should know?"
+    },
+    "resume": {
+      "title": "Welcome back",
+      "checklistNote": "What you've saved so far",
+      "privacyNote": "Your trainer can't see your answers until you submit.",
+      "continueButton": "Continue"
+    },
+    "review": {
+      "title": "Intake review",
+      "flaggedLabel": "Needs attention",
+      "notSubmittedYet": "This client hasn't submitted their intake yet.",
+      "sectionsTitle": "All answers"
+    }
+  },
+  "waiver": {
+    "title": "Liability waiver",
+    "body": "I acknowledge that participation in physical training carries inherent risk of injury. I have disclosed my health history accurately and completely in the intake form above. I release Forge and my trainer from liability for injuries arising from ordinary negligence, to the fullest extent permitted by law. I understand I may stop any activity at any time and should tell my trainer immediately if I feel unwell.",
+    "signatureLabel": "Sign here",
+    "signatureInstructions": "Use your finger to sign in the box above.",
+    "clear": "Clear",
+    "submit": "Sign and submit",
+    "submitting": "Submitting...",
+    "submitDisabledNote": "Sign above to continue.",
+    "submitError": "Something went wrong. Your signature is still here — please try again.",
+    "done": {
+      "title": "Waiver signed",
+      "subtitle": "Thanks — you're all set for your first session.",
+      "documentTitle": "Liability waiver",
+      "documentSubtitle": "Signed {{date}}",
+      "viewDocument": "View document",
+      "backToHome": "Back to home"
+    }
+  },
+  "clientHome": {
+    "greeting": "Hi {{name}}",
+    "trainerLabel": "Your trainer",
+    "noTrainerTitle": "No trainer linked yet",
+    "noTrainerBody": "Ask your trainer to invite this address:",
+    "copyEmail": "Copy my email",
+    "emailCopied": "Copied",
+    "intake": {
+      "notStarted": "Start your intake",
+      "notStartedBody": "A few questions before your first session — about 10 minutes.",
+      "startButton": "Start",
+      "inProgress": "Continue your intake",
+      "resumeButton": "Resume",
+      "waitingReview": "Submitted — waiting on your trainer",
+      "signWaiver": "Sign your waiver",
+      "signWaiverButton": "Sign now",
+      "done": "Intake complete"
+    },
+    "waiver": {
+      "rowTitle": "Liability waiver",
+      "rowSubtitle": "Signed {{date}}"
+    },
+    "program": {
+      "cardLabel": "Your program",
+      "none": "Your trainer hasn't assigned a program yet.",
+      "weekOf": "Week {{week}} of {{total}}",
+      "view": "View program"
+    }
+  },
+  "library": {
+    "title": "Library",
+    "searchPlaceholder": "Search {{count}} exercises",
+    "mineTag": "MINE",
+    "filterGroups": {
+      "muscle": "Muscle",
+      "equipment": "Equipment",
+      "pattern": "Pattern"
+    },
+    "muscleLabels": {
+      "chest": "Chest",
+      "back": "Back",
+      "shoulders": "Shoulders",
+      "biceps": "Biceps",
+      "triceps": "Triceps",
+      "forearms": "Forearms",
+      "quadriceps": "Quads",
+      "hamstrings": "Hamstrings",
+      "glutes": "Glutes",
+      "calves": "Calves",
+      "abs": "Abs",
+      "obliques": "Obliques",
+      "traps": "Traps",
+      "lats": "Lats",
+      "hip_flexors": "Hip flexors",
+      "adductors": "Adductors",
+      "abductors": "Abductors",
+      "full_body": "Full body",
+      "cardio": "Cardio",
+      "other": "Other"
+    },
+    "equipmentLabels": {
+      "barbell": "Barbell",
+      "dumbbell": "Dumbbell",
+      "kettlebell": "Kettlebell",
+      "machine": "Machine",
+      "cable": "Cable",
+      "bodyweight": "Bodyweight",
+      "resistance_band": "Band",
+      "smith_machine": "Smith machine",
+      "trx": "TRX",
+      "medicine_ball": "Med ball",
+      "foam_roller": "Foam roller",
+      "bench": "Bench",
+      "pull_up_bar": "Pull-up bar",
+      "cardio_machine": "Cardio machine",
+      "other": "Other",
+      "none": "No equipment"
+    },
+    "patternLabels": {
+      "push": "Push",
+      "pull": "Pull",
+      "squat": "Squat",
+      "hinge": "Hinge",
+      "lunge": "Lunge",
+      "carry": "Carry",
+      "rotation": "Rotation",
+      "isometric": "Isometric",
+      "plyometric": "Plyometric",
+      "cardio": "Cardio",
+      "stretch": "Stretch",
+      "other": "Other"
+    },
+    "difficultyLabels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "empty": {
+      "title": "No exercises yet",
+      "body": "Your library is empty. Build the movement you need.",
+      "createButton": "Create custom exercise"
+    },
+    "noMatch": {
+      "title": "Nothing matches \"{{query}}\"",
+      "body": "Clear a filter, or build the movement yourself.",
+      "createButton": "Create custom exercise"
+    },
+    "offlineError": {
+      "title": "Couldn't load the library",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "detail": {
+      "videoPlaceholder": "Demo video coming soon",
+      "cuesTitle": "Coaching cues",
+      "noCues": "No cues written for this movement yet.",
+      "historyTitle": "This client's history",
+      "historyEmpty": "No history yet — this is the first time you'll program it.",
+      "addToProgram": "Add to program",
+      "addFromBuilderHint": "Open this from a program to add it."
+    },
+    "custom": {
+      "title": "Custom exercise",
+      "nameLabel": "Name",
+      "namePlaceholder": "Landmine row",
+      "muscleLabel": "Muscle group",
+      "equipmentLabel": "Equipment",
+      "patternLabel": "Movement pattern (optional)",
+      "difficultyLabel": "Difficulty (optional)",
+      "videoLabel": "Video URL (optional)",
+      "cuesLabel": "Coaching cues (optional)",
+      "addCue": "Add a cue",
+      "removeCue": "Remove cue",
+      "save": "Save to my library",
+      "successTitle": "Saved to your library",
+      "error": "Couldn't save the exercise. Please try again."
+    }
+  },
+  "programs": {
+    "title": "Programs",
+    "tabs": {
+      "assigned": "Assigned",
+      "templates": "Templates"
+    },
+    "meta": "{{weeks}} weeks · {{days}} days/week · {{exercises}} exercises",
+    "weekTag": "WEEK {{week}}",
+    "draftTag": "DRAFT",
+    "aiDraftMeta": "{{weeks}} weeks · drafted with AI",
+    "newProgram": "New program",
+    "assignAction": "Assign",
+    "empty": {
+      "title": "No programs yet",
+      "body": "Build one from scratch, or let AI draft the first version.",
+      "createButton": "New program"
+    },
+    "emptyTemplates": {
+      "title": "No templates yet",
+      "body": "Save any program as a template to reuse it across clients.",
+      "createButton": "New program"
+    },
+    "noMatch": {
+      "title": "Nothing matches \"{{query}}\"",
+      "body": "Try a different search.",
+      "createButton": "New program"
+    },
+    "offlineError": {
+      "title": "Couldn't load your programs",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "create": {
+      "title": "New program",
+      "nameLabel": "Program name",
+      "namePlaceholder": "Strength block",
+      "weeksLabel": "Length",
+      "weeksValue_one": "{{count}} week",
+      "weeksValue_other": "{{count}} weeks",
+      "clientLabel": "For (optional)",
+      "templateLabel": "Save as a template",
+      "create": "Create program",
+      "error": "Couldn't create the program. Please try again."
+    }
+  },
+  "builder": {
+    "save": "Save",
+    "saving": "Saving",
+    "saved": "Saved",
+    "weekLabel": "Week {{week}}",
+    "dayLabel": "Day {{day}}",
+    "addDay": "Add day",
+    "addBlock": "Add block",
+    "addExercise": "Add exercise",
+    "removeExercise": "Remove exercise",
+    "restLabel": "REST {{rest}}",
+    "cells": {
+      "sets": "SETS",
+      "reps": "REPS",
+      "rpe": "RPE",
+      "tempo": "TEMPO"
+    },
+    "blockTypeLabels": {
+      "warmup": "Warm-up",
+      "working": "Working",
+      "cooldown": "Cool-down",
+      "superset": "Superset",
+      "circuit": "Circuit",
+      "straight": "Straight",
+      "emom": "EMOM",
+      "amrap": "AMRAP",
+      "drop_set": "Drop set"
+    },
+    "keypad": {
+      "done": "Done",
+      "next": "Next",
+      "clear": "Clear",
+      "tempoCustom": "Custom"
+    },
+    "empty": {
+      "title": "Nothing programmed yet",
+      "body": "Add your first exercise to this day."
+    },
+    "offlineError": {
+      "title": "Couldn't load this program",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "saveError": "Couldn't save. Your changes are still here — try again.",
+    "unsaved": {
+      "title": "Leave without saving?",
+      "body": "Your changes to this program will be lost.",
+      "confirm": "Discard changes",
+      "cancel": "Keep editing"
+    },
+    "copyWeek": {
+      "action": "Copy week",
+      "title": "Copy week {{week}}",
+      "body": "Choose where it lands. Existing sessions in the target week are replaced.",
+      "targetLabel": "Week {{week}}",
+      "confirm": "Copy week",
+      "cancel": "Cancel",
+      "error": "Couldn't copy the week. Please try again.",
+      "saveFirst": "Save your changes first. Copying a week reloads the program from the server, which would discard anything you haven't saved."
+    },
+    "assign": {
+      "title": "Assign to client",
+      "clientsLabel": "Assign to",
+      "startDateLabel": "Start",
+      "startNextMonday": "Next Monday",
+      "startToday": "Today",
+      "startCustom": "Pick a date",
+      "replaceWarning": "{{name}}'s current program has {{weeks}} weeks left. Assigning this replaces it.",
+      "confirm": "Assign program",
+      "empty": "You have no active clients to assign to yet.",
+      "error": "Couldn't assign the program. Please try again."
+    }
+  },
+  "ai": {
+    "draftAction": "Draft with AI",
+    "creditCost": "Generate draft · 1 credit",
+    "intro": "Answer three things. You review and edit every set before anything reaches {{name}}.",
+    "goalLabel": "Goal",
+    "goalLabels": {
+      "strength": "Strength",
+      "hypertrophy": "Muscle",
+      "fat_loss": "Fat loss",
+      "endurance": "Endurance",
+      "general_fitness": "General fitness",
+      "rehab_return": "Return from injury"
+    },
+    "equipmentLabel": "Equipment available",
+    "experienceLabel": "Experience",
+    "experienceLabels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "avoidLabel": "Anything to avoid",
+    "avoidPlaceholder": "No overhead pressing — left shoulder.",
+    "generating": {
+      "title": "Drafting four weeks",
+      "body": "Usually under 12 seconds. Keep this screen open.",
+      "step1": "Reading {{name}}'s intake and history",
+      "step2": "Choosing movements for available kit",
+      "step3": "Setting loads, reps and RPE",
+      "step4": "Checking weekly progression"
+    },
+    "result": {
+      "warning": "Draft only. Nothing is assigned until you save it.",
+      "reviewInBuilder": "Review in builder",
+      "redraft": "Redraft",
+      "discard": "Discard",
+      "discardTitle": "Discard this draft?",
+      "discardBody": "The credit for this draft has already been spent. Discarding cannot undo that.",
+      "discardConfirm": "Discard draft",
+      "discardCancel": "Keep reviewing"
+    },
+    "errors": {
+      "unauthorized": "Your session expired. Sign in and try again.",
+      "forbidden": "You're not this client's trainer.",
+      "insufficientCredits": "You're out of AI credits. No credit was charged.",
+      "model": "The draft failed to generate. No credit was charged.",
+      "timeout": "That took too long. No credit was charged — try again.",
+      "refunded": "Something went wrong after the draft was generated. Your credit was refunded.",
+      "generic": "Couldn't draft a program. No credit was charged."
+    },
+    "needsClient": "Assign this program to a client first — a draft is written for one person."
+  },
+  "credits": {
+    "balanceLabel": "AI credits",
+    "remaining_one": "{{count}} credit left",
+    "remaining_other": "{{count}} credits left",
+    "enoughForOne": "Enough for one more draft",
+    "empty": "You're out of AI credits",
+    "body": "Credits only cover AI drafting. Building programs by hand is always free and unlimited.",
+    "packs": {
+      "starter": "Enough for ~20 drafts",
+      "standard": "Best value · most PTs pick this",
+      "power": "For studios"
+    },
+    "comingSoon": "Coming soon",
+    "dismiss": "Not now"
+  },
+  "myProgram": {
+    "title": "Your program",
+    "empty": "Your trainer hasn't assigned a program yet.",
+    "readOnlyNote": "Your trainer writes this program. You'll log against it from the next release.",
+    "offlineError": {
+      "title": "Couldn't load your program",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    }
+  },
+  "units": {
+    "cm": "cm",
+    "inch": "in",
+    "kg": "kg",
+    "lb": "lb"
   }
 }

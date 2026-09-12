@@ -33,7 +33,11 @@ export default function Home() {
         Platform admin
       </h1>
       <p style={{ color: 'var(--text-secondary)', margin: 0, maxWidth: '60ch' }}>
-        Internal only. Staff sign-in and user search arrive in M1.
+        Internal only.{' '}
+        <a href="/login" style={{ color: 'var(--accent-text)' }}>
+          Staff sign-in
+        </a>{' '}
+        and user search are live.
       </p>
       <p style={{ color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-mono)' }}>
         <a href="/api/health" style={{ color: 'var(--accent-text)' }}>
