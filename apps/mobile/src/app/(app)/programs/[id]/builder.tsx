@@ -3,6 +3,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { CreditSheet } from '../../../../lib/ai/CreditSheet';
 import { useAuth } from '../../../../lib/auth/AuthProvider';
 import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
 import { useCreditBalance } from '../../../../lib/ai/useCreditBalance';
@@ -70,6 +71,7 @@ export default function ProgramBuilder() {
   const [pendingBlockIndex, setPendingBlockIndex] = useState<number | null>(null);
   const [copyWeekOpen, setCopyWeekOpen] = useState(false);
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
+  const [creditSheetOpen, setCreditSheetOpen] = useState(false);
 
   const { submitting, error: saveError, setError, run } = useAsyncSubmit();
 
@@ -528,12 +530,20 @@ export default function ProgramBuilder() {
         </View>
         <Button
           label={'✦ ' + t('ai.draftAction')}
-          onPress={() =>
+          onPress={() => {
+            // The cost is decided here, next to the balance — so an empty
+            // wallet opens the sheet rather than sending the PT to a prompt
+            // screen they cannot submit. It is never a hard block: dismissing
+            // leaves the builder working exactly as before.
+            if (credits.state === 'empty') {
+              setCreditSheetOpen(true);
+              return;
+            }
             router.push({
               pathname: '/(app)/programs/ai',
               params: { clientId: tree.client_id ?? '' },
-            })
-          }
+            });
+          }}
         />
       </Row>
 
@@ -615,6 +625,12 @@ export default function ProgramBuilder() {
           </Row>
         </View>
       ) : null}
+
+      <CreditSheet
+        visible={creditSheetOpen}
+        balance={credits.balance ?? 0}
+        onDismiss={() => setCreditSheetOpen(false)}
+      />
 
       <Modal
         visible={copyWeekOpen}
