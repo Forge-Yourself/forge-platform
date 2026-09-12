@@ -61,6 +61,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="programs"
+        options={{
+          title: t('common.tabs.programs'),
+          href: isClient ? null : undefined,
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▦</Text>,
+        }}
+      />
+      <Tabs.Screen
         name="library"
         options={{
           title: t('common.tabs.library'),

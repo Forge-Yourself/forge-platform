@@ -6711,6 +6711,24 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      program_summaries: {
+        Args: never
+        Returns: {
+          client_id: string
+          created_at: string
+          days_per_week: number
+          description: string
+          duration_weeks: number
+          exercise_count: number
+          id: string
+          is_ai_generated: boolean
+          is_template: boolean
+          name: string
+          periodization: string
+          start_date: string
+          state: string
+        }[]
+      }
       program_tree: { Args: { p_program_id: string }; Returns: Json }
       refund_ai_credit: {
         Args: { p_generation_id: string; p_reason?: string }
