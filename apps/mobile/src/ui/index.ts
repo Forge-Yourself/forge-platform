@@ -1,5 +1,9 @@
 export { Banner } from './Banner';
 export type { BannerProps, BannerVariant } from './Banner';
+export { BuilderBlock } from './BuilderBlock';
+export type { BuilderBlockProps } from './BuilderBlock';
+export { BuilderRow } from './BuilderRow';
+export type { BuilderCell, BuilderCellKey, BuilderRowProps } from './BuilderRow';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
 export { Card } from './Card';

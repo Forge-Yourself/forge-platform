@@ -5,6 +5,13 @@ import { Text } from './Text';
 export type NumericKeypadProps = {
   onKey: (digit: string) => void;
   onDelete: () => void;
+  /**
+   * Fills the otherwise-empty bottom-left slot. M3's builder passes a decimal
+   * point for the RPE cell — target_rpe is NUMERIC(3,1), so "7.5" is a real
+   * value a PT needs to type, not a nicety. Omitted, the transparent spacer
+   * stays exactly as MFA entry has always rendered it.
+   */
+  extraKey?: { label: string; onPress: () => void };
 };
 
 const ROWS = [
@@ -17,7 +24,7 @@ const ROWS = [
  * Generic 3-column numeric keypad. Reused by MFA/TOTP entry and (in M4) weight entry —
  * deliberately has no knowledge of what it's feeding, only onKey/onDelete callbacks.
  */
-export function NumericKeypad({ onKey, onDelete }: NumericKeypadProps) {
+export function NumericKeypad({ onKey, onDelete, extraKey }: NumericKeypadProps) {
   const t = useTheme();
 
   const keyStyle = {
@@ -49,7 +56,20 @@ export function NumericKeypad({ onKey, onDelete }: NumericKeypadProps) {
         </View>
       ))}
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <View style={[keyStyle, { backgroundColor: 'transparent' }]} />
+        {extraKey ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={extraKey.label}
+            onPress={extraKey.onPress}
+            style={keyStyle}
+          >
+            <Text numeric style={{ fontSize: 20, fontWeight: '700' }}>
+              {extraKey.label}
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={[keyStyle, { backgroundColor: 'transparent' }]} />
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="0"
