@@ -14,8 +14,11 @@ psql -U postgres -d forge -f db/seed.sql
 
 | File | Purpose |
 |---|---|
-| `schema.sql` | Complete DDL: extensions, 54 tables, indexes, constraints, partitions, triggers |
-| `seed.sql` | Reference data: 15 badges, 41 exercises |
+| `schema.sql` | Complete DDL: extensions, 54 tables, indexes, constraints, partitions, triggers. **Historical reference — see the header warning; `supabase/migrations/` is authoritative.** |
+| `seed.sql` | Reference data: 15 badges, 41 exercises. The exercises are superseded by, and absorbed verbatim into, migration `0008` — that migration is what actually populates a deployed library, and it carries all 41 of these slugs. |
+| `exercises/forge_exercise_library_v1.json` | The curated exercise library source of truth: 205 movements covering every `muscle_group`, `equipment` and `movement_pattern` CHECK value. Edit this, never the generated SQL. |
+| `exercises/build_import_sql.mjs` | Validates that JSON against the CHECK value lists (and refuses to emit on a coverage gap), then compiles it deterministically into `supabase/migrations/0008_exercise_library_v1.sql`. The eventual 2,000+ licensed import is a regeneration of the same file from a longer JSON — data only, no code change. |
+| `rls_assertions.sql` | The RLS assertion harness: 85 assertions run inside a transaction that ends in `ROLLBACK`. |
 
 ## Domain Map
 
@@ -26,6 +29,7 @@ psql -U postgres -d forge -f db/seed.sql
 | 3 | Coaching | clients, client_pt_assignments, intake_forms | 3 |
 | 4 | Gym | gyms, gym_memberships, gym_clients | 3 |
 | 5 | Programming | exercises, programs, program_weeks, program_days, program_blocks, program_exercises | 6 |
+| | | *M3 note: `program_days`, `program_blocks` and `program_exercises` each carry a denormalised `program_id`, guarded by a composite FK to their parent's `(id, program_id)`. It exists so every RLS policy on those tables is one predicate call rather than a 3-4 join chain per row — and the composite FK is what makes a drifted value structurally impossible. Any new write path must set it.* | |
 | 6 | Logging & Sessions | workout_sessions, sets, exercise_prs, body_metrics, progress_photos | 5 |
 | 7 | Nutrition | meal_plans, food_items, food_logs | 3 |
 | 8 | Scheduling & Bookings | schedules, classes, bookings, check_ins | 4 |

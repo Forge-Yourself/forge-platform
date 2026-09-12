@@ -16,7 +16,14 @@
 -- five-policy intake_forms split, the private waivers Storage bucket, and
 -- seven RPCs — invite_client, resend_invite, revoke_invite,
 -- claim_client_invites, set_client_state, submit_intake, intake_progress),
--- and migration 0006 (a client can read their own PT's users row).
+-- migration 0006 (a client can read their own PT's users row), migration
+-- 0007 (M3 programming: exercises.demo_video_url, programs.start_date, a
+-- denormalised program_id on program_days/program_blocks/program_exercises
+-- guarded by composite FKs to their parents, two DEFERRABLE sort-order
+-- uniques replacing the old plain indexes, RLS policies for all six
+-- programming tables plus exercises and the three AI-credit tables, and
+-- fourteen RPCs), migration 0008 (the 205-exercise library import, generated
+-- from db/exercises/), and migration 0009 (program_summaries).
 --
 -- Running `psql -f db/schema.sql` against a real environment produces a
 -- pre-auth, pre-RLS database that does NOT match what is actually deployed.

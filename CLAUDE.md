@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Forge** is a PT-first (personal trainer) SaaS platform for trainers, studios, and the people they coach. Lebanon-first market, expanding to UAE.
 
-- **Phase:** In development. M0 (foundation), M1 (auth & identity), and M2 (clients & intake) are complete on `develop`. M3 (programming) is next.
+- **Phase:** In development. M0 (foundation), M1 (auth & identity), M2 (clients & intake), and M3 (programming) are complete on `develop`. M4 (logging) is next.
 - **Repository:** pnpm + Turborepo monorepo — `apps/mobile` (Expo), `apps/web` (Next.js admin + API), `packages/shared` (tokens, i18n, zod schemas, generated DB types), `supabase/migrations`, `db/` (schema source + RLS harness).
-- **Status:** Application code exists and is deployed. Expo app boots themed/RTL-capable with working Supabase Auth (email/password + Google), TOTP MFA, password reset, onboarding, profile, settings, a client roster with invite/claim/pause/deactivate, a resumable 5-step intake with PAR-Q red-flag detection, and waiver e-signature. Next.js admin is live on Vercel with staff login, user search, a PT's client roster, and a client's intake status; it also serves the waiver PDF API and the public `/join` invite-link page. Supabase Postgres project is live in Frankfurt with 6 migrations applied (baseline, Supabase Auth wiring, RLS, M1 identity, M2 clients/intake/waiver, a client-reads-own-PT RLS fix) and RLS enabled on all tables. CI runs typecheck/lint/test on GitHub Actions.
+- **Status:** Application code exists and is deployed. Expo app boots themed/RTL-capable with working Supabase Auth (email/password + Google), TOTP MFA, password reset, onboarding, profile, settings, a client roster with invite/claim/pause/deactivate, a resumable 5-step intake with PAR-Q red-flag detection, and waiver e-signature. Next.js admin is live on Vercel with staff login, user search, a PT's client roster, and a client's intake status; it also serves the waiver PDF API and the public `/join` invite-link page. Expo also has a PT tab bar (Today/Clients/Programs/Library), a 205-exercise library with search and custom exercises, a program builder with copy-week and assign, an AI draft flow metered by a credit ledger, and a client's read-only view of their assigned program; Next.js admin also has a read-only program and AI-generation inspector, and serves the AI broker at `/api/ai/program-draft`. Supabase Postgres project is live in Frankfurt with 9 migrations applied (baseline, Supabase Auth wiring, RLS, M1 identity, M2 clients/intake/waiver, a client-reads-own-PT RLS fix, M3 programming RLS + RPCs, the exercise library import, program_summaries) and RLS enabled on all tables. CI runs typecheck/lint/test on GitHub Actions.
 
 ## Documentation
 
@@ -25,6 +25,7 @@ All product documentation lives in `docs/`. Start at `docs/index.html` for the h
 | `docs/Forge_DesignBrief_M1-M4.md` | Screen-by-screen design brief for the first four build milestones |
 | `docs/Forge_Prototype.html` | Claude Design clickable prototype (M1–M4 screens + designer annotations) |
 | `docs/DESIGN_SYSTEM_GAPS.md` | Components the prototype needs that the design system doesn't have yet — built vs. outstanding |
+| `docs/superpowers/plans/2026-09-12-m3-programming.md` | M3's plan. Where it and `Forge_Prototype.html` disagree, the plan's "Corrections" section wins: the library search count and credit balance are read live rather than hardcoded, and the AI generating state says "Usually under 12 seconds. Keep this screen open." rather than promising a notification (M9 builds notifications; the call is synchronous by design) |
 
 ## Tech Stack (Actual — see `docs/superpowers/specs/2026-09-09-forge-v1-implementation-design.md`)
 
@@ -40,7 +41,7 @@ This supersedes the stack described in `docs/Forge_Architecture.html` Section 05
 | Storage | Supabase Storage — in use from M2 (private `waivers` bucket, service-role only); progress photos and videos are M4 |
 | Real-time | Supabase Realtime (live mirror, from M5) |
 | Payments | RevenueCat over Apple IAP + Google Play Billing, planned for M6. Replaces the originally documented Whish + Areeba plan — removes PCI scope and KYC delay for a solo developer |
-| AI | Claude API (program drafts, meal plans, monthly recaps) — from M3 |
+| AI | Claude API — `claude-opus-5` via `@anthropic-ai/sdk`, brokered server-side by `apps/web/app/api/ai/program-draft/route.ts` (the only holder of `ANTHROPIC_API_KEY`). Structured output via `messages.parse` + `zodOutputFormat`; depth via `output_config.effort`, never `budget_tokens` (removed on this model). Meal plans (M8) and monthly recaps (M9) reuse the same ledger |
 
 ## Four Personas
 
@@ -111,14 +112,14 @@ the full definition of each; plans for completed/in-flight milestones live in
 | M0 | Foundation — monorepo, auth/RLS migrations, themed RTL app boot | ✅ done |
 | M1 | Auth & identity — EP-01, EP-02 Solo profile | ✅ done |
 | M2 | Clients & intake — EP-03 | ✅ done |
-| M3 | Programming — EP-04, EP-15 (AI draft) | next |
-| M4 | Logging — EP-05, EP-06 (offline sync, Storage) | |
+| M3 | Programming — EP-04, EP-15 (AI draft) | ✅ done |
+| M4 | Logging — EP-05, EP-06 (offline sync, Storage) | next |
 | M5 | Scheduling — EP-09, EP-10 (Realtime) | |
 | M6 | Money — EP-11 (RevenueCat) | |
 | M7 | Hierarchy & gyms — EP-02 remainder | |
 | M8 | Nutrition — EP-08 | |
 | M9 | Comms & insights — EP-12, EP-14, EP-18, EP-19 | |
-| M10 | Launch gate — EP-20 remainder, EP-13 | |
+| M10 | Launch gate — EP-20 remainder, EP-13, **full 2,000+ exercise library import** (M3 ships 205 curated movements covering every filter value; EP-04's "≥2,000 exercises with demos" needs the licensed import, which is a data-only regeneration of `supabase/migrations/0008` from a longer `db/exercises/forge_exercise_library_v1.json` — no code change) | |
 
 ## Phase Roadmap (product scope, by version)
 

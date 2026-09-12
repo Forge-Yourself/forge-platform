@@ -35,8 +35,27 @@ later milestones surface new gaps.
   `apps/mobile/src/ui/SignaturePad.tsx`. Not yet documented in
   `Forge_DesignSystem.html`.
 
+## Built (M3)
+
+- **Superset block header + 4-cell numeric builder row** — the block header
+  carries a mono tag (A/B/C), a title and a rest chip; the row beneath it
+  carries a slot badge (A1/A2), the exercise name, and a four-cell numeric
+  strip. The arithmetic that makes it fit is written into the component's own
+  header comment so nobody later folds the cells onto the name row:
+  390 − 32 (screen gutter) − 24 (card padding) − 18 (three 6pt gaps)
+  = 316 ÷ 4 = **79pt per cell at a 44pt height floor**. Implemented at
+  `apps/mobile/src/ui/BuilderBlock.tsx` and
+  `apps/mobile/src/ui/BuilderRow.tsx`. Omitting `onCellPress` renders the row
+  read-only (plain Views, not inert Pressables) — that is the client's own
+  view of their program, not a disabled state. Not yet documented as a
+  component in `Forge_DesignSystem.html`.
+- **Numeric keypad `extraKey`** — `NumericKeypad` gained an optional extra key
+  filling its previously-empty bottom-left slot. The builder passes "." for
+  the RPE cell (`target_rpe` is `NUMERIC(3,1)`, so 7.5 is a real value) and
+  "-" for REPS, which is how a rep range is typed as "6-8". Existing MFA
+  callers are unaffected. `apps/mobile/src/ui/NumericKeypad.tsx`.
+
 ## Outstanding
 
-- **Superset / 4-cell builder row** — needed for M3 (program builder). Not
-  yet built and not yet documented in the design system; should be designed
-  and added to `Forge_DesignSystem.html` before M3 needs it.
+No prototype-flagged gaps remain. Add new ones here as later milestones
+surface them.
