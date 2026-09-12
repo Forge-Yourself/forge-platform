@@ -146,6 +146,9 @@ function Gate() {
       return <Redirect href="/(onboarding)/pt-profile" />;
     }
 
+    if (segments[0] === '(onboarding)' && (segments as readonly string[])[1] === 'role') {
+      return <Slot />;
+    }
     return <Redirect href="/(onboarding)/role" />;
   }
 

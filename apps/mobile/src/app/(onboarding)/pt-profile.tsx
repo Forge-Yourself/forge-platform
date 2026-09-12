@@ -1,4 +1,5 @@
 import type { Database } from '@forge/shared';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -111,8 +112,12 @@ export default function PtProfile() {
           if (finishError) throw finishError;
         }
         await refreshAuthProfile();
-        // No manual navigation — the gate reacts to onboarding_completed=true and
-        // renders (app) on its own.
+        // router.replace('/') hands control back to the gate (same pattern as
+        // mfa-enroll.tsx's handleVerified) — the gate is deliberately passive
+        // (app/_layout.tsx's Gate renders whatever route currently matches rather
+        // than forcing a redirect), so without this the user would stay stranded
+        // on this route even after onboarding_completed flips true.
+        router.replace('/');
       } catch {
         setError(t('onboarding.ptProfile.error'));
       }
