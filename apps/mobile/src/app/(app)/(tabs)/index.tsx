@@ -4,12 +4,12 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { I18nManager, ScrollView, StyleSheet } from 'react-native';
-import { useAuth } from '../../lib/auth/AuthProvider';
-import { claimClientInvites } from '../../lib/intake/claimInvites';
-import { openWaiverDocument } from '../../lib/intake/openWaiver';
-import { supabase } from '../../lib/supabase';
-import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, Button, Card, ListRow, Row, SectionCard, Screen, Text } from '../../ui';
+import { useAuth } from '../../../lib/auth/AuthProvider';
+import { claimClientInvites } from '../../../lib/intake/claimInvites';
+import { openWaiverDocument } from '../../../lib/intake/openWaiver';
+import { supabase } from '../../../lib/supabase';
+import { useTheme } from '../../../theme/ThemeProvider';
+import { Banner, Button, Card, ListRow, Row, SectionCard, Screen, Text } from '../../../ui';
 
 type Reachability = 'checking' | 'ok' | 'failed';
 type ClientRow = Database['public']['Tables']['clients']['Row'];
@@ -76,7 +76,7 @@ function PtHome() {
           </Row>
         </Card>
 
-        <Button label={t('clients.title')} onPress={() => router.push('/(app)/clients/index')} />
+        <Button label={t('clients.title')} onPress={() => router.push('/(app)/(tabs)/clients')} />
 
         <Card>
           <Text variant="display">Aa</Text>

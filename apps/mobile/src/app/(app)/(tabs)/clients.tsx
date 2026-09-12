@@ -97,7 +97,7 @@ export default function ClientsIndex() {
                     }}
                   />
                 }
-                onPress={() => router.push({ pathname: '/(app)/clients/[id]/index', params: { id: item.id } })}
+                onPress={() => router.push({ pathname: '/(app)/clients/[id]', params: { id: item.id } })}
               />
             ))}
           </SectionCard>

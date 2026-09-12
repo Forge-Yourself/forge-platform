@@ -73,7 +73,7 @@ export default function InviteClient() {
   if (sentEmail) {
     return (
       <FormScreen
-        footer={<Button label={t('common.close')} onPress={() => router.replace('/(app)/clients/index')} />}
+        footer={<Button label={t('common.close')} onPress={() => router.replace('/(app)/(tabs)/clients')} />}
       >
         <Text variant="h1" style={{ marginBottom: theme.space[2] }}>
           {t('clients.invite.successTitle')}

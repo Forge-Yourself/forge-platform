@@ -21,7 +21,13 @@
     "continue": "Continue",
     "save": "Save",
     "finish": "Finish",
-    "close": "Close"
+    "close": "Close",
+    "tabs": {
+      "today": "Today",
+      "clients": "Clients",
+      "programs": "Programs",
+      "library": "Library"
+    }
   },
   "auth": {
     "signIn": {

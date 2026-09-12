@@ -21,7 +21,13 @@
     "continue": "متابعة",
     "save": "حفظ",
     "finish": "إنهاء",
-    "close": "إغلاق"
+    "close": "إغلاق",
+    "tabs": {
+      "today": "اليوم",
+      "clients": "العملاء",
+      "programs": "البرامج",
+      "library": "المكتبة"
+    }
   },
   "auth": {
     "signIn": {

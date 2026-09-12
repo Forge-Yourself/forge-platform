@@ -60,7 +60,7 @@ export default function ClientDetail() {
       try {
         if (confirmAction === 'revoke') {
           await revokeInvite(client!.id);
-          router.replace('/(app)/clients/index');
+          router.replace('/(app)/(tabs)/clients');
           return;
         }
         const targetState = confirmAction === 'pause' ? 'paused' : confirmAction === 'deactivate' ? 'deactivated' : 'active';
