@@ -67,6 +67,33 @@ export default async function AdminUserDetailPage({
     ptCertifications = certs ?? [];
   }
 
+  // M3: the PT's AI credit wallet and program count, for support cases
+  // ("where did my credits go"). Read-only like the rest of this page —
+  // grant_ai_credits exists as an admin RPC for support to call directly,
+  // and a UI for it is M10 quarantine-tooling territory.
+  type WalletRow = Pick<
+    Database['public']['Tables']['ai_credit_wallets']['Row'],
+    'balance' | 'total_purchased' | 'total_consumed' | 'total_refunded' | 'low_balance_warned_at'
+  >;
+  let wallet: WalletRow | null = null;
+  let programCount = 0;
+
+  if (target.role === 'pt') {
+    const [{ data: walletRow }, { count }] = await Promise.all([
+      supabase
+        .from('ai_credit_wallets')
+        .select('balance, total_purchased, total_consumed, total_refunded, low_balance_warned_at')
+        .eq('user_id', id)
+        .maybeSingle(),
+      supabase
+        .from('programs')
+        .select('id', { head: true, count: 'exact' })
+        .eq('author_user_id', id),
+    ]);
+    wallet = walletRow ?? null;
+    programCount = count ?? 0;
+  }
+
   // M2 (Task 17): a PT's roster and a client's intake state, for support
   // cases. Read-only, same posture as the rest of this page — the admin's
   // own session already has full read via is_admin() in every relevant
@@ -223,6 +250,36 @@ export default async function AdminUserDetailPage({
               </div>
             ))
           )}
+        </section>
+      ) : null}
+
+      {target.role === 'pt' ? (
+        <section style={ui.card}>
+          <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>AI credits</h2>
+          {wallet ? (
+            <>
+              <Field label="Balance" value={wallet.balance.toString()} />
+              <Field label="Total purchased" value={wallet.total_purchased.toString()} />
+              <Field label="Total consumed" value={wallet.total_consumed.toString()} />
+              <Field label="Total refunded" value={wallet.total_refunded.toString()} />
+              <Field
+                label="Low-balance warned"
+                value={
+                  wallet.low_balance_warned_at
+                    ? new Date(wallet.low_balance_warned_at).toLocaleString()
+                    : '—'
+                }
+              />
+            </>
+          ) : (
+            <p style={ui.muted}>No wallet — this account predates M3.</p>
+          )}
+          <Field label="Programs authored" value={programCount.toString()} />
+          <p style={{ margin: 'var(--s-3) 0 0' }}>
+            <Link href="/admin/programs" style={ui.link}>
+              Browse all programs
+            </Link>
+          </p>
         </section>
       ) : null}
 
