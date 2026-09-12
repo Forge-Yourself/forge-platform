@@ -1599,6 +1599,7 @@ export type Database = {
           coaching_cues: string[]
           created_at: string
           created_by_user_id: string | null
+          demo_video_url: string | null
           difficulty: string | null
           equipment: string
           id: string
@@ -1616,6 +1617,7 @@ export type Database = {
           coaching_cues?: string[]
           created_at?: string
           created_by_user_id?: string | null
+          demo_video_url?: string | null
           difficulty?: string | null
           equipment?: string
           id?: string
@@ -1633,6 +1635,7 @@ export type Database = {
           coaching_cues?: string[]
           created_at?: string
           created_by_user_id?: string | null
+          demo_video_url?: string | null
           difficulty?: string | null
           equipment?: string
           id?: string
@@ -4182,6 +4185,7 @@ export type Database = {
           day_id: string
           id: string
           label: string | null
+          program_id: string
           rest_between_sec: number | null
           sort_order: number
           updated_at: string
@@ -4192,6 +4196,7 @@ export type Database = {
           day_id: string
           id?: string
           label?: string | null
+          program_id: string
           rest_between_sec?: number | null
           sort_order?: number
           updated_at?: string
@@ -4202,6 +4207,7 @@ export type Database = {
           day_id?: string
           id?: string
           label?: string | null
+          program_id?: string
           rest_between_sec?: number | null
           sort_order?: number
           updated_at?: string
@@ -4214,6 +4220,13 @@ export type Database = {
             referencedRelation: "program_days"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_pb_day_program"
+            columns: ["day_id", "program_id"]
+            isOneToOne: false
+            referencedRelation: "program_days"
+            referencedColumns: ["id", "program_id"]
+          },
         ]
       }
       program_days: {
@@ -4223,6 +4236,7 @@ export type Database = {
           id: string
           label: string | null
           notes: string | null
+          program_id: string
           updated_at: string
           week_id: string
         }
@@ -4232,6 +4246,7 @@ export type Database = {
           id?: string
           label?: string | null
           notes?: string | null
+          program_id: string
           updated_at?: string
           week_id: string
         }
@@ -4241,6 +4256,7 @@ export type Database = {
           id?: string
           label?: string | null
           notes?: string | null
+          program_id?: string
           updated_at?: string
           week_id?: string
         }
@@ -4251,6 +4267,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "program_weeks"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_pd_week_program"
+            columns: ["week_id", "program_id"]
+            isOneToOne: false
+            referencedRelation: "program_weeks"
+            referencedColumns: ["id", "program_id"]
           },
         ]
       }
@@ -4263,6 +4286,7 @@ export type Database = {
           notes: string | null
           prescribed_distance_m: number | null
           prescribed_duration_sec: number | null
+          program_id: string
           rest_sec: number | null
           sort_order: number
           target_reps_max: number | null
@@ -4281,6 +4305,7 @@ export type Database = {
           notes?: string | null
           prescribed_distance_m?: number | null
           prescribed_duration_sec?: number | null
+          program_id: string
           rest_sec?: number | null
           sort_order?: number
           target_reps_max?: number | null
@@ -4299,6 +4324,7 @@ export type Database = {
           notes?: string | null
           prescribed_distance_m?: number | null
           prescribed_duration_sec?: number | null
+          program_id?: string
           rest_sec?: number | null
           sort_order?: number
           target_reps_max?: number | null
@@ -4316,6 +4342,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "program_blocks"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_pe_block_program"
+            columns: ["block_id", "program_id"]
+            isOneToOne: false
+            referencedRelation: "program_blocks"
+            referencedColumns: ["id", "program_id"]
           },
           {
             foreignKeyName: "fk_pe_exercise"
@@ -4374,6 +4407,7 @@ export type Database = {
           is_template: boolean
           name: string
           periodization: string | null
+          start_date: string | null
           state: string
           template_source_id: string | null
           updated_at: string
@@ -4390,6 +4424,7 @@ export type Database = {
           is_template?: boolean
           name: string
           periodization?: string | null
+          start_date?: string | null
           state?: string
           template_source_id?: string | null
           updated_at?: string
@@ -4406,6 +4441,7 @@ export type Database = {
           is_template?: boolean
           name?: string
           periodization?: string | null
+          start_date?: string | null
           state?: string
           template_source_id?: string | null
           updated_at?: string
@@ -6390,7 +6426,73 @@ export type Database = {
             }
             Returns: string
           }
+      archive_program: { Args: { p_program_id: string }; Returns: undefined }
+      assign_program: {
+        Args: {
+          p_client_id: string
+          p_program_id: string
+          p_start_date?: string
+        }
+        Returns: undefined
+      }
       claim_client_invites: { Args: never; Returns: number }
+      consume_ai_credit: {
+        Args: {
+          p_generation_type: string
+          p_input_tokens?: number
+          p_latency_ms?: number
+          p_model_id: string
+          p_output_scrubbed: string
+          p_output_tokens?: number
+          p_prompt_hash: string
+          p_prompt_scrubbed: string
+        }
+        Returns: {
+          generation_id: string
+          new_balance: number
+        }[]
+      }
+      copy_program: {
+        Args: { p_as_template?: boolean; p_program_id: string }
+        Returns: string
+      }
+      copy_program_week: {
+        Args: { p_from_week: number; p_program_id: string; p_to_week: number }
+        Returns: undefined
+      }
+      create_custom_exercise: {
+        Args: {
+          p_coaching_cues?: string[]
+          p_demo_video_url?: string
+          p_difficulty?: string
+          p_equipment: string
+          p_instructions?: string
+          p_movement_pattern?: string
+          p_muscle_group: string
+          p_name: string
+        }
+        Returns: string
+      }
+      create_program: {
+        Args: {
+          p_client_id?: string
+          p_description?: string
+          p_duration_weeks: number
+          p_is_template?: boolean
+          p_name: string
+          p_periodization?: string
+        }
+        Returns: string
+      }
+      create_program_from_draft: {
+        Args: {
+          p_client_id: string
+          p_generation_id: string
+          p_name?: string
+          p_payload: Json
+        }
+        Returns: string
+      }
       current_user_role: { Args: never; Returns: string }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
@@ -6424,6 +6526,10 @@ export type Database = {
         | { Args: { schema_name: string; table_name: string }; Returns: string }
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
+      ensure_ai_credit_wallet: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
@@ -6524,6 +6630,18 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       gettransactionid: { Args: never; Returns: unknown }
+      grant_ai_credits: {
+        Args: { p_credits: number; p_reason?: string; p_user_id: string }
+        Returns: number
+      }
+      instantiate_template: {
+        Args: {
+          p_client_id: string
+          p_start_date?: string
+          p_template_id: string
+        }
+        Returns: string
+      }
       intake_progress: {
         Args: { p_client_id: string }
         Returns: {
@@ -6544,6 +6662,8 @@ export type Database = {
       }
       is_master_of: { Args: { p_pt_user_id: string }; Returns: boolean }
       is_my_pt: { Args: { p_pt_user_id: string }; Returns: boolean }
+      is_program_editor: { Args: { p_program_id: string }; Returns: boolean }
+      is_program_visible: { Args: { p_program_id: string }; Returns: boolean }
       is_pt_of_client: { Args: { p_client_id: string }; Returns: boolean }
       is_pt_of_user: { Args: { p_user_id: string }; Returns: boolean }
       log_account_event: {
@@ -6591,11 +6711,46 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      program_tree: { Args: { p_program_id: string }; Returns: Json }
+      refund_ai_credit: {
+        Args: { p_generation_id: string; p_reason?: string }
+        Returns: undefined
+      }
       resend_invite: {
         Args: { p_client_id: string; p_email?: string }
         Returns: undefined
       }
       revoke_invite: { Args: { p_client_id: string }; Returns: undefined }
+      save_program: {
+        Args: { p_payload: Json; p_program_id: string }
+        Returns: undefined
+      }
+      search_exercises: {
+        Args: {
+          p_equipment?: string
+          p_limit?: number
+          p_muscle?: string
+          p_offset?: number
+          p_pattern?: string
+          p_query?: string
+        }
+        Returns: {
+          coaching_cues: string[]
+          created_by_user_id: string
+          demo_video_url: string
+          difficulty: string
+          equipment: string
+          id: string
+          instructions: string
+          is_custom: boolean
+          movement_pattern: string
+          muscle_group: string
+          name: string
+          name_ar: string
+          slug: string
+          total_count: number
+        }[]
+      }
       set_client_state: {
         Args: { p_client_id: string; p_state: string }
         Returns: undefined
