@@ -486,4 +486,312 @@ RESET ROLE;
 SELECT pg_temp.expect('log_account_event inserts exactly one audit_logs row for the actor', 1,
   format('SELECT count(*) FROM public.audit_logs WHERE actor_id = %L', :'client_b'));
 
+-- ═════════════════════════════════════════════════════════════════════════════
+-- M3 — programming: denormalised program_id, program/exercise visibility,
+-- template immutability, and the AI credit ledger. Reuses pt_a / pt_b /
+-- client_a / client_b / client_row from the M0-M2 fixtures above (note:
+-- client_a's users.role is 'pt' by this point in the file — the M1 section
+-- above flips it via set_initial_role and never reverts it. None of the M3
+-- predicates below key on users.role, only on the clients table, so this is
+-- harmless — except where explicitly noted as a bonus assertion on it).
+-- ═════════════════════════════════════════════════════════════════════════════
+\set program_a       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+\set program_tmpl    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+\set exercise_mine   'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+\set exercise_global 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+\set week_a  'e0000000-0000-4000-8000-000000000001'
+\set day_a   'e0000000-0000-4000-8000-000000000002'
+\set block_a 'e0000000-0000-4000-8000-000000000003'
+\set pe_a    'e0000000-0000-4000-8000-000000000004'
+\set week_t  'e0000000-0000-4000-8000-000000000011'
+\set day_t   'e0000000-0000-4000-8000-000000000012'
+\set block_t 'e0000000-0000-4000-8000-000000000013'
+\set pe_t    'e0000000-0000-4000-8000-000000000014'
+\set admin_a 'a0000000-0000-4000-8000-00000000a001'
+
+INSERT INTO public.exercises (id, name, slug, muscle_group, equipment, movement_pattern, is_custom, created_by_user_id)
+VALUES
+  (:'exercise_global', 'Barbell Back Squat (RLS fixture)', 'rls-fixture-squat', 'quadriceps', 'barbell', 'squat', FALSE, NULL),
+  (:'exercise_mine',   'PT B''s Custom Curl', 'rls-fixture-curl-pt-b', 'biceps', 'dumbbell', 'pull', TRUE, :'pt_b');
+
+-- program_a: authored by pt_a, assigned to client_row, starts 'draft'.
+INSERT INTO public.programs (id, author_user_id, client_id, state, name, duration_weeks)
+VALUES (:'program_a', :'pt_a', :'client_row', 'draft', 'RLS Test Program', 1);
+INSERT INTO public.program_weeks (id, program_id, week_number) VALUES (:'week_a', :'program_a', 1);
+INSERT INTO public.program_days (id, week_id, program_id, day_number) VALUES (:'day_a', :'week_a', :'program_a', 1);
+INSERT INTO public.program_blocks (id, day_id, program_id, sort_order, block_type) VALUES (:'block_a', :'day_a', :'program_a', 0, 'working');
+INSERT INTO public.program_exercises (id, block_id, program_id, exercise_id, sort_order, target_sets, target_reps_min, target_reps_max)
+VALUES (:'pe_a', :'block_a', :'program_a', :'exercise_global', 0, 3, 8, 10);
+
+-- program_tmpl: a template authored by pt_a, same shape, so we can prove a
+-- copy mutates independently of the source.
+INSERT INTO public.programs (id, author_user_id, state, name, duration_weeks, is_template)
+VALUES (:'program_tmpl', :'pt_a', 'draft', 'RLS Test Template', 1, TRUE);
+INSERT INTO public.program_weeks (id, program_id, week_number) VALUES (:'week_t', :'program_tmpl', 1);
+INSERT INTO public.program_days (id, week_id, program_id, day_number) VALUES (:'day_t', :'week_t', :'program_tmpl', 1);
+INSERT INTO public.program_blocks (id, day_id, program_id, sort_order, block_type) VALUES (:'block_t', :'day_t', :'program_tmpl', 0, 'working');
+INSERT INTO public.program_exercises (id, block_id, program_id, exercise_id, sort_order, target_sets, target_reps_min, target_reps_max)
+VALUES (:'pe_t', :'block_t', :'program_tmpl', :'exercise_global', 0, 3, 8, 10);
+
+INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at)
+VALUES (:'admin_a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+        'rls-admin-a@forge-test.local', '{"role":"client","display_name":"Admin A"}', NOW());
+UPDATE public.users SET role = 'admin' WHERE id = :'admin_a';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- The composite-FK invariant (D1) — a program_blocks row whose declared
+-- program_id disagrees with its day_id's actual program_id must be rejected
+-- by the database itself, not merely discouraged. This is what fails loudly
+-- if someone later drops fk_pb_day_program "to simplify".
+-- ─────────────────────────────────────────────────────────────────────────────
+SELECT pg_temp.expect_raises('composite FK rejects a program_blocks row whose program_id disagrees with its day_id',
+  format('INSERT INTO public.program_blocks (day_id, program_id, sort_order, block_type)
+          VALUES (%L, %L, 99, ''working'')', :'day_a', :'program_tmpl'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Cross-tenant reads — PT B must not reach PT A's program tree; PT A must
+-- not reach PT B's custom exercise (but the global library is shared).
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('PT B cannot see PT A''s program', 0,
+  format('SELECT count(*) FROM public.programs WHERE id = %L', :'program_a'));
+SELECT pg_temp.expect('PT B cannot see PT A''s program weeks', 0,
+  format('SELECT count(*) FROM public.program_weeks WHERE program_id = %L', :'program_a'));
+SELECT pg_temp.expect('PT B cannot see PT A''s program days', 0,
+  format('SELECT count(*) FROM public.program_days WHERE program_id = %L', :'program_a'));
+SELECT pg_temp.expect('PT B cannot see PT A''s program blocks', 0,
+  format('SELECT count(*) FROM public.program_blocks WHERE program_id = %L', :'program_a'));
+SELECT pg_temp.expect('PT B cannot see PT A''s program exercises', 0,
+  format('SELECT count(*) FROM public.program_exercises WHERE program_id = %L', :'program_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A cannot see PT B''s custom exercise', 0,
+  format('SELECT count(*) FROM public.exercises WHERE id = %L', :'exercise_mine'));
+SELECT pg_temp.expect('PT A can see the global exercise library', 1,
+  format('SELECT count(*) FROM public.exercises WHERE id = %L', :'exercise_global'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Draft invisibility — EP-15's "AI never auto-publishes" at the row level.
+-- client_id is already set on program_a; only the state flip makes it visible.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('Client A cannot see their assigned program while it is draft', 0,
+  format('SELECT count(*) FROM public.programs WHERE id = %L', :'program_a'));
+RESET ROLE;
+
+UPDATE public.programs SET state = 'active' WHERE id = :'program_a';
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('Client A sees the program once it is active', 1,
+  format('SELECT count(*) FROM public.programs WHERE id = %L', :'program_a'));
+SELECT pg_temp.expect('Client A sees the program''s week/day/block/exercise tree', 1,
+  format('SELECT count(*) FROM public.program_weeks WHERE program_id = %L', :'program_a'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Client cannot write. program_exercises_write's USING excludes a client
+-- entirely (not merely a WITH CHECK failure), so this is the 0-affected-rows
+-- idiom, same as clients_update's own client-tamper test above — not
+-- expect_rls_block, which is for a WITH CHECK failure on a row USING admits.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('Client A cannot edit a program_exercises row (USING-filtered no-op)', 0,
+  format('WITH u AS (
+            UPDATE public.program_exercises SET target_sets = 99 WHERE id = %L
+            RETURNING 1
+          ) SELECT count(*) FROM u', :'pe_a'));
+SELECT pg_temp.expect('Client A cannot rename the program row itself (USING-filtered no-op)', 0,
+  format('WITH u AS (
+            UPDATE public.programs SET name = ''hijacked'' WHERE id = %L
+            RETURNING 1
+          ) SELECT count(*) FROM u', :'program_a'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- The global exercise library is not writable via a bare INSERT — WITH CHECK
+-- fails on is_custom = FALSE, which Postgres raises as insufficient_privilege.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_rls_block('cannot insert into the global library directly (is_custom = false)',
+  format('INSERT INTO public.exercises (name, slug, muscle_group, equipment, movement_pattern, is_custom, created_by_user_id)
+          VALUES (''Sneaky Global Exercise'', ''rls-sneaky-global'', ''chest'', ''barbell'', ''push'', FALSE, %L)', :'pt_a'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- AI credit wallet — auto-created at signup (pt_a/pt_b's metadata already
+-- said role: pt), isolated per user, and immutable via direct PostgREST
+-- write — every mutation is one of the RPCs below, never a raw UPDATE.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A has an AI credit wallet with the starting balance of 10', 1,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L AND balance = 10', :'pt_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('PT B cannot see PT A''s wallet', 0,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L', :'pt_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A cannot directly UPDATE their own wallet balance (no write policy exists)', 0,
+  format('WITH u AS (
+            UPDATE public.ai_credit_wallets SET balance = 9999 WHERE user_id = %L
+            RETURNING 1
+          ) SELECT count(*) FROM u', :'pt_a'));
+RESET ROLE;
+
+-- Bonus: client_a became a 'pt' via set_initial_role above (M1 section) —
+-- confirm that code path also granted a wallet (handle_new_user_ai_wallet
+-- only fires on INSERT, so this exercises the OTHER of the two grant paths).
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('set_initial_role(''pt'') also grants an AI credit wallet', 1,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L AND balance = 10', :'client_a'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- The ledger end to end: consume → refund → double-refund raises → drain to
+-- zero → over-debit raises without going negative → admin-only grant.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT generation_id AS gen1_id, new_balance AS gen1_balance
+  FROM public.consume_ai_credit('program_draft', repeat('a', 64), 'scrubbed prompt', 'scrubbed output', 'claude-opus-5', 100, 200, 5000) \gset
+RESET ROLE;
+
+SELECT pg_temp.expect('consume_ai_credit drops PT A''s balance by exactly 1', 1,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L AND balance = 9', :'pt_a'));
+SELECT pg_temp.expect('consume_ai_credit logs exactly one un-refunded ai_generations row', 1,
+  format('SELECT count(*) FROM public.ai_generations WHERE id = %L AND was_refunded = FALSE', :'gen1_id'));
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.refund_ai_credit(:'gen1_id'::uuid, 'llm timeout');
+RESET ROLE;
+
+SELECT pg_temp.expect('refund_ai_credit restores PT A''s balance to 10', 1,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L AND balance = 10', :'pt_a'));
+SELECT pg_temp.expect('refund_ai_credit flips was_refunded', 1,
+  format('SELECT count(*) FROM public.ai_generations WHERE id = %L AND was_refunded = TRUE', :'gen1_id'));
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('refund_ai_credit refuses a second refund of the same generation',
+  format('SELECT public.refund_ai_credit(%L::uuid, ''double refund attempt'')', :'gen1_id'));
+RESET ROLE;
+
+UPDATE public.ai_credit_wallets SET balance = 0, updated_at = NOW() WHERE user_id = :'pt_a';
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('consume_ai_credit raises on chk_acw_balance when the wallet is already at 0',
+  format('SELECT * FROM public.consume_ai_credit(''program_draft'', %L, ''p'', ''o'', ''claude-opus-5'', 1, 1, 1)', repeat('b', 64)));
+RESET ROLE;
+
+SELECT pg_temp.expect('a failed consume_ai_credit leaves the balance at 0, never negative', 1,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L AND balance = 0', :'pt_a'));
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect_raises('grant_ai_credits refuses a non-admin caller',
+  format('SELECT public.grant_ai_credits(%L::uuid, 5, ''test'')', :'pt_b'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT public.grant_ai_credits(:'pt_a'::uuid, 5, 'support top-up');
+RESET ROLE;
+
+SELECT pg_temp.expect('grant_ai_credits (admin) tops up PT A''s balance to 5', 1,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L AND balance = 5', :'pt_a'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Template immutability (EP-04: "copies, never mutates") — instantiate,
+-- mutate the copy, confirm the source is untouched. Also exercises the
+-- archive-then-activate semantics: client_row's program_a (still 'active'
+-- from the visibility test above) must be archived by this call.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.instantiate_template(:'program_tmpl'::uuid, :'client_row'::uuid, CURRENT_DATE) AS instantiated_id \gset
+RESET ROLE;
+
+SELECT pg_temp.expect('instantiate_template archives client_row''s previous active program', 1,
+  format('SELECT count(*) FROM public.programs WHERE id = %L AND state = ''archived''', :'program_a'));
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+UPDATE public.program_exercises SET target_reps_min = 1
+ WHERE program_id = :'instantiated_id' AND exercise_id = :'exercise_global';
+RESET ROLE;
+
+SELECT pg_temp.expect('the instantiated copy reflects the mutation', 1,
+  format('SELECT count(*) FROM public.program_exercises WHERE program_id = %L AND target_reps_min = 1', :'instantiated_id'));
+SELECT pg_temp.expect('the original template is unchanged after mutating its copy', 1,
+  format('SELECT count(*) FROM public.program_exercises WHERE program_id = %L AND target_reps_min = 8', :'program_tmpl'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- create_program + assign_program — a second, independent exercise of
+-- archive-then-activate, chained onto the program instantiate_template just
+-- created (which is still 'active' on client_row at this point).
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.create_program('Fresh Program To Assign', 2::smallint) AS fresh_program_id \gset
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.assign_program(:'fresh_program_id'::uuid, :'client_row'::uuid, CURRENT_DATE);
+RESET ROLE;
+
+SELECT pg_temp.expect('assign_program activates the fresh program', 1,
+  format('SELECT count(*) FROM public.programs WHERE id = %L AND state = ''active''', :'fresh_program_id'));
+SELECT pg_temp.expect('assign_program archived the program it replaced (the template instantiation)', 1,
+  format('SELECT count(*) FROM public.programs WHERE id = %L AND state = ''archived''', :'instantiated_id'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- save_program — a real round trip, not just a permission check: replace the
+-- fresh program's tree and confirm the numeric(3,1) RPE cast survives.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.save_program(:'fresh_program_id'::uuid, format(
+  '{"weeks":[{"week_number":1,"label":"W1","days":[{"day_number":1,"label":"Day 1","blocks":[{"sort_order":0,"block_type":"working","exercises":[{"sort_order":0,"exercise_id":"%s","target_sets":4,"target_reps_min":6,"target_reps_max":8,"target_rpe":7.5}]}]}]},{"week_number":2,"label":"W2","days":[]}]}',
+  :'exercise_global')::jsonb);
+RESET ROLE;
+
+SELECT pg_temp.expect('save_program replaced the fresh program''s tree with exactly one exercise row', 1,
+  format('SELECT count(*) FROM public.program_exercises WHERE program_id = %L', :'fresh_program_id'));
+SELECT pg_temp.expect('save_program''s exercise row carries the RPE value through the numeric(3,1) cast', 1,
+  format('SELECT count(*) FROM public.program_exercises WHERE program_id = %L AND target_rpe = 7.5', :'fresh_program_id'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Positive controls — the people who SHOULD have access still do.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('PT A sees the global exercise', 1,
+  format('SELECT count(*) FROM public.exercises WHERE id = %L', :'exercise_global'));
+SELECT pg_temp.expect('program_tree resolves non-null for PT A''s own program', 1,
+  format('SELECT CASE WHEN public.program_tree(%L) IS NOT NULL THEN 1 ELSE 0 END::bigint', :'fresh_program_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('Client A (via client_row) sees the fresh active assigned program', 1,
+  format('SELECT count(*) FROM public.programs WHERE id = %L', :'fresh_program_id'));
+RESET ROLE;
+
 ROLLBACK;
