@@ -60,6 +60,14 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◎</Text>,
         }}
       />
+      <Tabs.Screen
+        name="library"
+        options={{
+          title: t('common.tabs.library'),
+          href: isClient ? null : undefined,
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▤</Text>,
+        }}
+      />
     </Tabs>
   );
 }
