@@ -9,18 +9,33 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qkmgmzhrwduvigccwgcz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrbWdtemhyd2R1dmlnY2N3Z2N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4OTMxMDEsImV4cCI6MjEwNDQ2OTEwMX0.HMoUBAJpCVN38a6axk3xGUaAolcRJcAzOICoIWCiyso",
+        "EXPO_PUBLIC_WEB_HOST": "https://forge-admin-one.vercel.app"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qkmgmzhrwduvigccwgcz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrbWdtemhyd2R1dmlnY2N3Z2N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4OTMxMDEsImV4cCI6MjEwNDQ2OTEwMX0.HMoUBAJpCVN38a6axk3xGUaAolcRJcAzOICoIWCiyso",
+        "EXPO_PUBLIC_WEB_HOST": "https://forge-admin-one.vercel.app"
       }
     },
     "production": {
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qkmgmzhrwduvigccwgcz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrbWdtemhyd2R1dmlnY2N3Z2N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4OTMxMDEsImV4cCI6MjEwNDQ2OTEwMX0.HMoUBAJpCVN38a6axk3xGUaAolcRJcAzOICoIWCiyso",
+        "EXPO_PUBLIC_WEB_HOST": "https://forge-admin-one.vercel.app"
       }
     }
   },

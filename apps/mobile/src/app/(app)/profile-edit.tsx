@@ -50,6 +50,29 @@ export default function ProfileEdit() {
   const [languages, setLanguages] = useState<string[]>(ptProfile?.languages ?? []);
   const [photoUrl, setPhotoUrl] = useState(ptProfile?.profile_photo_url ?? '');
 
+  /**
+   * usePtProfileData fetches asynchronously, so `ptProfile` is null on the first
+   * render and the useState initialisers above all resolved to empty. Nothing ever
+   * re-ran them — which meant opening this screen showed a blank bio and no chips,
+   * and Save then wrote those blanks over whatever the PT actually had. Seed once,
+   * the moment the row lands.
+   *
+   * Adjusting state during render behind an id guard rather than in an effect: it is
+   * React's own documented pattern for deriving state from an async prop, it renders
+   * before paint so nothing flashes, and it is the same shape (app)/intake/[id].tsx
+   * and programs/[id]/builder.tsx already use. The guard is keyed on user_id, so the
+   * refetch() that follows a successful save does NOT re-seed and discard the values
+   * the PT is still looking at.
+   */
+  const [seededUserId, setSeededUserId] = useState<string | null>(null);
+  if (ptProfile && ptProfile.user_id !== seededUserId) {
+    setSeededUserId(ptProfile.user_id);
+    setBio(ptProfile.bio ?? '');
+    setSpecializations(ptProfile.specializations ?? []);
+    setLanguages(ptProfile.languages ?? []);
+    setPhotoUrl(ptProfile.profile_photo_url ?? '');
+  }
+
   async function handleSave() {
     setError(null);
     setSaved(false);
@@ -157,7 +180,7 @@ export default function ProfileEdit() {
             keyboardType="phone-pad"
           />
           <TextField
-            label={t('profileEdit.photoUrlLabel')}
+            label={t('profileEdit.accountPhotoUrlLabel')}
             value={avatarUrl}
             onChangeText={setAvatarUrl}
             autoCapitalize="none"
@@ -182,7 +205,7 @@ export default function ProfileEdit() {
                 {bio.length} / 300
               </Text>
               <TextField
-                label={t('profileEdit.photoUrlLabel')}
+                label={t('profileEdit.ptPhotoUrlLabel')}
                 value={photoUrl}
                 onChangeText={setPhotoUrl}
                 autoCapitalize="none"

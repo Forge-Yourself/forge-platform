@@ -51,6 +51,24 @@ export default function PtProfile() {
   const [specializations, setSpecializations] = useState<string[]>(ptProfile?.specializations ?? []);
   const [languages, setLanguages] = useState<string[]>(ptProfile?.languages ?? []);
 
+  /**
+   * `ptProfile` arrives asynchronously, so every useState initialiser above ran
+   * against null. For a brand-new PT that is correct — there is no row yet — but a PT
+   * resuming a half-finished wizard saw empty fields, and then step 3's Continue
+   * upserted `specializations: []` and Finish upserted `languages: []` straight over
+   * what they had already chosen. Seed once, when the row lands.
+   *
+   * Keyed on user_id so the refetch() inside upsertPtProfile() does not re-seed
+   * mid-wizard and undo the selections the PT just made on the current step.
+   */
+  const [seededUserId, setSeededUserId] = useState<string | null>(null);
+  if (ptProfile && ptProfile.user_id !== seededUserId) {
+    setSeededUserId(ptProfile.user_id);
+    setBio(ptProfile.bio ?? '');
+    setSpecializations(ptProfile.specializations ?? []);
+    setLanguages(ptProfile.languages ?? []);
+  }
+
   async function upsertPtProfile(partial: Omit<PtProfilesInsert, 'user_id'>) {
     if (!userId) return;
     const { error: upsertError } = await supabase

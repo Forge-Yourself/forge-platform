@@ -12,6 +12,16 @@ import { Banner, Button, Card, ListRow, Row, SectionCard, Screen, Spinner, Text 
 type ConfirmAction = 'pause' | 'deactivate' | 'reactivate' | 'revoke';
 
 /**
+ * intakeSummary() converts height and weight into the PT's unit system but returns a
+ * bare number, so this card was rendering "175" and "72" with nothing to say which
+ * system they were in — which makes the conversion worse than useless to a PT who has
+ * switched it. The unit comes from the same setting the conversion did.
+ */
+function withUnit(value: number | null, unit: string): string {
+  return value === null ? '—' : `${value} ${unit}`;
+}
+
+/**
  * PT client detail — red-flag banner above the stats (warn, not danger, per
  * the annotation), essentials from `intakeSummary()`, intake status that
  * shows counts only while pending/in_progress and never response content
@@ -99,6 +109,9 @@ export default function ClientDetail() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
+        <Row>
+          <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
+        </Row>
         <Text variant="h1">{displayName}</Text>
         <Text tone="secondary">{t(`clients.stateLabels.${client.state}`)}</Text>
 
@@ -128,11 +141,15 @@ export default function ClientDetail() {
             </Row>
             <Row style={{ justifyContent: 'space-between' }}>
               <Text tone="secondary">{t('clients.detail.heightLabel')}</Text>
-              <Text numeric>{summary.height ?? '—'}</Text>
+              <Text numeric>
+                {withUnit(summary.height, t(unitSystem === 'imperial' ? 'units.inch' : 'units.cm'))}
+              </Text>
             </Row>
             <Row style={{ justifyContent: 'space-between' }}>
               <Text tone="secondary">{t('clients.detail.weightLabel')}</Text>
-              <Text numeric>{summary.weight ?? '—'}</Text>
+              <Text numeric>
+                {withUnit(summary.weight, t(unitSystem === 'imperial' ? 'units.lb' : 'units.kg'))}
+              </Text>
             </Row>
             <Row style={{ justifyContent: 'space-between' }}>
               <Text tone="secondary">{t('clients.detail.goalLabel')}</Text>

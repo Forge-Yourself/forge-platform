@@ -1,12 +1,12 @@
 import type { Database, IntakeResponses } from '@forge/shared';
 import { INTAKE_TEMPLATE_V1, PARQ_QUESTIONS } from '@forge/shared';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { I18nManager, ScrollView, View } from 'react-native';
 import { supabase } from '../../../../lib/supabase';
 import { useTheme } from '../../../../theme/ThemeProvider';
-import { Banner, Row, Screen, SectionCard, Spinner, Text } from '../../../../ui';
+import { Banner, Button, Row, Screen, SectionCard, Spinner, Text } from '../../../../ui';
 
 type IntakeFormRow = Database['public']['Tables']['intake_forms']['Row'];
 
@@ -91,6 +91,9 @@ export default function IntakeReview() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
+        <Row>
+          <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
+        </Row>
         <Text variant="h1">{t('intake.review.title')}</Text>
 
         <SectionCard>
@@ -102,7 +105,7 @@ export default function IntakeReview() {
                 key={q}
                 style={{
                   position: 'relative',
-                  paddingInlineStart: isFlagged ? theme.space[4] : theme.space[4],
+                  paddingInlineStart: theme.space[4],
                   backgroundColor: isFlagged ? theme.colors.dangerSurface : 'transparent',
                   borderBottomWidth: i === PARQ_QUESTIONS.length - 1 ? 0 : 1,
                   borderBottomColor: theme.colors.border,
@@ -149,7 +152,12 @@ export default function IntakeReview() {
                 {rows.map((row, i) => (
                   <Row key={row.label} style={{ justifyContent: 'space-between', padding: theme.space[3], borderBottomWidth: i === rows.length - 1 ? 0 : 1, borderBottomColor: theme.colors.border }}>
                     <Text tone="secondary">{row.label}</Text>
-                    <Text style={{ flex: 1, textAlign: 'right' }}>{row.value}</Text>
+                    {/* React Native has no textAlign: 'end', and it does not flip
+                        'right' under RTL — so the trailing edge has to be named
+                        explicitly, same as ui/TextField.tsx does for its input. */}
+                    <Text style={{ flex: 1, textAlign: I18nManager.isRTL ? 'left' : 'right' }}>
+                      {row.value}
+                    </Text>
                   </Row>
                 ))}
               </SectionCard>

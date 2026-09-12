@@ -3,6 +3,9 @@ import { getLocales } from 'expo-localization';
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { I18nManager } from 'react-native';
+import { getStoredValue, setStoredValue } from './deviceStore';
+
+const LOCALE_KEY = 'forge.locale';
 
 function deviceLocale(): Locale {
   const tag = getLocales()[0]?.languageCode ?? defaultLocale;
@@ -35,9 +38,34 @@ export function applyDirection(locale: Locale): void {
 
 applyDirection(initialLocale);
 
+/**
+ * Persists the choice as well as applying it.
+ *
+ * The device locale is only ever the DEFAULT, never the answer: `users.locale` records
+ * the choice for the account, but nothing can read that column until a session exists,
+ * and i18n has to be initialised long before that. Without a device-local copy, a PT
+ * who picked Arabic on an English phone was handed English again on every relaunch —
+ * while the appearance override, stored two files away, survived correctly.
+ */
 export async function setLocale(locale: Locale): Promise<void> {
   await i18n.changeLanguage(locale);
   applyDirection(locale);
+  await setStoredValue(LOCALE_KEY, locale);
 }
+
+/**
+ * Applies the stored choice once SecureStore answers, which is necessarily after the
+ * synchronous init above. Started at module load rather than from a screen so it runs
+ * exactly once per launch, before anything the user can interact with has rendered.
+ *
+ * The direction caveat is the same one that already applies to switching language from
+ * Settings: strings swap on this launch, `forceRTL` mirrors the layout on the next one.
+ */
+export const localeRestored: Promise<void> = getStoredValue(LOCALE_KEY).then(async (stored) => {
+  if (stored && isLocale(stored) && stored !== i18n.language) {
+    await i18n.changeLanguage(stored);
+    applyDirection(stored);
+  }
+});
 
 export { i18n, initialLocale };

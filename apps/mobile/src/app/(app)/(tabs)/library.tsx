@@ -6,10 +6,11 @@ import {
   type MovementPattern,
   type MuscleGroup,
 } from '@forge/shared';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import { takeCustomExerciseCreated } from '../../../lib/exercises/customExerciseSignal';
 import { useExerciseSearch } from '../../../lib/exercises/useExerciseSearch';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
@@ -107,6 +108,15 @@ export default function LibraryIndex() {
 
   const { loading, error, items, total, isEmpty, isNoMatch, hasMore, loadMore, refetch } =
     useExerciseSearch(search, muscle, equipment, pattern);
+
+  // Refetch only when library/custom.tsx says it inserted something. This tab stays
+  // mounted behind every screen pushed over it, so a plain refetch-on-focus would
+  // fire constantly and reset pagination each time.
+  useFocusEffect(
+    useCallback(() => {
+      if (takeCustomExerciseCreated()) void refetch();
+    }, [refetch]),
+  );
 
   const openDetail = (id: string) =>
     router.push({

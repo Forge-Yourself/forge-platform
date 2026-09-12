@@ -22,6 +22,16 @@ import { createBearerClient, getBearerToken } from '@/lib/supabase/bearer';
 export const dynamic = 'force-dynamic';
 
 /**
+ * Vercel's default function ceiling is well below this route's own 25s SDK timeout,
+ * so without this the platform kills a slow draft before the route's 504 handler can
+ * run and the app sees an opaque gateway error instead of `ai.errors.timeout`. This
+ * is the outer bound, not the target: AI_BUDGET_MS (12s) is what the route holds
+ * itself to and AI_TIMEOUT_MS (25s) is when it gives up — this only guarantees the
+ * platform lets it get that far.
+ */
+export const maxDuration = 60;
+
+/**
  * POST /api/ai/program-draft — the AI broker, and the only place the
  * Anthropic key exists.
  *
@@ -39,7 +49,13 @@ export const dynamic = 'force-dynamic';
  *   502 model error/refusal/unparseable  charged: false
  *   504 model timeout                charged: false
  *   402 charge lost a concurrent race    charged: false (see the note at the charge)
- *   500 anything after the charge    charged: true, and refunded before returning
+ *
+ * There is deliberately no "charged: true" branch. consume_ai_credit() is the last
+ * thing this route does before returning, so no failure can land between the charge
+ * and the response — which is what makes refund_ai_credit() an operator tool for
+ * support cases rather than a path this route ever takes. If you add work after the
+ * charge, you are adding that branch, and it needs the refund call and a `charged:
+ * true` body to match what lib/ai/requestProgramDraft.ts already maps.
  */
 export async function POST(request: Request) {
   const startedAt = Date.now();

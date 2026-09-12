@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { mapAuthError } from './authErrors';
 import { supabase } from '../supabase';
@@ -21,7 +21,27 @@ export function useMfaAutoVerify(
   const [code, setCode] = useState('');
   const { submitting, error, setError, run } = useAsyncSubmit();
 
+  /**
+   * A one-way latch, because `submitting` is in this effect's dependency list and
+   * the code is still six digits long after a SUCCESSFUL verify. The sequence
+   * without it: the 6th digit lands, the effect runs, `run` flips `submitting`
+   * true (effect re-runs, guard stops it), verify succeeds, `run`'s finally flips
+   * `submitting` back to false — and the effect runs a THIRD time against an
+   * unchanged six-digit code, calling mfa.verify() again on a challenge the
+   * server has already consumed. The user sees a red "invalid code" banner
+   * immediately after a correct one.
+   *
+   * It bites hardest on (auth)/mfa-challenge, whose onVerified is a no-op by
+   * design: the screen stays mounted while the root gate re-checks AAL
+   * asynchronously, so the second call always lands. Set before onVerified()
+   * runs, which is before `submitting` can flip and re-trigger the effect.
+   */
+  const verifiedRef = useRef(false);
+
   useEffect(() => {
+    if (verifiedRef.current) {
+      return;
+    }
     if (code.length !== 6 || !factorId || !challengeId || submitting) {
       return;
     }
@@ -32,10 +52,11 @@ export function useMfaAutoVerify(
         setCode('');
         return;
       }
+      verifiedRef.current = true;
       onVerified();
     });
     // Re-running this effect when onVerified's identity changes is harmless — the
-    // early-return guard above means it's a no-op on every render except the one
+    // early-return guards above mean it's a no-op on every render except the one
     // where the 6th digit just landed, so onVerified is included rather than omitted.
   }, [code, factorId, challengeId, submitting, run, setError, t, onVerified]);
 

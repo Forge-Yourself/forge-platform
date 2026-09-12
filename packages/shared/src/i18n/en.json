@@ -98,7 +98,8 @@
       "passwordLabel": "New password",
       "confirmLabel": "Confirm password",
       "match": "Passwords match.",
-      "submit": "Save new password"
+      "submit": "Save new password",
+      "success": "Password updated. You're signed out on every other device."
     },
     "errors": {
       "invalidCredentials": "That email and password combination doesn't match our records.",
@@ -199,7 +200,9 @@
     "deleteAccount": "Delete account",
     "deleteAccountBody": "Contact support to delete your account. We don't support self-service account deletion yet — this only opens a message, it doesn't delete anything.",
     "deleteAccountContact": "Contact support",
-    "deleteAccountClose": "Close"
+    "deleteAccountClose": "Close",
+    "accountPhotoUrlLabel": "Account photo URL",
+    "ptPhotoUrlLabel": "Trainer profile photo URL"
   },
   "settings": {
     "title": "Settings",
@@ -289,10 +292,12 @@
       "expiryNote": "Expires in 7 days.",
       "singleUseNote": "This link works once.",
       "linkCopied": "Link copied",
-      "successTitle": "Invite sent",
-      "successBody": "{{name}} will show up in your client list once they accept.",
+      "successTitle": "Invite link ready",
+      "successBody": "Send this link to {{name}}. They'll show up in your client list once they accept.",
       "error": "Couldn't send the invite. Please try again.",
-      "duplicateError": "An invite to this address is already pending."
+      "duplicateError": "An invite to this address is already pending.",
+      "submit": "Create invite link",
+      "noEmailNote": "Forge doesn't email this for you — copy or share the link yourself."
     },
     "detail": {
       "essentialsTitle": "Essentials",
@@ -658,7 +663,8 @@
       "targetLabel": "Week {{week}}",
       "confirm": "Copy week",
       "cancel": "Cancel",
-      "error": "Couldn't copy the week. Please try again."
+      "error": "Couldn't copy the week. Please try again.",
+      "saveFirst": "Save your changes first. Copying a week reloads the program from the server, which would discard anything you haven't saved."
     },
     "assign": {
       "title": "Assign to client",
@@ -721,7 +727,8 @@
       "timeout": "That took too long. No credit was charged — try again.",
       "refunded": "Something went wrong after the draft was generated. Your credit was refunded.",
       "generic": "Couldn't draft a program. No credit was charged."
-    }
+    },
+    "needsClient": "Assign this program to a client first — a draft is written for one person."
   },
   "credits": {
     "balanceLabel": "AI credits",
@@ -747,5 +754,11 @@
       "body": "Check your connection and try again.",
       "retry": "Retry"
     }
+  },
+  "units": {
+    "cm": "cm",
+    "inch": "in",
+    "kg": "kg",
+    "lb": "lb"
   }
 }

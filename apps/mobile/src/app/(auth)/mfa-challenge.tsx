@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
+import { logAccountEvent } from '../../lib/auth/audit';
 import { mapAuthError } from '../../lib/auth/authErrors';
 import { useAuth } from '../../lib/auth/AuthProvider';
 import { useMfaAutoVerify } from '../../lib/auth/useMfaAutoVerify';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, CodeCells, NumericKeypad, Screen, Spinner, Text } from '../../ui';
+import { Banner, Button, CodeCells, NumericKeypad, Screen, Spinner, Text } from '../../ui';
 
 /**
  * Reached only via the root gate (app/_layout.tsx) when
@@ -72,6 +73,23 @@ export default function MfaChallenge() {
 
   const ready = !!factorId && !!challengeId && !initError;
 
+  /**
+   * The only way off this screen without a working authenticator.
+   *
+   * The gate routes here on every render while AAL is aal1 with aal2 pending, so a
+   * user who has lost their TOTP device has no back, no tab bar, and — since
+   * Supabase issues no recovery codes for this factor type — nothing to type either.
+   * Signing out drops the session, which flips the gate to (auth)/sign-in and at
+   * least lets them reach a different account or support. It does NOT unenrol the
+   * factor: only an authenticated aal2 session can do that (lib/auth/mfa.ts), and
+   * offering a bypass here would make MFA decorative.
+   */
+  async function handleSignOut() {
+    // Before signOut(), while the session still exists for the RPC to run under.
+    await logAccountEvent('user_logout');
+    await supabase.auth.signOut();
+  }
+
   return (
     <Screen>
       <Text variant="h1" style={{ marginBottom: theme.space[2] }}>
@@ -105,6 +123,13 @@ export default function MfaChallenge() {
           />
         </>
       )}
+
+      <Button
+        label={t('settings.signOut')}
+        variant="ghost"
+        onPress={() => void handleSignOut()}
+        style={{ marginTop: theme.space[5] }}
+      />
     </Screen>
   );
 }

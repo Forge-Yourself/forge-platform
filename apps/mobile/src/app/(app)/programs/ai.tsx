@@ -2,7 +2,6 @@ import {
   AI_EXPERIENCE_LEVELS,
   AI_GOALS,
   EQUIPMENT,
-  creditState,
   formatSetSpec,
   type AiExperienceLevel,
   type AiGoal,
@@ -125,7 +124,9 @@ export default function AiDraft() {
       setError(t('ai.errors.forbidden'));
       return;
     }
-    if (creditState(credits.balance ?? 0) === 'empty') {
+    // credits.state, not creditState(balance ?? 0): the hook reports 'loading'
+    // until the wallet lands, and a null balance is not the same answer as zero.
+    if (credits.state === 'empty') {
       setSheetOpen(true);
       return;
     }
@@ -178,10 +179,15 @@ export default function AiDraft() {
     <Screen>
       <ScrollView contentContainerStyle={{ gap: theme.space[4] }} keyboardShouldPersistTaps="handled">
         <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* Only in the prompt phase: once a draft exists, leaving is the Discard
+              flow at the bottom, which confirms first. */}
+          {phase === 'prompt' ? (
+            <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
+          ) : null}
           <Text variant="h2">✦ {t('ai.draftAction')}</Text>
           <View style={{ alignItems: 'flex-end' }}>
             <Text numeric variant="h3">
-              {credits.balance ?? 0}
+              {credits.state === 'loading' ? '—' : (credits.balance ?? 0)}
             </Text>
             <Text variant="caption" tone="muted">
               {t('credits.balanceLabel')}
@@ -258,7 +264,7 @@ export default function AiDraft() {
             <Button
               label={t('ai.creditCost')}
               size="lg"
-              disabled={submitting || equipment.length === 0}
+              disabled={submitting || equipment.length === 0 || credits.state === 'loading'}
               onPress={() => void handleGenerate()}
             />
           </>

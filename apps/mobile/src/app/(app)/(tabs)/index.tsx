@@ -10,12 +10,35 @@ import { openWaiverDocument } from '../../../lib/intake/openWaiver';
 import { useProgramList } from '../../../lib/programs/useProgramList';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { Banner, Button, Card, ListRow, Row, SectionCard, Screen, Text } from '../../../ui';
+import { Banner, Button, Card, ListRow, Row, SectionCard, Screen, Spinner, Text } from '../../../ui';
 
 type Reachability = 'checking' | 'ok' | 'failed';
 type ClientRow = Database['public']['Tables']['clients']['Row'];
 type IntakeFormRow = Database['public']['Tables']['intake_forms']['Row'];
 type PtInfo = { display_name: string; avatar_url: string | null };
+
+/**
+ * The ONLY way into (app)/settings, and therefore the only way to sign out, change
+ * language or units, enrol/unenrol MFA, edit a profile, or withdraw a consent — every
+ * one of those lives behind that route and nothing else links to it.
+ *
+ * It sits on Today rather than in the tab bar because a client has no tab bar at all
+ * ((tabs)/_layout.tsx renders none for them), so a fifth tab would leave the client
+ * personas exactly as stranded as before. Today is the one screen both personas land
+ * on, which makes it the one place this row is reachable from for everyone.
+ */
+function SettingsButton() {
+  const { t } = useTranslation();
+  return (
+    <Button
+      label="⚙"
+      variant="ghost"
+      size="md"
+      accessibilityLabel={t('settings.title')}
+      onPress={() => router.push('/(app)/settings')}
+    />
+  );
+}
 
 /** Signed-in PT home placeholder. Real dashboard content lands in later milestones. */
 function PtHome() {
@@ -41,9 +64,12 @@ function PtHome() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
-        <Text variant="display" tone="accent">
-          FORGE
-        </Text>
+        <Row style={styles.between}>
+          <Text variant="display" tone="accent">
+            FORGE
+          </Text>
+          <SettingsButton />
+        </Row>
         <Text variant="h3" tone="secondary">
           {t('boot.tagline')}
         </Text>
@@ -187,7 +213,7 @@ function ClientHome() {
   if (state.loading) {
     return (
       <Screen>
-        <Text tone="muted">{t('common.retry')}</Text>
+        <Spinner />
       </Screen>
     );
   }
@@ -196,7 +222,12 @@ function ClientHome() {
     return (
       <Screen>
         <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
-          <Text variant="h1">{t('clientHome.noTrainerTitle')}</Text>
+          <Row style={styles.between}>
+            <Text variant="h1" style={{ flex: 1 }}>
+              {t('clientHome.noTrainerTitle')}
+            </Text>
+            <SettingsButton />
+          </Row>
           <Text tone="secondary">{t('clientHome.noTrainerBody')}</Text>
           <Text variant="bodyBold" numeric>
             {auth.user?.email}
@@ -215,7 +246,12 @@ function ClientHome() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
-        <Text variant="h1">{t('clientHome.greeting', { name: auth.user?.display_name ?? '' })}</Text>
+        <Row style={styles.between}>
+          <Text variant="h1" style={{ flex: 1 }} numberOfLines={1}>
+            {t('clientHome.greeting', { name: auth.user?.display_name ?? '' })}
+          </Text>
+          <SettingsButton />
+        </Row>
 
         <Card>
           <Text variant="label" tone="muted">

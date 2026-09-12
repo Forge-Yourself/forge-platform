@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseCalendarDate } from './dates';
 
 /**
  * The seven fixed PAR-Q ids. Mirrored byte-for-byte by the ARRAY literal in
@@ -153,8 +154,11 @@ function round1(n: number): number {
 
 function ageFromDob(dob: string | undefined): number | null {
   if (!dob) return null;
-  const birth = new Date(dob);
-  if (Number.isNaN(birth.getTime())) return null;
+  // A DATE, so parse it as a local calendar day — see schemas/dates.ts. Mixing a
+  // UTC-parsed birthday with the local getDate()/getMonth() below put the age a
+  // day out either side of a birthday, depending on the device's offset.
+  const birth = parseCalendarDate(dob);
+  if (birth === null) return null;
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
   const monthDiff = now.getMonth() - birth.getMonth();

@@ -9,7 +9,7 @@ import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { zodIssuesToFieldErrors } from '../../../lib/forms/zodFieldErrors';
 import { joinInviteUrl } from '../../../lib/webHost';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { Banner, Button, FormScreen, Text, TextField } from '../../../ui';
+import { Banner, Button, FormScreen, Row, Text, TextField } from '../../../ui';
 
 type Field = 'name' | 'email';
 
@@ -102,15 +102,18 @@ export default function InviteClient() {
     <FormScreen
       footer={
         <Button
-          label={submitting ? t('intake.submitting') : t('clients.invite.title')}
+          label={submitting ? t('intake.submitting') : t('clients.invite.submit')}
           onPress={() => void handleSubmit()}
           disabled={submitting}
         />
       }
     >
-      <Text variant="h1" style={{ marginBottom: theme.space[5] }}>
-        {t('clients.invite.title')}
-      </Text>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.space[5] }}>
+        <Text variant="h1" style={{ flex: 1 }}>
+          {t('clients.invite.title')}
+        </Text>
+        <Button label={t('common.cancel')} variant="ghost" size="md" onPress={() => router.back()} />
+      </Row>
 
       {error ? <Banner variant="danger" message={error} /> : null}
 
@@ -132,9 +135,13 @@ export default function InviteClient() {
         error={fieldErrors.email}
       />
 
+      {/* invite_client() writes a row and an audit entry; it dispatches nothing.
+          The PT is the delivery mechanism, so the screen says so before they tap
+          rather than leaving them waiting for an email that was never sent. */}
       <Text tone="muted" style={{ marginTop: theme.space[3] }}>
-        {t('clients.invite.expiryNote')}
+        {t('clients.invite.noEmailNote')}
       </Text>
+      <Text tone="muted">{t('clients.invite.expiryNote')}</Text>
       <Text tone="muted">{t('clients.invite.singleUseNote')}</Text>
     </FormScreen>
   );

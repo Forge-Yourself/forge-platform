@@ -1,4 +1,5 @@
 import { resetPasswordSchema } from '@forge/shared';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -14,9 +15,15 @@ type FieldErrors = { password?: string; confirmPassword?: string };
 
 /**
  * Reached ONLY through the recovery deep link (lib/deepLinks.ts already verified the
- * OTP and navigated here — by the time this renders, a session already exists). No
- * navigation happens from this screen on success: the session stays live with a real
- * password now set, and the root gate reacts and routes onward as normal.
+ * OTP and navigated here — by the time this renders, a session already exists).
+ *
+ * On success this screen confirms and then hands control back to the gate with
+ * router.replace('/'). It must do both explicitly. The gate is deliberately passive
+ * (app/_layout.tsx step 6 renders whatever route currently matches rather than forcing
+ * a redirect), and signOut({ scope: 'others' }) leaves this session untouched and fires
+ * no local auth event — so nothing about a successful save changes what the gate
+ * renders. Without this, the password really did change and the screen sat there
+ * looking exactly as it had before the tap.
  */
 export default function ResetPassword() {
   const { t } = useTranslation();
@@ -25,6 +32,7 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [saved, setSaved] = useState(false);
   const { submitting, error: formError, setError: setFormError, run } = useAsyncSubmit();
 
   const passwordsMatch =
@@ -50,7 +58,12 @@ export default function ResetPassword() {
       // about this before the tap, so no confirm dialog here.
       await supabase.auth.signOut({ scope: 'others' });
       void logAccountEvent('user_password_change');
-      // No manual navigation: session is still live, gate reacts as normal.
+
+      // Confirm, then leave. The banner is what tells the user it worked; the replace
+      // is what stops them sitting on a recovery screen with a live, already-recovered
+      // session. See this component's doc comment for why neither is optional.
+      setSaved(true);
+      router.replace('/');
     });
   }
 
@@ -66,6 +79,11 @@ export default function ResetPassword() {
       {formError ? (
         <View style={{ marginBottom: theme.space[4] }}>
           <Banner variant="danger" message={formError} />
+        </View>
+      ) : null}
+      {saved ? (
+        <View style={{ marginBottom: theme.space[4] }}>
+          <Banner variant="success" message={t('auth.resetPassword.success')} />
         </View>
       ) : null}
 

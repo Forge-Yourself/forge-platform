@@ -61,6 +61,9 @@ export default function Profile() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ gap: theme.space[5] }}>
+        <Row>
+          <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
+        </Row>
         <View style={{ alignItems: 'center' }}>
           <View style={{ marginBottom: theme.space[3] }}>
             <Avatar

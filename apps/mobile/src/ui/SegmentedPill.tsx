@@ -49,19 +49,25 @@ export function SegmentedPill({ items, selected, onChange }: SegmentedPillProps)
               alignItems: 'center',
               justifyContent: 'center',
               flexDirection: 'row',
-              gap: 6,
+              gap: 4,
+              paddingHorizontal: 6,
               backgroundColor: isSelected ? t.colors.accent : 'transparent',
               opacity: item.disabled ? 0.5 : 1,
             }}
           >
+            {/* Every item is flex: 1, so a four-item row (the client filter) or a
+                three-item one inside a ListRow trailing slot (Appearance) has very
+                little width at 360dp. Without this the label wrapped and pushed the
+                pill's height out; with it, it truncates and the row stays one line. */}
             <Text
-              style={{ fontSize: 13, fontWeight: '700' }}
+              numberOfLines={1}
+              style={{ fontSize: 13, fontWeight: '700', flexShrink: 1, textAlign: 'center' }}
               tone={isSelected ? 'onAccent' : 'primary'}
             >
               {item.label}
             </Text>
             {item.disabled && (
-              <Text style={{ fontSize: 10, fontWeight: '700' }} tone="muted">
+              <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '700', flexShrink: 1 }} tone="muted">
                 {(item.disabledLabel ?? 'Coming soon').toUpperCase()}
               </Text>
             )}

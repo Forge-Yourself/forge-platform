@@ -1,4 +1,4 @@
-import { weekCompletion } from '@forge/shared';
+import { toCalendarDate, weekCompletion } from '@forge/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,10 +22,6 @@ import {
 } from '../../../../ui';
 
 type StartChoice = 'nextMonday' | 'today' | 'custom';
-
-function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 function nextMonday(from: Date): Date {
   const date = new Date(from);
@@ -51,20 +47,29 @@ export default function AssignProgram() {
   const params = useLocalSearchParams<{ id: string; template?: string }>();
   const isTemplate = params.template === '1';
 
-  const clients = useClientList(auth.user?.id, '', 'active');
+  const clients = useClientList(auth.user?.id, '', 'all');
   const programs = useProgramList('assigned');
+
+  /**
+   * 'accepted' belongs here, not just 'active'. claim_client_invites() parks a client
+   * in 'accepted' the moment they link their account, and nothing promotes them to
+   * 'active' until they submit an intake (0010) — so filtering on 'active' alone made
+   * a freshly-onboarded client invisible on the one screen that exists to give them a
+   * program. 'invited' is excluded on purpose: there is no account to assign to yet.
+   */
+  const assignable = clients.items.filter((c) => c.state === 'active' || c.state === 'accepted');
 
   const [selected, setSelected] = useState<string[]>([]);
   const [startChoice, setStartChoice] = useState<StartChoice>('nextMonday');
-  const [customDate, setCustomDate] = useState(toIsoDate(new Date()));
+  const [customDate, setCustomDate] = useState(toCalendarDate(new Date()));
   const { submitting, error, setError, run } = useAsyncSubmit();
 
   const startDate =
     startChoice === 'custom'
       ? customDate
       : startChoice === 'today'
-        ? toIsoDate(new Date())
-        : toIsoDate(nextMonday(new Date()));
+        ? toCalendarDate(new Date())
+        : toCalendarDate(nextMonday(new Date()));
 
   const activeByClient = new Map(
     programs.items
@@ -76,7 +81,7 @@ export default function AssignProgram() {
     .map((clientId) => {
       const existing = activeByClient.get(clientId);
       if (!existing) return null;
-      const client = clients.items.find((c) => c.id === clientId);
+      const client = assignable.find((c) => c.id === clientId);
       const { currentWeek } = weekCompletion(
         { duration_weeks: existing.duration_weeks, start_date: existing.start_date },
         new Date(),
@@ -137,11 +142,11 @@ export default function AssignProgram() {
             <Skeleton height={68} />
             <Skeleton height={68} />
           </SectionCard>
-        ) : clients.items.length === 0 ? (
+        ) : assignable.length === 0 ? (
           <Text tone="secondary">{t('builder.assign.empty')}</Text>
         ) : (
           <SectionCard>
-            {clients.items.map((client) => {
+            {assignable.map((client) => {
               const isSelected = selected.includes(client.id);
               return (
                 <ListRow

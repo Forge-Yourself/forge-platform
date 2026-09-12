@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import { markCustomExerciseCreated } from '../../../lib/exercises/customExerciseSignal';
 import { createCustomExercise } from '../../../lib/exercises/exerciseActions';
 import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { zodIssuesToFieldErrors } from '../../../lib/forms/zodFieldErrors';
@@ -135,6 +136,9 @@ export default function CustomExercise() {
     await run(async () => {
       try {
         await createCustomExercise(input);
+        // The library tab does not unmount while this screen is pushed over it, so
+        // it needs telling that its list is now out of date. See the signal module.
+        markCustomExerciseCreated();
         router.back();
       } catch {
         setError(t('library.custom.error'));

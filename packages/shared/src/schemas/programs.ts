@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseCalendarDate } from './dates';
 
 /** Mirrors db/schema.sql's chk_programs_state CHECK constraint exactly. */
 export const PROGRAM_STATES = ['draft', 'active', 'completed', 'archived'] as const;
@@ -264,9 +265,12 @@ export function weekCompletion(
   today: Date = new Date(),
 ): { weeks: { weekNumber: number; state: WeekProgressState }[]; currentWeek: number | null } {
   const total = Math.max(0, program.duration_weeks);
-  const start = program.start_date ? new Date(program.start_date) : null;
-  const started =
-    start !== null && !Number.isNaN(start.getTime()) && start.getTime() <= today.getTime();
+  // parseCalendarDate, not new Date(): start_date is a DATE column, and the Date
+  // constructor reads a bare YYYY-MM-DD as UTC midnight while `today` is a local
+  // instant. See schemas/dates.ts — in Beirut that made a program read as not yet
+  // started until 03:00 on its own start date.
+  const start = parseCalendarDate(program.start_date);
+  const started = start !== null && start.getTime() <= today.getTime();
 
   // 1-based: on the start date itself the client is in week 1.
   const currentWeek = started

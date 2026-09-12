@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
 import {
   Banner,
+  Button,
   CodeCells,
   NumericKeypad,
   Screen,
@@ -90,6 +91,18 @@ export default function MfaEnroll() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+        {/* MFA is offered, never forced — verify-success says as much. Without a way
+            back, a user who taps "Set up two-factor" and changes their mind (or whose
+            enroll() call failed) has only the Android hardware button, and nothing at
+            all on iOS but the edge swipe. router.replace('/') rather than back(),
+            since this screen is also reachable from Settings. */}
+        <Button
+          label={t('common.back')}
+          variant="ghost"
+          size="md"
+          onPress={() => router.replace('/')}
+          style={{ alignSelf: 'flex-start', marginBottom: theme.space[2] }}
+        />
         <Text variant="h1" style={{ marginBottom: theme.space[2] }}>
           {t('auth.mfaEnroll.title')}
         </Text>

@@ -35,6 +35,36 @@ function emptyResponses(): IntakeResponses {
   };
 }
 
+/** The three free-typed number fields, tracked as raw text — see NumericField below. */
+type NumericFieldKey = 'years_training' | 'height_cm' | 'weight_kg';
+type NumericText = Record<NumericFieldKey, string>;
+
+const EMPTY_NUMERIC_TEXT: NumericText = { years_training: '', height_cm: '', weight_kg: '' };
+
+/** Digits and at most one decimal point. Everything else never reaches state. */
+function sanitizeDecimal(input: string): string {
+  const cleaned = input.replace(/[^0-9.]/g, '');
+  const [whole, ...fraction] = cleaned.split('.');
+  return fraction.length > 0 ? `${whole}.${fraction.join('')}` : whole;
+}
+
+/**
+ * Raw text -> the number to store, or undefined for "not answered".
+ *
+ * `allowZero` mirrors the schemas exactly: historyResponsesSchema has
+ * `years_training: z.number().nonnegative()` (a beginner really has trained zero
+ * years), anthropometricsResponsesSchema has `height_cm`/`weight_kg` as
+ * `.positive()` (nobody weighs nothing). A value the schema would reject is stored
+ * as undefined rather than written through to be rejected later at submit.
+ */
+function parseDecimal(input: string, allowZero: boolean): number | undefined {
+  if (input.trim() === '') return undefined;
+  const value = Number(input);
+  if (!Number.isFinite(value)) return undefined;
+  if (allowZero ? value < 0 : value <= 0) return undefined;
+  return value;
+}
+
 /**
  * The client's resumable 5-step intake. Two modes: `resume` (shown once on
  * opening a row that already has saved progress, per the annotation) and
@@ -51,7 +81,16 @@ export default function Intake() {
   const [mode, setMode] = useState<'resume' | 'wizard' | null>(null);
   const [step, setStep] = useState(1);
   const [responses, setResponses] = useState<IntakeResponses>(emptyResponses());
-  // Tracks which row.id the two setState calls below have already seeded
+  /**
+   * The number fields are edited as TEXT and only parsed into `responses` on the way
+   * through. Deriving the input's value from the parsed number instead made two
+   * things impossible: `Number('')` is 0 and `Number.isFinite(0)` is true, so clearing
+   * a field stored a literal zero rather than "not answered"; and typing "72." parsed
+   * to 72 and repainted the field as "72", swallowing the decimal point, so no client
+   * could ever enter 72.5 kg. Same separation the program builder's cell buffer uses.
+   */
+  const [numericText, setNumericText] = useState<NumericText>(EMPTY_NUMERIC_TEXT);
+  // Tracks which row.id the setState calls below have already seeded
   // from, so they run exactly once per fetched row.
   const [seededRowId, setSeededRowId] = useState<string | null>(null);
 
@@ -62,8 +101,14 @@ export default function Intake() {
   // when state changes during render, before the browser/native paints, so
   // this doesn't flash the unseeded state.
   if (row && row.id !== seededRowId) {
+    const seeded = { ...emptyResponses(), ...((row.responses as Partial<IntakeResponses>) ?? {}) };
     setSeededRowId(row.id);
-    setResponses({ ...emptyResponses(), ...((row.responses as Partial<IntakeResponses>) ?? {}) });
+    setResponses(seeded);
+    setNumericText({
+      years_training: seeded.history?.years_training?.toString() ?? '',
+      height_cm: seeded.anthropometrics?.height_cm?.toString() ?? '',
+      weight_kg: seeded.anthropometrics?.weight_kg?.toString() ?? '',
+    });
     setMode(row.state === 'in_progress' ? 'resume' : 'wizard');
   }
 
@@ -264,15 +309,16 @@ export default function Intake() {
         <>
           <TextField
             label={t('intake.history.yearsTrainingLabel')}
-            value={responses.history?.years_training?.toString() ?? ''}
+            value={numericText.years_training}
             onChangeText={(v) => {
-              const n = Number(v);
+              const text = sanitizeDecimal(v);
+              setNumericText((prev) => ({ ...prev, years_training: text }));
               setResponses((prev) => ({
                 ...prev,
-                history: { ...prev.history, years_training: Number.isFinite(n) ? n : undefined },
+                history: { ...prev.history, years_training: parseDecimal(text, true) },
               }));
             }}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
           />
           <TextField
             label={t('intake.history.injuriesLabel')}
@@ -319,27 +365,29 @@ export default function Intake() {
           />
           <TextField
             label={t('intake.anthropometrics.heightLabel')}
-            value={responses.anthropometrics?.height_cm?.toString() ?? ''}
+            value={numericText.height_cm}
             onChangeText={(v) => {
-              const n = Number(v);
+              const text = sanitizeDecimal(v);
+              setNumericText((prev) => ({ ...prev, height_cm: text }));
               setResponses((prev) => ({
                 ...prev,
-                anthropometrics: { ...prev.anthropometrics, height_cm: Number.isFinite(n) ? n : undefined },
+                anthropometrics: { ...prev.anthropometrics, height_cm: parseDecimal(text, false) },
               }));
             }}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
           />
           <TextField
             label={t('intake.anthropometrics.weightLabel')}
-            value={responses.anthropometrics?.weight_kg?.toString() ?? ''}
+            value={numericText.weight_kg}
             onChangeText={(v) => {
-              const n = Number(v);
+              const text = sanitizeDecimal(v);
+              setNumericText((prev) => ({ ...prev, weight_kg: text }));
               setResponses((prev) => ({
                 ...prev,
-                anthropometrics: { ...prev.anthropometrics, weight_kg: Number.isFinite(n) ? n : undefined },
+                anthropometrics: { ...prev.anthropometrics, weight_kg: parseDecimal(text, false) },
               }));
             }}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
           />
         </>
       ) : null}

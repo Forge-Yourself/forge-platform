@@ -2,7 +2,7 @@ import { saveProgramPayloadSchema } from '@forge/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { BackHandler, Modal, Pressable, ScrollView, View } from 'react-native';
 import { CreditSheet } from '../../../../lib/ai/CreditSheet';
 import { useAuth } from '../../../../lib/auth/AuthProvider';
 import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
@@ -268,6 +268,33 @@ export default function ProgramBuilder() {
     router.back();
   }
 
+  /**
+   * The same guard, for the Android hardware back button.
+   *
+   * `leave()` alone only protected this screen's own Back control, and on Android the
+   * hardware button is a reflex — it went straight past the confirm sheet and took an
+   * unsaved program with it. Returning true from the handler consumes the event, so
+   * react-navigation never sees it and the screen does not pop.
+   *
+   * Scoped with useFocusEffect so it is only registered while the builder is the
+   * visible screen: the library and the AI screen push over the top of it, and they
+   * must keep their own back behaviour.
+   *
+   * The iOS interactive swipe-back is NOT covered by this — BackHandler is Android-only.
+   * Blocking that gesture needs a `beforeRemove` listener, which expo-router 57 does
+   * not re-export a hook for; revisit when there is an iOS device to verify against.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (!dirty) return false;
+        setConfirmLeaveOpen(true);
+        return true;
+      });
+      return () => subscription.remove();
+    }, [dirty]),
+  );
+
   if (loading) {
     return (
       <Screen>
@@ -520,16 +547,31 @@ export default function ProgramBuilder() {
           borderTopColor: theme.colors.border,
         }}
       >
-        <View>
+        <View style={{ flex: 1 }}>
           <Text numeric variant="h3">
-            {credits.balance ?? 0}
+            {/* '—' rather than 0 while the wallet is still loading: showing a real
+                figure the app has not read yet is worse than showing none. */}
+            {credits.state === 'loading' ? '—' : (credits.balance ?? 0)}
           </Text>
           <Text variant="caption" tone="muted">
             {t('credits.balanceLabel')}
           </Text>
+          {/* A draft is generated against one client's intake, so an unassigned
+              program or a template has nothing to generate for. Say that here,
+              next to the disabled button, rather than letting the PT fill in the
+              whole prompt and meet a 403 at the end. */}
+          {!tree.client_id ? (
+            <Text variant="caption" tone="muted" style={{ marginTop: 2 }}>
+              {t('ai.needsClient')}
+            </Text>
+          ) : null}
         </View>
         <Button
           label={'✦ ' + t('ai.draftAction')}
+          // 'loading' is not 'empty' — see useCreditBalance. Disabling for the
+          // moment before the wallet lands is what stops a PT with credits from
+          // being shown the out-of-credits sheet.
+          disabled={!tree.client_id || credits.state === 'loading'}
           onPress={() => {
             // The cost is decided here, next to the balance — so an empty
             // wallet opens the sheet rather than sending the PT to a prompt
@@ -643,6 +685,11 @@ export default function ProgramBuilder() {
             <Text variant="h2">{t('builder.copyWeek.title', { week: week?.week_number ?? 1 })}</Text>
             {/* The warning is stated before the tap, not after it. */}
             <Banner variant="warn" message={t('builder.copyWeek.body')} />
+            {/* copy_program_week() works server-side, so handleCopyWeek has to refetch
+                and reseed the local draft afterwards — which silently threw away any
+                unsaved edits. Rather than copy the week and lose the work, or merge two
+                sources of truth, the copy waits until there is nothing unsaved to lose. */}
+            {dirty ? <Banner variant="danger" message={t('builder.copyWeek.saveFirst')} /> : null}
             {draft.weeks
               .filter((w) => w.week_number !== week?.week_number)
               .map((target) => (
@@ -650,7 +697,7 @@ export default function ProgramBuilder() {
                   key={target.week_number}
                   label={t('builder.copyWeek.targetLabel', { week: target.week_number })}
                   variant="ghost"
-                  disabled={submitting}
+                  disabled={submitting || dirty}
                   onPress={() => void handleCopyWeek(target.week_number)}
                 />
               ))}

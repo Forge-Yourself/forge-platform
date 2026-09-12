@@ -314,7 +314,13 @@ export default function Settings() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ gap: theme.space[5], paddingBottom: theme.space[6] }}>
-        <Text variant="h2">{t('settings.title')}</Text>
+        {/* Every stack in this app sets headerShown: false, so a screen without its
+            own back control is reachable only by the Android hardware button. */}
+        <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
+          <Text variant="h2">{t('settings.title')}</Text>
+          <View style={{ width: 64 }} />
+        </Row>
 
         {error ? <Banner variant="danger" message={error} /> : null}
 
@@ -412,6 +418,11 @@ export default function Settings() {
             {t('settings.account.heading')}
           </Text>
           <SectionCard>
+            <ListRow
+              title={t('profile.title')}
+              onPress={() => router.push('/(app)/profile')}
+              trailing={<Text tone="muted">›</Text>}
+            />
             <ListRow
               title={t('settings.account.editProfile')}
               onPress={() => router.push('/(app)/profile-edit')}
