@@ -439,6 +439,12 @@
     "waiver": {
       "rowTitle": "Liability waiver",
       "rowSubtitle": "Signed {{date}}"
+    },
+    "program": {
+      "cardLabel": "Your program",
+      "none": "Your trainer hasn't assigned a program yet.",
+      "weekOf": "Week {{week}} of {{total}}",
+      "view": "View program"
     }
   },
   "library": {
@@ -731,5 +737,15 @@
     },
     "comingSoon": "Coming soon",
     "dismiss": "Not now"
+  },
+  "myProgram": {
+    "title": "Your program",
+    "empty": "Your trainer hasn't assigned a program yet.",
+    "readOnlyNote": "Your trainer writes this program. You'll log against it from the next release.",
+    "offlineError": {
+      "title": "Couldn't load your program",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    }
   }
 }

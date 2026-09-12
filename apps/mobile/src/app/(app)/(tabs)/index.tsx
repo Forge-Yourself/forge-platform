@@ -1,4 +1,4 @@
-import { isRTL, type Database, type Locale } from '@forge/shared';
+import { isRTL, weekCompletion, type Database, type Locale } from '@forge/shared';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -7,6 +7,7 @@ import { I18nManager, ScrollView, StyleSheet } from 'react-native';
 import { useAuth } from '../../../lib/auth/AuthProvider';
 import { claimClientInvites } from '../../../lib/intake/claimInvites';
 import { openWaiverDocument } from '../../../lib/intake/openWaiver';
+import { useProgramList } from '../../../lib/programs/useProgramList';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../../theme/ThemeProvider';
 import { Banner, Button, Card, ListRow, Row, SectionCard, Screen, Text } from '../../../ui';
@@ -123,6 +124,13 @@ function ClientHome() {
   const [emailCopied, setEmailCopied] = useState(false);
   const [waiverError, setWaiverError] = useState<string | null>(null);
 
+  // RLS already returns only 'active'/'completed' programs to a client
+  // (is_program_visible), so there is no state filter here and there must not
+  // be one: the absence of it is what proves a draft is invisible by policy
+  // rather than by a client-side check somebody could later remove.
+  const programs = useProgramList('assigned');
+  const myProgram = programs.items[0] ?? null;
+
   // Inlined with .then() (not a separately-defined callback) so every setState
   // call stays visible to the linter inside this effect body — same
   // react-hooks/set-state-in-effect constraint documented in
@@ -217,6 +225,49 @@ function ClientHome() {
         </Card>
 
         {waiverError ? <Banner variant="danger" message={waiverError} /> : null}
+
+        <Card>
+          <Text variant="label" tone="muted">
+            {t('clientHome.program.cardLabel')}
+          </Text>
+          {myProgram === null ? (
+            <Text tone="secondary">{t('clientHome.program.none')}</Text>
+          ) : (
+            <>
+              <Text variant="h3">{myProgram.name}</Text>
+              <Text tone="secondary">
+                {t('programs.meta', {
+                  weeks: myProgram.duration_weeks,
+                  days: myProgram.days_per_week,
+                  exercises: myProgram.exercise_count,
+                })}
+              </Text>
+              {(() => {
+                const { currentWeek } = weekCompletion(
+                  {
+                    duration_weeks: myProgram.duration_weeks,
+                    start_date: myProgram.start_date,
+                  },
+                  new Date(),
+                );
+                return currentWeek === null ? null : (
+                  <Text numeric tone="secondary">
+                    {t('clientHome.program.weekOf', {
+                      week: currentWeek,
+                      total: myProgram.duration_weeks,
+                    })}
+                  </Text>
+                );
+              })()}
+              <Button
+                label={t('clientHome.program.view')}
+                onPress={() =>
+                  router.push({ pathname: '/(app)/my-program', params: { id: myProgram.id } })
+                }
+              />
+            </>
+          )}
+        </Card>
 
         {intakeState === 'pending' ? (
           <Card>
