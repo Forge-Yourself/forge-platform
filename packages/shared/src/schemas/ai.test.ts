@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { z } from 'zod';
 import {
   AI_CREDIT_PACKS,
   AI_LOW_BALANCE_THRESHOLD,
@@ -52,7 +53,9 @@ describe('aiProgramDraftRequestSchema', () => {
 });
 
 describe('aiDraftModelSchema', () => {
-  const modelOutput = {
+  // Typed as the schema's own input so a fixture that drifts from the
+  // contract fails typecheck, not just assertion-by-assertion at runtime.
+  const modelOutput: z.input<typeof aiDraftModelSchema> = {
     summary: '3 days/week · 18 exercises · no overhead press',
     weeks: [
       {
@@ -93,8 +96,8 @@ describe('aiDraftModelSchema', () => {
 
   it('accepts a null RPE and a null tempo — warm-ups prescribe neither', () => {
     const relaxed = structuredClone(modelOutput);
-    relaxed.weeks[0].days[0].blocks[0].exercises[0].targetRpe = null;
-    relaxed.weeks[0].days[0].blocks[0].exercises[0].tempoPrescribed = null;
+    relaxed.weeks[0]!.days[0]!.blocks[0]!.exercises[0]!.targetRpe = null;
+    relaxed.weeks[0]!.days[0]!.blocks[0]!.exercises[0]!.tempoPrescribed = null;
     expect(aiDraftModelSchema.safeParse(relaxed).success).toBe(true);
   });
 
@@ -102,13 +105,13 @@ describe('aiDraftModelSchema', () => {
     expect(aiDraftModelSchema.safeParse({ ...modelOutput, weeks: [] }).success).toBe(false);
 
     const empty = structuredClone(modelOutput);
-    empty.weeks[0].days[0].blocks = [];
+    empty.weeks[0]!.days[0]!.blocks = [];
     expect(aiDraftModelSchema.safeParse(empty).success).toBe(false);
   });
 
   it('rejects a block type outside chk_pb_block_type', () => {
     const bad = structuredClone(modelOutput);
-    bad.weeks[0].days[0].blocks[0].blockType = 'giant_set';
+    (bad.weeks[0]!.days[0]!.blocks[0]! as { blockType: string }).blockType = 'giant_set';
     expect(aiDraftModelSchema.safeParse(bad).success).toBe(false);
   });
 });

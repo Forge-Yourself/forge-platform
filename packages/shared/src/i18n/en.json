@@ -434,5 +434,296 @@
       "rowTitle": "Liability waiver",
       "rowSubtitle": "Signed {{date}}"
     }
+  },
+  "library": {
+    "title": "Library",
+    "searchPlaceholder": "Search {{count}} exercises",
+    "mineTag": "MINE",
+    "filterGroups": {
+      "muscle": "Muscle",
+      "equipment": "Equipment",
+      "pattern": "Pattern"
+    },
+    "muscleLabels": {
+      "chest": "Chest",
+      "back": "Back",
+      "shoulders": "Shoulders",
+      "biceps": "Biceps",
+      "triceps": "Triceps",
+      "forearms": "Forearms",
+      "quadriceps": "Quads",
+      "hamstrings": "Hamstrings",
+      "glutes": "Glutes",
+      "calves": "Calves",
+      "abs": "Abs",
+      "obliques": "Obliques",
+      "traps": "Traps",
+      "lats": "Lats",
+      "hip_flexors": "Hip flexors",
+      "adductors": "Adductors",
+      "abductors": "Abductors",
+      "full_body": "Full body",
+      "cardio": "Cardio",
+      "other": "Other"
+    },
+    "equipmentLabels": {
+      "barbell": "Barbell",
+      "dumbbell": "Dumbbell",
+      "kettlebell": "Kettlebell",
+      "machine": "Machine",
+      "cable": "Cable",
+      "bodyweight": "Bodyweight",
+      "resistance_band": "Band",
+      "smith_machine": "Smith machine",
+      "trx": "TRX",
+      "medicine_ball": "Med ball",
+      "foam_roller": "Foam roller",
+      "bench": "Bench",
+      "pull_up_bar": "Pull-up bar",
+      "cardio_machine": "Cardio machine",
+      "other": "Other",
+      "none": "No equipment"
+    },
+    "patternLabels": {
+      "push": "Push",
+      "pull": "Pull",
+      "squat": "Squat",
+      "hinge": "Hinge",
+      "lunge": "Lunge",
+      "carry": "Carry",
+      "rotation": "Rotation",
+      "isometric": "Isometric",
+      "plyometric": "Plyometric",
+      "cardio": "Cardio",
+      "stretch": "Stretch",
+      "other": "Other"
+    },
+    "difficultyLabels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "empty": {
+      "title": "No exercises yet",
+      "body": "Your library is empty. Build the movement you need.",
+      "createButton": "Create custom exercise"
+    },
+    "noMatch": {
+      "title": "Nothing matches \"{{query}}\"",
+      "body": "Clear a filter, or build the movement yourself.",
+      "createButton": "Create custom exercise"
+    },
+    "offlineError": {
+      "title": "Couldn't load the library",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "detail": {
+      "videoPlaceholder": "Demo video coming soon",
+      "cuesTitle": "Coaching cues",
+      "noCues": "No cues written for this movement yet.",
+      "historyTitle": "This client's history",
+      "historyEmpty": "No history yet — this is the first time you'll program it.",
+      "addToProgram": "Add to program",
+      "addFromBuilderHint": "Open this from a program to add it."
+    },
+    "custom": {
+      "title": "Custom exercise",
+      "nameLabel": "Name",
+      "namePlaceholder": "Landmine row",
+      "muscleLabel": "Muscle group",
+      "equipmentLabel": "Equipment",
+      "patternLabel": "Movement pattern (optional)",
+      "difficultyLabel": "Difficulty (optional)",
+      "videoLabel": "Video URL (optional)",
+      "cuesLabel": "Coaching cues (optional)",
+      "addCue": "Add a cue",
+      "removeCue": "Remove cue",
+      "save": "Save to my library",
+      "successTitle": "Saved to your library",
+      "error": "Couldn't save the exercise. Please try again."
+    }
+  },
+  "programs": {
+    "title": "Programs",
+    "tabs": {
+      "assigned": "Assigned",
+      "templates": "Templates"
+    },
+    "meta": "{{weeks}} weeks · {{days}} days/week · {{exercises}} exercises",
+    "weekTag": "WEEK {{week}}",
+    "draftTag": "DRAFT",
+    "aiDraftMeta": "{{weeks}} weeks · drafted with AI",
+    "newProgram": "New program",
+    "assignAction": "Assign",
+    "empty": {
+      "title": "No programs yet",
+      "body": "Build one from scratch, or let AI draft the first version.",
+      "createButton": "New program"
+    },
+    "emptyTemplates": {
+      "title": "No templates yet",
+      "body": "Save any program as a template to reuse it across clients.",
+      "createButton": "New program"
+    },
+    "noMatch": {
+      "title": "Nothing matches \"{{query}}\"",
+      "body": "Try a different search.",
+      "createButton": "New program"
+    },
+    "offlineError": {
+      "title": "Couldn't load your programs",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "create": {
+      "title": "New program",
+      "nameLabel": "Program name",
+      "namePlaceholder": "Strength block",
+      "weeksLabel": "Length",
+      "weeksValue_one": "{{count}} week",
+      "weeksValue_other": "{{count}} weeks",
+      "clientLabel": "For (optional)",
+      "templateLabel": "Save as a template",
+      "create": "Create program",
+      "error": "Couldn't create the program. Please try again."
+    }
+  },
+  "builder": {
+    "save": "Save",
+    "saving": "Saving",
+    "saved": "Saved",
+    "weekLabel": "Week {{week}}",
+    "dayLabel": "Day {{day}}",
+    "addDay": "Add day",
+    "addBlock": "Add block",
+    "addExercise": "Add exercise",
+    "removeExercise": "Remove exercise",
+    "restLabel": "REST {{rest}}",
+    "cells": {
+      "sets": "SETS",
+      "reps": "REPS",
+      "rpe": "RPE",
+      "tempo": "TEMPO"
+    },
+    "blockTypeLabels": {
+      "warmup": "Warm-up",
+      "working": "Working",
+      "cooldown": "Cool-down",
+      "superset": "Superset",
+      "circuit": "Circuit",
+      "straight": "Straight",
+      "emom": "EMOM",
+      "amrap": "AMRAP",
+      "drop_set": "Drop set"
+    },
+    "keypad": {
+      "done": "Done",
+      "next": "Next",
+      "clear": "Clear",
+      "tempoCustom": "Custom"
+    },
+    "empty": {
+      "title": "Nothing programmed yet",
+      "body": "Add your first exercise to this day."
+    },
+    "offlineError": {
+      "title": "Couldn't load this program",
+      "body": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "saveError": "Couldn't save. Your changes are still here — try again.",
+    "unsaved": {
+      "title": "Leave without saving?",
+      "body": "Your changes to this program will be lost.",
+      "confirm": "Discard changes",
+      "cancel": "Keep editing"
+    },
+    "copyWeek": {
+      "action": "Copy week",
+      "title": "Copy week {{week}}",
+      "body": "Choose where it lands. Existing sessions in the target week are replaced.",
+      "targetLabel": "Week {{week}}",
+      "confirm": "Copy week",
+      "cancel": "Cancel",
+      "error": "Couldn't copy the week. Please try again."
+    },
+    "assign": {
+      "title": "Assign to client",
+      "clientsLabel": "Assign to",
+      "startDateLabel": "Start",
+      "startNextMonday": "Next Monday",
+      "startToday": "Today",
+      "startCustom": "Pick a date",
+      "replaceWarning": "{{name}}'s current program has {{weeks}} weeks left. Assigning this replaces it.",
+      "confirm": "Assign program",
+      "empty": "You have no active clients to assign to yet.",
+      "error": "Couldn't assign the program. Please try again."
+    }
+  },
+  "ai": {
+    "draftAction": "Draft with AI",
+    "creditCost": "Generate draft · 1 credit",
+    "intro": "Answer three things. You review and edit every set before anything reaches {{name}}.",
+    "goalLabel": "Goal",
+    "goalLabels": {
+      "strength": "Strength",
+      "hypertrophy": "Muscle",
+      "fat_loss": "Fat loss",
+      "endurance": "Endurance",
+      "general_fitness": "General fitness",
+      "rehab_return": "Return from injury"
+    },
+    "equipmentLabel": "Equipment available",
+    "experienceLabel": "Experience",
+    "experienceLabels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "avoidLabel": "Anything to avoid",
+    "avoidPlaceholder": "No overhead pressing — left shoulder.",
+    "generating": {
+      "title": "Drafting four weeks",
+      "body": "Usually under 12 seconds. Keep this screen open.",
+      "step1": "Reading {{name}}'s intake and history",
+      "step2": "Choosing movements for available kit",
+      "step3": "Setting loads, reps and RPE",
+      "step4": "Checking weekly progression"
+    },
+    "result": {
+      "warning": "Draft only. Nothing is assigned until you save it.",
+      "reviewInBuilder": "Review in builder",
+      "redraft": "Redraft",
+      "discard": "Discard",
+      "discardTitle": "Discard this draft?",
+      "discardBody": "The credit for this draft has already been spent. Discarding cannot undo that.",
+      "discardConfirm": "Discard draft",
+      "discardCancel": "Keep reviewing"
+    },
+    "errors": {
+      "unauthorized": "Your session expired. Sign in and try again.",
+      "forbidden": "You're not this client's trainer.",
+      "insufficientCredits": "You're out of AI credits. No credit was charged.",
+      "model": "The draft failed to generate. No credit was charged.",
+      "timeout": "That took too long. No credit was charged — try again.",
+      "refunded": "Something went wrong after the draft was generated. Your credit was refunded.",
+      "generic": "Couldn't draft a program. No credit was charged."
+    }
+  },
+  "credits": {
+    "balanceLabel": "AI credits",
+    "remaining_one": "{{count}} credit left",
+    "remaining_other": "{{count}} credits left",
+    "enoughForOne": "Enough for one more draft",
+    "empty": "You're out of AI credits",
+    "body": "Credits only cover AI drafting. Building programs by hand is always free and unlimited.",
+    "packs": {
+      "starter": "Enough for ~20 drafts",
+      "standard": "Best value · most PTs pick this",
+      "power": "For studios"
+    },
+    "comingSoon": "Coming soon",
+    "dismiss": "Not now"
   }
 }

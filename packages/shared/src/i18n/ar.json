@@ -434,5 +434,296 @@
       "rowTitle": "إخلاء المسؤولية",
       "rowSubtitle": "تم التوقيع في {{date}}"
     }
+  },
+  "library": {
+    "title": "المكتبة",
+    "searchPlaceholder": "ابحث في {{count}} تمرين",
+    "mineTag": "تماريني",
+    "filterGroups": {
+      "muscle": "العضلة",
+      "equipment": "المعدات",
+      "pattern": "النمط"
+    },
+    "muscleLabels": {
+      "chest": "الصدر",
+      "back": "الظهر",
+      "shoulders": "الأكتاف",
+      "biceps": "العضلة ذات الرأسين",
+      "triceps": "العضلة ثلاثية الرؤوس",
+      "forearms": "الساعدان",
+      "quadriceps": "الرباعية",
+      "hamstrings": "أوتار الركبة",
+      "glutes": "الألوية",
+      "calves": "السمانة",
+      "abs": "البطن",
+      "obliques": "الخصر الجانبي",
+      "traps": "شبه المنحرفة",
+      "lats": "الظهرية العريضة",
+      "hip_flexors": "قابضات الورك",
+      "adductors": "المقربات",
+      "abductors": "المبعدات",
+      "full_body": "الجسم كامل",
+      "cardio": "كارديو",
+      "other": "أخرى"
+    },
+    "equipmentLabels": {
+      "barbell": "بار",
+      "dumbbell": "دمبل",
+      "kettlebell": "كيتل بيل",
+      "machine": "جهاز",
+      "cable": "كابل",
+      "bodyweight": "وزن الجسم",
+      "resistance_band": "شريط مقاومة",
+      "smith_machine": "جهاز سميث",
+      "trx": "تي آر إكس",
+      "medicine_ball": "كرة طبية",
+      "foam_roller": "أسطوانة فوم",
+      "bench": "بنش",
+      "pull_up_bar": "عقلة",
+      "cardio_machine": "جهاز كارديو",
+      "other": "أخرى",
+      "none": "بدون معدات"
+    },
+    "patternLabels": {
+      "push": "دفع",
+      "pull": "سحب",
+      "squat": "قرفصاء",
+      "hinge": "ثني الورك",
+      "lunge": "طعن",
+      "carry": "حمل",
+      "rotation": "دوران",
+      "isometric": "ثابت",
+      "plyometric": "قفز",
+      "cardio": "كارديو",
+      "stretch": "إطالة",
+      "other": "أخرى"
+    },
+    "difficultyLabels": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم"
+    },
+    "empty": {
+      "title": "لا تمارين بعد",
+      "body": "مكتبتك فارغة. أنشئ الحركة التي تحتاجها.",
+      "createButton": "إنشاء تمرين خاص"
+    },
+    "noMatch": {
+      "title": "لا نتائج لـ \"{{query}}\"",
+      "body": "أزل أحد الفلاتر، أو أنشئ الحركة بنفسك.",
+      "createButton": "إنشاء تمرين خاص"
+    },
+    "offlineError": {
+      "title": "تعذّر تحميل المكتبة",
+      "body": "تحقق من اتصالك وحاول مجددًا.",
+      "retry": "إعادة المحاولة"
+    },
+    "detail": {
+      "videoPlaceholder": "فيديو الشرح قريبًا",
+      "cuesTitle": "إرشادات التنفيذ",
+      "noCues": "لا توجد إرشادات مكتوبة لهذه الحركة بعد.",
+      "historyTitle": "سجل هذا العميل",
+      "historyEmpty": "لا سجل بعد — هذه أول مرة تبرمج فيها هذه الحركة.",
+      "addToProgram": "أضف إلى البرنامج",
+      "addFromBuilderHint": "افتح هذا من داخل برنامج لإضافته."
+    },
+    "custom": {
+      "title": "تمرين خاص",
+      "nameLabel": "الاسم",
+      "namePlaceholder": "تجديف بالبار الأرضي",
+      "muscleLabel": "المجموعة العضلية",
+      "equipmentLabel": "المعدات",
+      "patternLabel": "نمط الحركة (اختياري)",
+      "difficultyLabel": "المستوى (اختياري)",
+      "videoLabel": "رابط الفيديو (اختياري)",
+      "cuesLabel": "إرشادات التنفيذ (اختياري)",
+      "addCue": "أضف إرشادًا",
+      "removeCue": "حذف الإرشاد",
+      "save": "حفظ في مكتبتي",
+      "successTitle": "تم الحفظ في مكتبتك",
+      "error": "تعذّر حفظ التمرين. حاول مجددًا."
+    }
+  },
+  "programs": {
+    "title": "البرامج",
+    "tabs": {
+      "assigned": "المُسندة",
+      "templates": "القوالب"
+    },
+    "meta": "{{weeks}} أسابيع · {{days}} أيام/أسبوع · {{exercises}} تمرين",
+    "weekTag": "الأسبوع {{week}}",
+    "draftTag": "مسودة",
+    "aiDraftMeta": "{{weeks}} أسابيع · مسودة بالذكاء الاصطناعي",
+    "newProgram": "برنامج جديد",
+    "assignAction": "إسناد",
+    "empty": {
+      "title": "لا برامج بعد",
+      "body": "ابنِ برنامجًا من الصفر، أو دع الذكاء الاصطناعي يكتب النسخة الأولى.",
+      "createButton": "برنامج جديد"
+    },
+    "emptyTemplates": {
+      "title": "لا قوالب بعد",
+      "body": "احفظ أي برنامج كقالب لإعادة استخدامه مع عملاء آخرين.",
+      "createButton": "برنامج جديد"
+    },
+    "noMatch": {
+      "title": "لا نتائج لـ \"{{query}}\"",
+      "body": "جرّب بحثًا آخر.",
+      "createButton": "برنامج جديد"
+    },
+    "offlineError": {
+      "title": "تعذّر تحميل برامجك",
+      "body": "تحقق من اتصالك وحاول مجددًا.",
+      "retry": "إعادة المحاولة"
+    },
+    "create": {
+      "title": "برنامج جديد",
+      "nameLabel": "اسم البرنامج",
+      "namePlaceholder": "مرحلة القوة",
+      "weeksLabel": "المدة",
+      "weeksValue_one": "أسبوع واحد",
+      "weeksValue_other": "{{count}} أسابيع",
+      "clientLabel": "لـ (اختياري)",
+      "templateLabel": "احفظه كقالب",
+      "create": "إنشاء البرنامج",
+      "error": "تعذّر إنشاء البرنامج. حاول مجددًا."
+    }
+  },
+  "builder": {
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ",
+    "saved": "تم الحفظ",
+    "weekLabel": "الأسبوع {{week}}",
+    "dayLabel": "اليوم {{day}}",
+    "addDay": "أضف يومًا",
+    "addBlock": "أضف مقطعًا",
+    "addExercise": "أضف تمرينًا",
+    "removeExercise": "حذف التمرين",
+    "restLabel": "راحة {{rest}}",
+    "cells": {
+      "sets": "مجموعات",
+      "reps": "تكرارات",
+      "rpe": "الجهد",
+      "tempo": "الإيقاع"
+    },
+    "blockTypeLabels": {
+      "warmup": "إحماء",
+      "working": "عمل",
+      "cooldown": "تهدئة",
+      "superset": "سوبرست",
+      "circuit": "دائري",
+      "straight": "مجموعات مباشرة",
+      "emom": "كل دقيقة",
+      "amrap": "أكبر عدد ممكن",
+      "drop_set": "دروب ست"
+    },
+    "keypad": {
+      "done": "تم",
+      "next": "التالي",
+      "clear": "مسح",
+      "tempoCustom": "مخصص"
+    },
+    "empty": {
+      "title": "لا شيء مبرمج بعد",
+      "body": "أضف أول تمرين لهذا اليوم."
+    },
+    "offlineError": {
+      "title": "تعذّر تحميل هذا البرنامج",
+      "body": "تحقق من اتصالك وحاول مجددًا.",
+      "retry": "إعادة المحاولة"
+    },
+    "saveError": "تعذّر الحفظ. تعديلاتك ما زالت هنا — حاول مجددًا.",
+    "unsaved": {
+      "title": "الخروج دون حفظ؟",
+      "body": "ستفقد تعديلاتك على هذا البرنامج.",
+      "confirm": "تجاهل التعديلات",
+      "cancel": "متابعة التعديل"
+    },
+    "copyWeek": {
+      "action": "نسخ الأسبوع",
+      "title": "نسخ الأسبوع {{week}}",
+      "body": "اختر وجهة النسخ. محتوى الأسبوع الهدف سيُستبدل بالكامل.",
+      "targetLabel": "الأسبوع {{week}}",
+      "confirm": "نسخ الأسبوع",
+      "cancel": "إلغاء",
+      "error": "تعذّر نسخ الأسبوع. حاول مجددًا."
+    },
+    "assign": {
+      "title": "إسناد إلى عميل",
+      "clientsLabel": "إسناد إلى",
+      "startDateLabel": "البداية",
+      "startNextMonday": "الاثنين القادم",
+      "startToday": "اليوم",
+      "startCustom": "اختر تاريخًا",
+      "replaceWarning": "برنامج {{name}} الحالي متبقٍ منه {{weeks}} أسابيع. الإسناد سيستبدله.",
+      "confirm": "إسناد البرنامج",
+      "empty": "لا يوجد عملاء نشطون للإسناد إليهم بعد.",
+      "error": "تعذّر إسناد البرنامج. حاول مجددًا."
+    }
+  },
+  "ai": {
+    "draftAction": "مسودة بالذكاء الاصطناعي",
+    "creditCost": "إنشاء المسودة · رصيد واحد",
+    "intro": "أجب عن ثلاثة أسئلة. أنت تراجع وتعدّل كل مجموعة قبل أن يصل أي شيء إلى {{name}}.",
+    "goalLabel": "الهدف",
+    "goalLabels": {
+      "strength": "القوة",
+      "hypertrophy": "الكتلة العضلية",
+      "fat_loss": "خسارة الدهون",
+      "endurance": "التحمل",
+      "general_fitness": "لياقة عامة",
+      "rehab_return": "العودة من إصابة"
+    },
+    "equipmentLabel": "المعدات المتاحة",
+    "experienceLabel": "الخبرة",
+    "experienceLabels": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم"
+    },
+    "avoidLabel": "ما يجب تجنبه",
+    "avoidPlaceholder": "لا ضغط علوي — إصابة في الكتف الأيسر.",
+    "generating": {
+      "title": "جارٍ كتابة أربعة أسابيع",
+      "body": "عادةً أقل من 12 ثانية. أبقِ هذه الشاشة مفتوحة.",
+      "step1": "قراءة استبيان {{name}} وسجله",
+      "step2": "اختيار الحركات المناسبة للمعدات المتاحة",
+      "step3": "ضبط الأحمال والتكرارات والجهد",
+      "step4": "مراجعة التدرّج الأسبوعي"
+    },
+    "result": {
+      "warning": "مسودة فقط. لا شيء يُسند حتى تحفظه بنفسك.",
+      "reviewInBuilder": "مراجعة في المحرر",
+      "redraft": "إعادة الإنشاء",
+      "discard": "تجاهل",
+      "discardTitle": "تجاهل هذه المسودة؟",
+      "discardBody": "رصيد هذه المسودة قد استُهلك بالفعل. التجاهل لا يعيده.",
+      "discardConfirm": "تجاهل المسودة",
+      "discardCancel": "متابعة المراجعة"
+    },
+    "errors": {
+      "unauthorized": "انتهت جلستك. سجّل الدخول وحاول مجددًا.",
+      "forbidden": "أنت لست مدرب هذا العميل.",
+      "insufficientCredits": "نفد رصيدك من الذكاء الاصطناعي. لم يُخصم أي رصيد.",
+      "model": "تعذّر إنشاء المسودة. لم يُخصم أي رصيد.",
+      "timeout": "استغرق الأمر وقتًا طويلًا. لم يُخصم أي رصيد — حاول مجددًا.",
+      "refunded": "حدث خطأ بعد إنشاء المسودة. تمت إعادة رصيدك.",
+      "generic": "تعذّر إنشاء البرنامج. لم يُخصم أي رصيد."
+    }
+  },
+  "credits": {
+    "balanceLabel": "أرصدة الذكاء الاصطناعي",
+    "remaining_one": "بقي رصيد واحد",
+    "remaining_other": "بقي {{count}} أرصدة",
+    "enoughForOne": "يكفي لمسودة واحدة أخرى",
+    "empty": "نفد رصيدك من الذكاء الاصطناعي",
+    "body": "الأرصدة تغطي مسودات الذكاء الاصطناعي فقط. بناء البرامج يدويًا مجاني دائمًا وبلا حدود.",
+    "packs": {
+      "starter": "يكفي لنحو 20 مسودة",
+      "standard": "الأفضل قيمة · اختيار معظم المدربين",
+      "power": "للاستوديوهات"
+    },
+    "comingSoon": "قريبًا",
+    "dismiss": "ليس الآن"
   }
 }
