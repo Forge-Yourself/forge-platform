@@ -1,5 +1,6 @@
 import { Pressable, View } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import { Icon } from './Icon';
 import { Text } from './Text';
 
 export type BuilderCellKey = 'sets' | 'reps' | 'rpe' | 'tempo';
@@ -113,9 +114,7 @@ export function BuilderRow({
               justifyContent: 'center',
             }}
           >
-            <Text tone="muted" style={{ fontSize: 18, lineHeight: 22 }}>
-              ×
-            </Text>
+            <Icon name="close" size={16} color={t.colors.textMuted} strokeWidth={2.2} />
           </Pressable>
         ) : null}
       </View>

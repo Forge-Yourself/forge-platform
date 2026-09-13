@@ -10,13 +10,17 @@ import { assignProgram, instantiateTemplate } from '../../../../lib/programs/pro
 import { useProgramList } from '../../../../lib/programs/useProgramList';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import {
+  Avatar,
   Banner,
   Button,
+  FooterBar,
   ListRow,
-  Row,
+  NavHeader,
   Screen,
   SectionCard,
+  SectionLabel,
   Skeleton,
+  Tag,
   Text,
   TextField,
 } from '../../../../ui';
@@ -124,18 +128,18 @@ export default function AssignProgram() {
   ];
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[4] }} keyboardShouldPersistTaps="handled">
-        <Row style={{ justifyContent: 'space-between' }}>
-          <Text variant="h1">{t('builder.assign.title')}</Text>
-          <Button label={t('common.cancel')} variant="ghost" onPress={() => router.back()} />
-        </Row>
-
+    <Screen padded={false}>
+      <NavHeader
+        title={t('builder.assign.title')}
+        leading={<Button label={t('common.cancel')} variant="link" onPress={() => router.back()} />}
+      />
+      <ScrollView
+        contentContainerStyle={{ padding: theme.space[4], gap: theme.space[4] }}
+        keyboardShouldPersistTaps="handled"
+      >
         {error ? <Banner variant="danger" message={error} /> : null}
 
-        <Text variant="label" tone="muted">
-          {t('builder.assign.clientsLabel')}
-        </Text>
+        <SectionLabel>{t('builder.assign.clientsLabel')}</SectionLabel>
 
         {clients.loading ? (
           <SectionCard>
@@ -152,6 +156,8 @@ export default function AssignProgram() {
                 <ListRow
                   key={client.id}
                   minHeight={68}
+                  chevron={false}
+                  leading={<Avatar name={client.displayName} photoUrl={client.avatarUrl} size={38} />}
                   title={client.displayName}
                   subtitle={t('clients.stateLabels.' + client.state)}
                   trailing={
@@ -195,9 +201,7 @@ export default function AssignProgram() {
         )}
 
         <View style={{ gap: theme.space[2] }}>
-          <Text variant="label" tone="muted">
-            {t('builder.assign.startDateLabel')}
-          </Text>
+          <SectionLabel>{t('builder.assign.startDateLabel')}</SectionLabel>
           <View style={{ flexDirection: 'row', gap: theme.space[2] }}>
             {startOptions.map((option) => {
               const isSelected = option.value === startChoice;
@@ -237,23 +241,24 @@ export default function AssignProgram() {
               placeholder="2026-09-14"
             />
           ) : (
-            <Text numeric variant="caption" tone="muted">
-              {startDate}
-            </Text>
+            <Tag numeric label={startDate} />
           )}
         </View>
 
         {replaceWarnings.map((message) => (
           <Banner key={message} variant="warn" message={message} />
         ))}
+      </ScrollView>
 
+      <FooterBar>
         <Button
           label={t('builder.assign.confirm')}
           size="lg"
-          disabled={submitting || selected.length === 0}
+          loading={submitting}
+          disabled={selected.length === 0}
           onPress={() => void handleAssign()}
         />
-      </ScrollView>
+      </FooterBar>
     </Screen>
   );
 }

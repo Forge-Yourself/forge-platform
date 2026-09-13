@@ -21,6 +21,28 @@ function LoadingScreen() {
 }
 
 /**
+ * True when the route already matched IS the route a gate branch wants to send the
+ * user to.
+ *
+ * Every redirect below has to ask this before firing. expo-router's <Redirect>
+ * drives router.replace() from a useFocusEffect whose callback it does not
+ * memoize, so the effect's deps change on every render and the replace re-runs for
+ * as long as the component stays mounted. Gate returns a redirect INSTEAD of
+ * <Slot/>, so a branch whose condition is still true after the redirect has landed
+ * never gets to render the screen that would make it false: it replaces,
+ * re-renders, replaces again, forever. On web that reads as a page reloading in a
+ * loop; on native it is a screen that never paints.
+ *
+ * That is not hypothetical — the post-onboarding pt_profiles check below had
+ * exactly this shape, and a PT with onboarding_completed = true and no pt_profiles
+ * row (reachable by skipping every step of the wizard, see
+ * (onboarding)/pt-profile.tsx's handleFinish) could not open the app at all.
+ */
+function isCurrentRoute(segments: readonly string[], group: string, route: string): boolean {
+  return segments[0] === group && segments[1] === route;
+}
+
+/**
  * The auth gate. Order matters (see Task 6 plan step 5):
  *   1. AuthProvider still resolving -> hold on a loading screen.
  *   2. Signed out -> (auth)/sign-in, UNLESS the current route is already somewhere in
@@ -35,10 +57,15 @@ function LoadingScreen() {
  *      in which case they belong on (onboarding)/pt-profile instead — see the Task 10
  *      note below on why this can't be a separate, later check the way it looks like
  *      it should be.
- *   5. Post-onboarding defensive check: role is pt with no pt_profiles row (should be
- *      unreachable in normal operation — pt-profile's finish step always creates the
- *      row before setting onboarding_completed=true — but cheap to keep as a fallback
- *      for a manually-edited row) -> (onboarding)/pt-profile.
+ *   5. Post-onboarding check: role is pt with no pt_profiles row -> (onboarding)/pt-profile.
+ *      This was documented as unreachable; it was not. Skipping every step of the
+ *      wizard set onboarding_completed=true without ever upserting the row, and the
+ *      resulting account could not open the app. Reachable states are handled, not
+ *      asserted away.
+ *
+ *   Every redirect above yields when the user is already on its target — see
+ *   isCurrentRoute for why a gate that redirects to the route it is already on
+ *   cannot stop.
  *   6. Otherwise: render whatever route is currently matched (Slot) — this is
  *      deliberately passive, not a forced redirect into (app)/index, so that
  *      lib/deepLinks.ts's explicit router.replace('/(auth)/reset-password') during a
@@ -56,6 +83,9 @@ function LoadingScreen() {
 function Gate() {
   const auth = useAuth();
   const segments = useSegments();
+  // useSegments() is typed as a union of known route tuples, so indexing past [0]
+  // needs a widened view. One cast here beats one at each call site.
+  const currentSegments = segments as readonly string[];
   // `aal` starts fresh at 'loading' on every mount. Gate is keyed by user id in
   // ThemedGate below, so a sign-out -> different-user-sign-in remounts this component
   // instead of reusing stale AAL state from the previous user while the new check is
@@ -63,6 +93,28 @@ function Gate() {
   // render (react-hooks/set-state-in-effect) or leave a one-tick window where the
   // gate evaluates the new user's MFA requirement against the old user's AAL.
   const [aal, setAal] = useState<Aal | 'loading'>('loading');
+
+  // TEMP DEBUG — remove once the client sign-in update loop is diagnosed.
+  // In an effect with no dependency array, so it runs once per COMMIT: counting
+  // in the render body both trips react-hooks/immutability and double-counts
+  // under StrictMode, which is the opposite of what a loop counter needs.
+  useEffect(() => {
+    const g = globalThis as unknown as { __gateN?: number };
+    g.__gateN = (g.__gateN ?? 0) + 1;
+    if (g.__gateN <= 60) {
+      console.log(
+        '[gate]',
+        g.__gateN,
+        JSON.stringify({
+          status: auth.status,
+          role: auth.user?.role,
+          onboarding: auth.user?.onboarding_completed,
+          aal: aal === 'loading' ? 'loading' : [aal?.currentLevel, aal?.nextLevel].join('/'),
+          segments,
+        }),
+      );
+    }
+  });
 
   useEffect(() => {
     // Nothing to check until signed in — the gate short-circuits on status before ever
@@ -101,6 +153,11 @@ function Gate() {
   }
 
   if (aal?.currentLevel === 'aal1' && aal.nextLevel === 'aal2') {
+    // The challenge screen is the only place this condition gets cleared, so it has
+    // to be allowed to render rather than be redirected on top of itself.
+    if (isCurrentRoute(currentSegments, '(auth)', 'mfa-challenge')) {
+      return <Slot />;
+    }
     return <Redirect href="/(auth)/mfa-challenge" />;
   }
 
@@ -122,7 +179,7 @@ function Gate() {
     // lands there some other way pre-onboarding.
     if (
       segments[0] === '(auth)' ||
-      (segments[0] === '(onboarding)' && (segments as readonly string[])[1] === 'mfa-enroll')
+      isCurrentRoute(currentSegments, '(onboarding)', 'mfa-enroll')
     ) {
       return <Slot />;
     }
@@ -140,22 +197,29 @@ function Gate() {
     // the end) — so routing here can't depend on whether that row exists yet, only
     // on the role itself.
     if (auth.user.role === 'pt') {
-      if (segments[0] === '(onboarding)' && (segments as readonly string[])[1] === 'pt-profile') {
+      if (isCurrentRoute(currentSegments, '(onboarding)', 'pt-profile')) {
         return <Slot />;
       }
       return <Redirect href="/(onboarding)/pt-profile" />;
     }
 
-    if (segments[0] === '(onboarding)' && (segments as readonly string[])[1] === 'role') {
+    if (isCurrentRoute(currentSegments, '(onboarding)', 'role')) {
       return <Slot />;
     }
     return <Redirect href="/(onboarding)/role" />;
   }
 
-  // Defensive fallback only — see step 5 in the doc comment above. Normal operation
-  // never reaches this with a null ptProfile, since pt-profile.tsx's finish step
-  // always creates the row before setting onboarding_completed=true.
+  // A PT whose pt_profiles row is missing even though onboarding is marked complete.
+  // The original comment here called this unreachable because "pt-profile.tsx's
+  // finish step always creates the row" — it did not: skipping every step of the
+  // wizard flipped onboarding_completed with no upsert ever running, and this branch
+  // then redirected to pt-profile on top of pt-profile forever. handleFinish now
+  // always upserts, and the carve-out makes the state recoverable for the accounts
+  // already in it — they land on the wizard, finish it, and the row appears.
   if (auth.user?.role === 'pt' && !auth.ptProfile) {
+    if (isCurrentRoute(currentSegments, '(onboarding)', 'pt-profile')) {
+      return <Slot />;
+    }
     return <Redirect href="/(onboarding)/pt-profile" />;
   }
 

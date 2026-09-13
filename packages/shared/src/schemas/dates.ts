@@ -53,3 +53,47 @@ export function toCalendarDate(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/** Today as a calendar day, with the time of day discarded. */
+export function todayCalendarDate(): string {
+  return toCalendarDate(new Date());
+}
+
+/**
+ * Shifts a calendar date by whole years, clamping Feb 29 to Feb 28 in a
+ * non-leap target year rather than letting it roll into March.
+ */
+export function shiftCalendarYears(value: string, years: number): string {
+  const date = parseCalendarDate(value);
+  if (date === null) return value;
+  const shifted = new Date(date.getFullYear() + years, date.getMonth(), date.getDate());
+  if (shifted.getMonth() !== date.getMonth()) shifted.setDate(0);
+  return toCalendarDate(shifted);
+}
+
+/**
+ * Why a date the client typed is not acceptable, or null when it is fine.
+ *
+ * `malformed` covers both "not YYYY-MM-DD at all" and "well-shaped but not a
+ * real day" (2026-02-30) — parseCalendarDate already refuses to roll the latter
+ * forward, and to the client both are the same mistake.
+ *
+ * An empty string is NOT a problem: every date on the intake is optional, and
+ * "not answered" is a valid state right up to submission.
+ */
+export type CalendarDateProblem = 'malformed' | 'before_min' | 'after_max';
+
+export function checkCalendarDate(
+  value: string | null | undefined,
+  bounds: { min?: string; max?: string } = {},
+): CalendarDateProblem | null {
+  if (!value || value.trim() === '') return null;
+  if (parseCalendarDate(value) === null) return 'malformed';
+
+  // Both sides are zero-padded YYYY-MM-DD, so a string compare IS a date
+  // compare — no second parse, and no timezone anywhere near it.
+  const day = value.trim();
+  if (bounds.min && day < bounds.min) return 'before_min';
+  if (bounds.max && day > bounds.max) return 'after_max';
+  return null;
+}

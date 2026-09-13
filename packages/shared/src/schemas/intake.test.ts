@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { todayCalendarDate } from './dates';
 import {
+  anthropometricsResponsesSchema,
+  checkNumericField,
   evaluateParq,
+  historyResponsesSchema,
+  intakeDateBounds,
+  INTAKE_LIMITS,
   goalsResponsesSchema,
   intakeCompletion,
   intakeResponsesSchema,
@@ -127,17 +133,50 @@ describe('intakeCompletion', () => {
     });
   });
 
-  it('reports 5 of 5 once every top-level key is present, regardless of how thorough each section is', () => {
-    const allFalse = allParq(false);
+  it('reports 0 of 5 when every section key is present but empty', () => {
+    // The exact shape the intake screen seeds from emptyResponses(). Counting key
+    // presence here showed a client who had answered nothing five green ticks.
     const result = intakeCompletion({
-      parq: allFalse,
+      parq: Object.fromEntries(PARQ_QUESTIONS.map((q) => [q, undefined])) as never,
       goals: {},
       history: {},
       anthropometrics: {},
       dietary: {},
     });
-    expect(result.answered).toBe(5);
-    expect(result.total).toBe(5);
+    expect(result.answered).toBe(0);
+    expect(result.stepStatus).toEqual({
+      parq: false,
+      goals: false,
+      history: false,
+      anthropometrics: false,
+      dietary: false,
+    });
+  });
+
+  it('leaves PAR-Q incomplete until all seven questions are answered', () => {
+    const partial = { ...allParq(false), parq_supervised: undefined } as never;
+    expect(intakeCompletion({ parq: partial }).stepStatus.parq).toBe(false);
+    expect(intakeCompletion({ parq: allParq(false) }).stepStatus.parq).toBe(true);
+  });
+
+  it('counts a section with one real answer, and skips blank strings and empty arrays', () => {
+    const result = intakeCompletion({
+      parq: allParq(false),
+      goals: { primary_goal: '   ' },
+      history: { years_training: 0 },
+      anthropometrics: { sex: 'male' },
+      dietary: { restrictions: [] },
+    });
+    expect(result.stepStatus).toEqual({
+      parq: true,
+      // whitespace only — the client typed nothing
+      goals: false,
+      // zero years is a beginner's real answer, not an absence of one
+      history: true,
+      anthropometrics: true,
+      dietary: false,
+    });
+    expect(result.answered).toBe(3);
   });
 });
 
@@ -181,5 +220,67 @@ describe('intakeSummary', () => {
   it('counts flags from a red_flags array when given', () => {
     const summary = intakeSummary({ parq: allFalse }, 'metric', ['parq_heart', 'parq_dizziness']);
     expect(summary.flagCount).toBe(2);
+  });
+});
+
+describe('checkNumericField', () => {
+  it('treats an unanswered field as fine — only PAR-Q is required', () => {
+    expect(checkNumericField('', 'weight_kg')).toBeNull();
+    expect(checkNumericField('   ', 'height_cm')).toBeNull();
+  });
+
+  it('reports not_a_number for text the field cannot parse', () => {
+    // sanitizeDecimal on the screen strips letters, so a lone '.' is the realistic case.
+    expect(checkNumericField('.', 'weight_kg')).toBe('not_a_number');
+    expect(checkNumericField('abc', 'weight_kg')).toBe('not_a_number');
+  });
+
+  it('accepts zero years of training — a beginner has trained none', () => {
+    expect(checkNumericField('0', 'years_training')).toBeNull();
+  });
+
+  it('rejects a height typed in metres and a weight typed in pounds', () => {
+    expect(checkNumericField('1.75', 'height_cm')).toBe('below_min');
+    expect(checkNumericField('1750', 'height_cm')).toBe('above_max');
+    expect(checkNumericField('440', 'weight_kg')).toBe('above_max');
+  });
+
+  it('accepts the exact bounds', () => {
+    for (const field of ['years_training', 'height_cm', 'weight_kg'] as const) {
+      const { min, max } = INTAKE_LIMITS[field];
+      expect(checkNumericField(String(min), field)).toBeNull();
+      expect(checkNumericField(String(max), field)).toBeNull();
+    }
+  });
+
+  it('agrees with the zod schemas it shares INTAKE_LIMITS with', () => {
+    expect(historyResponsesSchema.safeParse({ years_training: 0 }).success).toBe(true);
+    expect(historyResponsesSchema.safeParse({ years_training: 81 }).success).toBe(false);
+    expect(anthropometricsResponsesSchema.safeParse({ height_cm: 1.75 }).success).toBe(false);
+    expect(anthropometricsResponsesSchema.safeParse({ weight_kg: 72.5 }).success).toBe(true);
+  });
+});
+
+describe('intake date fields', () => {
+  it('allows a birthday up to today and refuses one in the future', () => {
+    const today = todayCalendarDate();
+    expect(intakeDateBounds().date_of_birth.max).toBe(today);
+    expect(anthropometricsResponsesSchema.safeParse({ date_of_birth: today }).success).toBe(true);
+    expect(anthropometricsResponsesSchema.safeParse({ date_of_birth: '2999-01-01' }).success).toBe(false);
+  });
+
+  it('refuses a date that is well-shaped but not a real day', () => {
+    // The old z.string() let all three of these reach the database, and a garbage
+    // date_of_birth then showed the PT no age at all rather than an error.
+    expect(anthropometricsResponsesSchema.safeParse({ date_of_birth: '2026-02-30' }).success).toBe(false);
+    expect(anthropometricsResponsesSchema.safeParse({ date_of_birth: '14/09/2026' }).success).toBe(false);
+    expect(goalsResponsesSchema.safeParse({ target_date: 'next June' }).success).toBe(false);
+  });
+
+  it('accepts a target date from today out to the ten-year ceiling', () => {
+    const { min, max } = intakeDateBounds().target_date;
+    expect(goalsResponsesSchema.safeParse({ target_date: min }).success).toBe(true);
+    expect(goalsResponsesSchema.safeParse({ target_date: max }).success).toBe(true);
+    expect(Number(max.slice(0, 4)) - Number(min.slice(0, 4))).toBe(10);
   });
 });

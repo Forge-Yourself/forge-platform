@@ -9,7 +9,17 @@ import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { zodIssuesToFieldErrors } from '../../lib/forms/zodFieldErrors';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, Button, FormScreen, PasswordStrength, Text, TextField } from '../../ui';
+import {
+  Banner,
+  Button,
+  Divider,
+  FormScreen,
+  Icon,
+  PasswordStrength,
+  Text,
+  TextField,
+  TextLink,
+} from '../../ui';
 
 type Field = 'fullName' | 'email' | 'password' | 'acceptedTerms';
 type FieldErrors = Partial<Record<Field, string>>;
@@ -133,17 +143,23 @@ export default function SignUp() {
   return (
     <FormScreen
       footer={
-        <Button
-          label={t('auth.signUp.haveAccount')}
-          variant="ghost"
+        <TextLink
+          prefix={t('auth.signUp.haveAccountPrefix')}
+          action={t('auth.signUp.haveAccountAction')}
           onPress={() => router.push('/(auth)/sign-in')}
         />
       }
     >
-      <Text variant="h1" style={{ marginBottom: theme.space[2] }}>
+      {/* No wordmark here: sign-in is the screen that introduces the brand, and the
+          artboard opens this one on the task instead. 26/800 is its own title size —
+          smaller than h1, because it sits above a form rather than alone. */}
+      <Text
+        accessibilityRole="header"
+        style={{ fontSize: 26, fontWeight: '800', letterSpacing: -0.4 }}
+      >
         {t('auth.signUp.title')}
       </Text>
-      <Text variant="body" tone="secondary" style={{ marginBottom: theme.space[6] }}>
+      <Text tone="secondary" style={{ fontSize: 14, marginTop: 4, marginBottom: 22 }}>
         {t('auth.signUp.subtitle')}
       </Text>
 
@@ -189,7 +205,7 @@ export default function SignUp() {
         returnKeyType="done"
       />
       {password.length > 0 ? (
-        <View style={{ marginTop: -8, marginBottom: theme.space[4] }}>
+        <View style={{ marginTop: -8, marginBottom: 20 }}>
           <PasswordStrength strength={strength} />
         </View>
       ) : null}
@@ -205,7 +221,9 @@ export default function SignUp() {
         }}
         style={{
           flexDirection: 'row',
-          alignItems: 'center',
+          // flex-start, not centre: the terms line wraps to two lines at 360dp and a
+          // centred box then floats against the middle of the paragraph.
+          alignItems: 'flex-start',
           minHeight: theme.touchTarget,
           gap: theme.space[3],
           marginTop: theme.space[2],
@@ -213,9 +231,10 @@ export default function SignUp() {
       >
         <View
           style={{
-            width: 22,
-            height: 22,
-            borderRadius: theme.radius.sm,
+            width: 20,
+            height: 20,
+            marginTop: 1,
+            borderRadius: 5,
             borderWidth: 1.5,
             borderColor: acceptedTerms ? theme.colors.accent : theme.colors.borderStrong,
             backgroundColor: acceptedTerms ? theme.colors.accent : 'transparent',
@@ -224,10 +243,10 @@ export default function SignUp() {
           }}
         >
           {acceptedTerms ? (
-            <Text style={{ color: theme.colors.onAccent, fontSize: 14, fontWeight: '700' }}>✓</Text>
+            <Icon name="check" size={12} color={theme.colors.onAccent} strokeWidth={3} />
           ) : null}
         </View>
-        <Text variant="body" style={{ flex: 1 }}>
+        <Text style={{ flex: 1, fontSize: 13, lineHeight: 20 }}>
           {t('auth.signUp.termsLabel')}
         </Text>
       </Pressable>
@@ -237,20 +256,28 @@ export default function SignUp() {
         </Text>
       ) : null}
 
+      {/* Pushes the CTA to the foot of the viewport when the form is short, per the
+          artboard's `margin-bottom:auto` on the terms row — FormScreen's ScrollView
+          already sets flexGrow so the spacer has somewhere to grow into. */}
+      <View style={{ flexGrow: 1, minHeight: theme.space[5] }} />
+
       <Button
         label={t('auth.signUp.submit')}
         size="lg"
+        loading={submitting}
         onPress={handleSubmit}
-        disabled={submitting}
-        style={{ marginTop: theme.space[5] }}
+        style={{ marginTop: 22 }}
       />
+
+      <View style={{ marginVertical: theme.space[5] }}>
+        <Divider label={t('auth.orDivider')} />
+      </View>
 
       <Button
         label={t('auth.google.continue')}
         variant="ghost"
         onPress={handleGoogleSignIn}
         disabled={submitting}
-        style={{ marginTop: theme.space[4] }}
       />
     </FormScreen>
   );

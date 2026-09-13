@@ -6,7 +6,7 @@ import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
 import { supabase } from '../../../../lib/supabase';
 import { WEB_HOST } from '../../../../lib/webHost';
 import { useTheme } from '../../../../theme/ThemeProvider';
-import { Banner, Button, FormScreen, SignaturePad, Text } from '../../../../ui';
+import { Banner, Button, FormScreen, NavHeader, SectionLabel, SignaturePad, Text } from '../../../../ui';
 
 /**
  * Waiver e-signature. Body copy at 13px/1.65 per the annotation — legal text
@@ -42,7 +42,8 @@ export default function Waiver() {
         });
         if (!res.ok) throw new Error('waiver submit failed');
 
-        router.push({ pathname: '/(app)/intake/done', params: { id: params.id } });
+        // replace: the waiver is signed, so it must not remain a back target.
+        router.replace({ pathname: '/(app)/intake/done', params: { id: params.id } });
       } catch {
         setError(t('waiver.submitError'));
       }
@@ -51,6 +52,17 @@ export default function Waiver() {
 
   return (
     <FormScreen
+      header={
+        /* The client reaches this screen both from Today and straight after
+           submitting the intake, and the waiver is not signed yet either way, so
+           leaving has to stay possible — without it the screen is a dead end. */
+        <NavHeader
+          leading={
+            <Button label={t('common.back')} icon="chevronBack" variant="link" onPress={() => router.back()} />
+          }
+          divider={false}
+        />
+      }
       footer={
         <Button
           label={submitting ? t('waiver.submitting') : t('waiver.submit')}
@@ -69,9 +81,7 @@ export default function Waiver() {
           {t('waiver.body')}
         </Text>
 
-        <Text variant="label" tone="muted">
-          {t('waiver.signatureLabel')}
-        </Text>
+        <SectionLabel>{t('waiver.signatureLabel')}</SectionLabel>
         <SignaturePad
           value={signature}
           onChange={setSignature}

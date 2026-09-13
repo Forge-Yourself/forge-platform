@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Button, Screen, Text } from '../../ui';
+import { Button, Icon, Screen, Text } from '../../ui';
 
 /**
  * MFA is OFFERED here, not FORCED — "Set up two-factor" navigates to
@@ -29,9 +29,7 @@ export default function VerifySuccess() {
           marginBottom: theme.space[6],
         }}
       >
-        <Text style={{ color: theme.colors.onSuccessSurface, fontSize: 34, fontWeight: '700' }}>
-          ✓
-        </Text>
+        <Icon name="check" size={34} color={theme.colors.onSuccessSurface} strokeWidth={2.6} />
       </View>
 
       <Text variant="h2" style={{ textAlign: 'center', marginBottom: theme.space[7] }}>
@@ -46,9 +44,9 @@ export default function VerifySuccess() {
 
       <Button
         label={t('auth.verifySuccess.skip')}
-        variant="ghost"
+        variant="link"
         onPress={() => router.replace('/')}
-        style={{ marginTop: theme.space[3] }}
+        style={{ alignSelf: 'center', marginTop: theme.space[3] }}
       />
     </Screen>
   );

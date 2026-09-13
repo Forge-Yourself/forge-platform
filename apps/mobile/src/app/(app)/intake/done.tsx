@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { openWaiverDocument } from '../../../lib/intake/openWaiver';
 import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { Banner, Button, ListRow, SectionCard, Screen, Text } from '../../../ui';
+import { Banner, Button, Icon, ListRow, SectionCard, Screen, Text } from '../../../ui';
 
 /**
  * Signed confirmation — reuses `verify-success.tsx`'s success-circle visual
@@ -46,7 +46,7 @@ export default function IntakeDone() {
           marginBottom: theme.space[6],
         }}
       >
-        <Text style={{ color: theme.colors.onSuccessSurface, fontSize: 34, fontWeight: '700' }}>✓</Text>
+        <Icon name="check" size={34} color={theme.colors.onSuccessSurface} strokeWidth={2.6} />
       </View>
 
       <Text variant="h2" style={{ textAlign: 'center', marginBottom: theme.space[3] }}>

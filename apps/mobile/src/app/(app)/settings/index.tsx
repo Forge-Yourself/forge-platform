@@ -11,7 +11,22 @@ import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { setLocale } from '../../../lib/i18n';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { Banner, Button, Card, ListRow, Row, Screen, SectionCard, SegmentedPill, Text, Toggle } from '../../../ui';
+import {
+  Banner,
+  Button,
+  Card,
+  IconButton,
+  ListRow,
+  NavHeader,
+  Row,
+  Screen,
+  SectionCard,
+  SectionLabel,
+  SegmentedPill,
+  Tag,
+  Text,
+  Toggle,
+} from '../../../ui';
 
 type UsersUpdate = Database['public']['Tables']['users']['Update'];
 type NotificationPreferencesInsert = Database['public']['Tables']['notification_preferences']['Insert'];
@@ -75,12 +90,13 @@ function TimeTile({
         {label}
       </Text>
       <Row style={{ gap: t.space[2] }}>
-        <Button
-          label="–"
+        <IconButton
+          icon="minus"
           variant="ghost"
+          size={40}
+          accessibilityLabel={`${label} −30 minutes`}
           disabled={disabled}
           onPress={() => onChange(stepTime(value, -30))}
-          style={{ minWidth: 36, paddingHorizontal: t.space[2] }}
         />
         <View
           style={{
@@ -97,12 +113,13 @@ function TimeTile({
             {value}
           </Text>
         </View>
-        <Button
-          label="+"
+        <IconButton
+          icon="plus"
           variant="ghost"
+          size={40}
+          accessibilityLabel={`${label} +30 minutes`}
           disabled={disabled}
           onPress={() => onChange(stepTime(value, 30))}
-          style={{ minWidth: 36, paddingHorizontal: t.space[2] }}
         />
       </Row>
     </View>
@@ -312,22 +329,31 @@ export default function Settings() {
   }
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[5], paddingBottom: theme.space[6] }}>
-        {/* Every stack in this app sets headerShown: false, so a screen without its
-            own back control is reachable only by the Android hardware button. */}
-        <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
-          <Text variant="h2">{t('settings.title')}</Text>
-          <View style={{ width: 64 }} />
-        </Row>
-
+    <Screen padded={false}>
+      {/* Every stack in this app sets headerShown: false, so a screen without its
+          own back control is reachable only by the Android hardware button. */}
+      <NavHeader
+        title={t('settings.title')}
+        leading={
+          <Button
+            label={t('common.back')}
+            icon="chevronBack"
+            variant="link"
+            onPress={() => router.back()}
+          />
+        }
+      />
+      <ScrollView
+        contentContainerStyle={{
+          padding: theme.space[4],
+          paddingBottom: theme.space[8],
+          gap: theme.space[5],
+        }}
+      >
         {error ? <Banner variant="danger" message={error} /> : null}
 
         <View style={{ gap: theme.space[2] }}>
-          <Text variant="label" tone="muted">
-            {t('settings.preferences.heading')}
-          </Text>
+          <SectionLabel>{t('settings.preferences.heading')}</SectionLabel>
           <SectionCard>
             <ListRow
               title={t('settings.preferences.languageLabel')}
@@ -378,9 +404,7 @@ export default function Settings() {
         </View>
 
         <View style={{ gap: theme.space[2] }}>
-          <Text variant="label" tone="muted">
-            {t('settings.quietHours.heading')}
-          </Text>
+          <SectionLabel>{t('settings.quietHours.heading')}</SectionLabel>
           <SectionCard>
             <ListRow
               title={t('settings.quietHours.muteLabel')}
@@ -414,42 +438,25 @@ export default function Settings() {
         </View>
 
         <View style={{ gap: theme.space[2] }}>
-          <Text variant="label" tone="muted">
-            {t('settings.account.heading')}
-          </Text>
+          <SectionLabel>{t('settings.account.heading')}</SectionLabel>
           <SectionCard>
-            <ListRow
-              title={t('profile.title')}
-              onPress={() => router.push('/(app)/profile')}
-              trailing={<Text tone="muted">›</Text>}
-            />
+            <ListRow title={t('profile.title')} onPress={() => router.push('/(app)/profile')} />
             <ListRow
               title={t('settings.account.editProfile')}
               onPress={() => router.push('/(app)/profile-edit')}
-              trailing={<Text tone="muted">›</Text>}
             />
             <ListRow
               title={t('settings.account.twoFactor')}
               onPress={() => void handleTwoFactorPress()}
               trailing={
-                <View
-                  style={{
-                    paddingHorizontal: theme.space[2],
-                    paddingVertical: 4,
-                    borderRadius: theme.radius.pill,
-                    backgroundColor: totpFactorId ? theme.colors.successSurface : theme.colors.surfaceRaised,
-                    borderWidth: totpFactorId ? 0 : 1,
-                    borderColor: theme.colors.border,
-                  }}
-                >
-                  <Text
-                    numeric
-                    style={{ fontSize: 12, fontWeight: '700' }}
-                    tone={totpFactorId ? 'primary' : 'muted'}
-                  >
-                    {totpFactorId ? t('settings.account.twoFactorOn') : t('settings.account.twoFactorOff')}
-                  </Text>
-                </View>
+                <Tag
+                  tone={totpFactorId ? 'success' : 'neutral'}
+                  label={
+                    totpFactorId
+                      ? t('settings.account.twoFactorOn')
+                      : t('settings.account.twoFactorOff')
+                  }
+                />
               }
             />
           </SectionCard>
@@ -477,9 +484,7 @@ export default function Settings() {
         </View>
 
         <View style={{ gap: theme.space[2] }}>
-          <Text variant="label" tone="muted">
-            {t('settings.consents.heading')}
-          </Text>
+          <SectionLabel>{t('settings.consents.heading')}</SectionLabel>
           <SectionCard>
             <ListRow
               title={t('settings.consents.analyticsLabel')}
@@ -520,8 +525,8 @@ export default function Settings() {
         <Button
           label={t('settings.signOut')}
           variant="ghost"
+          tone="danger"
           onPress={() => void handleSignOut()}
-          style={{ borderColor: theme.colors.dangerAccent }}
         />
       </ScrollView>
     </Screen>

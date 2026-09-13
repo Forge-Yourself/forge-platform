@@ -2,7 +2,7 @@ import { saveProgramPayloadSchema } from '@forge/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BackHandler, Modal, Pressable, ScrollView, View } from 'react-native';
+import { BackHandler, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { CreditSheet } from '../../../../lib/ai/CreditSheet';
 import { useAuth } from '../../../../lib/auth/AuthProvider';
 import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
@@ -29,6 +29,9 @@ import {
   BuilderBlock,
   BuilderRow,
   Button,
+  FooterBar,
+  Icon,
+  NavHeader,
   NumericKeypad,
   Row,
   Screen,
@@ -107,10 +110,18 @@ export default function ProgramBuilder() {
     }));
   };
 
-  // The library hands back a pick through a module singleton rather than route
+  // The picker hands back a choice through a module singleton rather than route
   // params, so this screen keeps its unsaved draft across the round trip.
   useFocusEffect(
     useCallback(() => {
+      // Bail before touching pendingBlockIndex unless a pick is actually waiting.
+      // This callback is NOT only invoked on the way back: pendingBlockIndex is a
+      // dep, so setting it re-runs the effect immediately — while this screen is
+      // still focused and before the push to the picker has even committed. An
+      // earlier version cleared the slot here on a null pick "in case the picker
+      // was cancelled", which meant arming the slot instantly disarmed it and every
+      // chosen exercise was dropped on return. Reading clears the singleton either
+      // way, so a stale pick still cannot be applied twice.
       const picked = takePickedExercise();
       if (!picked || pendingBlockIndex === null) return;
       const blockIndex = pendingBlockIndex;
@@ -286,6 +297,11 @@ export default function ProgramBuilder() {
    */
   useFocusEffect(
     useCallback(() => {
+      // Android only. react-native-web's BackHandler logs "BackHandler is not
+      // supported on web and should not be used" on every registration, and there is
+      // no hardware back button to guard there anyway — the browser's own back
+      // button goes through history, which this cannot intercept.
+      if (Platform.OS !== 'android') return;
       const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
         if (!dirty) return false;
         setConfirmLeaveOpen(true);
@@ -295,10 +311,15 @@ export default function ProgramBuilder() {
     }, [dirty]),
   );
 
+  const backLink = (
+    <Button label={t('common.back')} icon="chevronBack" variant="link" onPress={leave} />
+  );
+
   if (loading) {
     return (
-      <Screen>
-        <View style={{ gap: theme.space[3] }}>
+      <Screen padded={false}>
+        <NavHeader leading={backLink} />
+        <View style={{ padding: theme.space[4], gap: theme.space[3] }}>
           <Skeleton height={32} />
           <Skeleton height={44} />
           <Skeleton height={120} />
@@ -309,33 +330,59 @@ export default function ProgramBuilder() {
 
   if (error || !tree) {
     return (
-      <Screen>
-        <View style={{ gap: theme.space[3] }}>
+      <Screen padded={false}>
+        <NavHeader
+          leading={
+            <Button
+              label={t('common.back')}
+              icon="chevronBack"
+              variant="link"
+              onPress={() => router.back()}
+            />
+          }
+        />
+        <View style={{ padding: theme.space[4], gap: theme.space[3] }}>
           <Banner variant="danger" message={t('builder.offlineError.body')} />
           <Button label={t('builder.offlineError.retry')} variant="ghost" onPress={() => void refetch()} />
-          <Button label={t('common.back')} variant="ghost" onPress={() => router.back()} />
         </View>
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button label={t('common.back')} variant="ghost" onPress={leave} />
-        <Text variant="h3" numberOfLines={1} style={{ flex: 1, textAlign: 'center' }}>
-          {tree.name}
-        </Text>
-        <Button
-          label={submitting ? t('builder.saving') : t('builder.save')}
-          disabled={!dirty || submitting}
-          onPress={() => void handleSave()}
-        />
-      </Row>
+    <Screen padded={false}>
+      <NavHeader
+        title={tree.name}
+        leading={backLink}
+        // Save is the one control on this screen that writes to the server, so it
+        // carries the ember once there is something to write and greys out when
+        // there isn't — the header has no room for a filled button.
+        trailing={
+          <Button
+            label={submitting ? t('builder.saving') : t('builder.save')}
+            variant="link"
+            tone="accent"
+            disabled={!dirty || submitting}
+            onPress={() => void handleSave()}
+            style={{ paddingHorizontal: theme.space[2] }}
+          />
+        }
+      />
 
-      {saveError ? <Banner variant="danger" message={saveError} /> : null}
+      {saveError ? (
+        <View style={{ paddingHorizontal: theme.space[4], paddingTop: theme.space[3] }}>
+          <Banner variant="danger" message={saveError} />
+        </View>
+      ) : null}
 
-      <Row style={{ gap: theme.space[2], alignItems: 'center', marginTop: theme.space[3] }}>
+      <Row
+        style={{
+          gap: theme.space[2],
+          alignItems: 'center',
+          paddingHorizontal: theme.space[4],
+          marginTop: theme.space[3],
+        }}
+      >
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.space[2] }}>
           {draft.weeks.map((w, wi) => {
             const selected = wi === weekIndex;
@@ -385,11 +432,19 @@ export default function ProgramBuilder() {
             backgroundColor: theme.colors.surfaceRaised,
           }}
         >
-          <Text style={{ fontSize: 16 }}>⧉</Text>
+          <Icon name="copy" size={18} color={theme.colors.textSecondary} />
         </Pressable>
       </Row>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.space[2], paddingVertical: theme.space[3] }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          gap: theme.space[2],
+          paddingVertical: theme.space[3],
+          paddingHorizontal: theme.space[4],
+        }}
+      >
         {(week?.days ?? []).map((d, di) => {
           const selected = di === dayIndex;
           return (
@@ -438,7 +493,13 @@ export default function ProgramBuilder() {
         </Pressable>
       </ScrollView>
 
-      <ScrollView contentContainerStyle={{ gap: theme.space[3], paddingBottom: theme.space[10] }}>
+      <ScrollView
+        contentContainerStyle={{
+          gap: theme.space[3],
+          paddingHorizontal: theme.space[4],
+          paddingBottom: theme.space[10],
+        }}
+      >
         {day === undefined || day.blocks.length === 0 ? (
           <View style={{ gap: theme.space[3], alignItems: 'center', paddingVertical: theme.space[8] }}>
             <Text variant="h3">{t('builder.empty.title')}</Text>
@@ -493,9 +554,13 @@ export default function ProgramBuilder() {
                   accessibilityLabel={t('builder.addExercise')}
                   onPress={() => {
                     setPendingBlockIndex(blockIndex);
+                    // The picker is this program's own pushed screen, not the
+                    // Library TAB: pushing a tab route from here mounts a second
+                    // tab navigator over the unsaved draft and strands the PT on a
+                    // list with no back control.
                     router.push({
-                      pathname: '/(app)/(tabs)/library',
-                      params: { returnTo: 'builder', clientId: tree.client_id ?? '' },
+                      pathname: '/(app)/programs/[id]/pick-exercise',
+                      params: { id: programId, clientId: tree.client_id ?? '' },
                     });
                   }}
                   style={{
@@ -538,15 +603,8 @@ export default function ProgramBuilder() {
         )}
       </ScrollView>
 
-      <Row
-        style={{
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingTop: theme.space[3],
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
-        }}
-      >
+      <FooterBar>
+        <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flex: 1 }}>
           <Text numeric variant="h3">
             {/* '—' rather than 0 while the wallet is still loading: showing a real
@@ -567,7 +625,8 @@ export default function ProgramBuilder() {
           ) : null}
         </View>
         <Button
-          label={'✦ ' + t('ai.draftAction')}
+          label={t('ai.draftAction')}
+          icon="sparkle"
           // 'loading' is not 'empty' — see useCreditBalance. Disabling for the
           // moment before the wallet lands is what stops a PT with credits from
           // being shown the out-of-credits sheet.
@@ -587,7 +646,8 @@ export default function ProgramBuilder() {
             });
           }}
         />
-      </Row>
+        </Row>
+      </FooterBar>
 
       {editing ? (
         <View

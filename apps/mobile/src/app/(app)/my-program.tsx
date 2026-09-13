@@ -6,7 +6,18 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { blockTag, formatRepsCell, formatRest, slotFor } from '../../lib/programs/draftModel';
 import { useProgramTree } from '../../lib/programs/useProgramTree';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, BuilderBlock, BuilderRow, Button, Row, Screen, Skeleton, Text } from '../../ui';
+import {
+  Banner,
+  BuilderBlock,
+  BuilderRow,
+  Button,
+  NavHeader,
+  Screen,
+  Skeleton,
+  Tag,
+  Text,
+  WeekStrip,
+} from '../../ui';
 
 /**
  * The client's read-only view of the program assigned to them.
@@ -31,10 +42,15 @@ export default function MyProgram() {
   const [weekIndex, setWeekIndex] = useState(0);
   const [dayIndex, setDayIndex] = useState(0);
 
+  const back = (
+    <Button label={t('common.back')} icon="chevronBack" variant="link" onPress={() => router.back()} />
+  );
+
   if (loading) {
     return (
-      <Screen>
-        <View style={{ gap: theme.space[3] }}>
+      <Screen padded={false}>
+        <NavHeader leading={back} divider={false} />
+        <View style={{ padding: theme.space[4], gap: theme.space[3] }}>
           <Skeleton height={32} />
           <Skeleton height={44} />
           <Skeleton height={120} />
@@ -45,19 +61,19 @@ export default function MyProgram() {
 
   if (error || !tree) {
     return (
-      <Screen>
-        <View style={{ gap: theme.space[3] }}>
+      <Screen padded={false}>
+        <NavHeader leading={back} divider={false} />
+        <View style={{ padding: theme.space[4], gap: theme.space[3] }}>
           <Text variant="h2">{t('myProgram.offlineError.title')}</Text>
           <Banner variant="danger" message={t('myProgram.offlineError.body')} />
           <Button label={t('myProgram.offlineError.retry')} variant="ghost" onPress={() => void refetch()} />
-          <Button label={t('common.back')} variant="ghost" onPress={() => router.back()} />
         </View>
       </Screen>
     );
   }
 
   const stats = programStats(tree);
-  const { currentWeek } = weekCompletion(
+  const { currentWeek, weeks: weekProgress } = weekCompletion(
     { duration_weeks: tree.duration_weeks, start_date: tree.start_date },
     new Date(),
   );
@@ -65,27 +81,38 @@ export default function MyProgram() {
   const day = week?.days[dayIndex];
 
   return (
-    <Screen>
-      <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button label={t('common.back')} variant="ghost" onPress={() => router.back()} />
-        <Text variant="h3" numberOfLines={1} style={{ flex: 1, textAlign: 'center' }}>
-          {tree.name}
-        </Text>
-        <View style={{ width: 64 }} />
-      </Row>
+    <Screen padded={false}>
+      <NavHeader
+        leading={back}
+        title={tree.name}
+        trailing={
+          currentWeek === null ? undefined : (
+            <Tag numeric tone="accent" label={t('programs.weekTag', { week: currentWeek })} />
+          )
+        }
+      />
 
-      <Text tone="secondary" style={{ marginTop: theme.space[2] }}>
-        {t('programs.meta', {
-          weeks: stats.weeks,
-          days: stats.daysPerWeek,
-          exercises: stats.exerciseCount,
-        })}
-      </Text>
+      <View style={{ paddingHorizontal: theme.space[4], paddingTop: theme.space[3], gap: theme.space[2] }}>
+        <WeekStrip
+          weeks={weekProgress}
+          label={t('clientHome.program.weekOf', {
+            week: currentWeek ?? 1,
+            total: tree.duration_weeks,
+          })}
+        />
+        <Text numeric tone="muted" style={{ fontSize: 11.5 }}>
+          {t('programs.meta', {
+            weeks: stats.weeks,
+            days: stats.daysPerWeek,
+            exercises: stats.exerciseCount,
+          })}
+        </Text>
+      </View>
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: theme.space[2], paddingVertical: theme.space[3] }}
+        contentContainerStyle={{ gap: theme.space[2], paddingVertical: theme.space[3], paddingHorizontal: theme.space[4] }}
       >
         {tree.weeks.map((w, wi) => {
           const selected = wi === weekIndex;
@@ -123,7 +150,7 @@ export default function MyProgram() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: theme.space[2], paddingBottom: theme.space[3] }}
+        contentContainerStyle={{ gap: theme.space[2], paddingBottom: theme.space[3], paddingHorizontal: theme.space[4] }}
       >
         {(week?.days ?? []).map((d, di) => {
           const selected = di === dayIndex;
@@ -152,7 +179,13 @@ export default function MyProgram() {
         })}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={{ gap: theme.space[3], paddingBottom: theme.space[8] }}>
+      <ScrollView
+        contentContainerStyle={{
+          gap: theme.space[3],
+          paddingHorizontal: theme.space[4],
+          paddingBottom: theme.space[8],
+        }}
+      >
         {day === undefined || day.blocks.length === 0 ? (
           <View style={{ alignItems: 'center', paddingVertical: theme.space[8], gap: theme.space[2] }}>
             <Text variant="h3">{t('builder.empty.title')}</Text>

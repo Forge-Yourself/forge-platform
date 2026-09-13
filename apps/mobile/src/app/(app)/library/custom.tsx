@@ -18,7 +18,18 @@ import { createCustomExercise } from '../../../lib/exercises/exerciseActions';
 import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { zodIssuesToFieldErrors } from '../../../lib/forms/zodFieldErrors';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { Banner, Button, FormScreen, Row, Text, TextField } from '../../../ui';
+import {
+  Banner,
+  Button,
+  FooterBar,
+  IconButton,
+  NavHeader,
+  Row,
+  Screen,
+  SectionLabel,
+  Text,
+  TextField,
+} from '../../../ui';
 
 type Field = 'name' | 'muscleGroup' | 'equipment' | 'demoVideoUrl';
 
@@ -42,9 +53,7 @@ function EnumPicker<T extends string>({
 
   return (
     <View style={{ gap: theme.space[2] }}>
-      <Text variant="label" tone="muted">
-        {label}
-      </Text>
+      <SectionLabel>{label}</SectionLabel>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space[2] }}>
         {values.map((value) => {
           const isSelected = value === selected;
@@ -147,22 +156,19 @@ export default function CustomExercise() {
   }
 
   return (
-    <FormScreen
-      footer={
-        <Button
-          label={t('library.custom.save')}
-          size="lg"
-          disabled={submitting}
-          onPress={() => void handleSubmit()}
-        />
-      }
-    >
-      <ScrollView contentContainerStyle={{ gap: theme.space[4] }} keyboardShouldPersistTaps="handled">
-        <Row style={{ justifyContent: 'space-between' }}>
-          <Text variant="h1">{t('library.custom.title')}</Text>
-          <Button label={t('common.cancel')} variant="ghost" onPress={() => router.back()} />
-        </Row>
-
+    // Screen + its own ScrollView, not FormScreen: FormScreen already renders a
+    // ScrollView, and this screen was nesting a second one inside it — two vertical
+    // scroll containers stacked, which on Android swallows the inner one's momentum
+    // and on iOS fights the keyboard-avoiding inset.
+    <Screen padded={false}>
+      <NavHeader
+        title={t('library.custom.title')}
+        leading={<Button label={t('common.cancel')} variant="link" onPress={() => router.back()} />}
+      />
+      <ScrollView
+        contentContainerStyle={{ padding: theme.space[5], gap: theme.space[4] }}
+        keyboardShouldPersistTaps="handled"
+      >
         {error ? <Banner variant="danger" message={error} /> : null}
 
         <TextField
@@ -228,9 +234,7 @@ export default function CustomExercise() {
         />
 
         <View style={{ gap: theme.space[2] }}>
-          <Text variant="label" tone="muted">
-            {t('library.custom.cuesLabel')}
-          </Text>
+          <SectionLabel>{t('library.custom.cuesLabel')}</SectionLabel>
           {cues.map((cue, index) => (
             <Row key={index} style={{ gap: theme.space[2] }}>
               <View style={{ flex: 1 }}>
@@ -242,9 +246,11 @@ export default function CustomExercise() {
                   }
                 />
               </View>
-              <Button
-                label={t('library.custom.removeCue')}
-                variant="ghost"
+              <IconButton
+                icon="close"
+                variant="plain"
+                size={40}
+                accessibilityLabel={t('library.custom.removeCue')}
                 onPress={() => setCues((prev) => prev.filter((_, i) => i !== index))}
               />
             </Row>
@@ -252,12 +258,23 @@ export default function CustomExercise() {
           {cues.length < 10 ? (
             <Button
               label={t('library.custom.addCue')}
+              icon="plus"
               variant="ghost"
               onPress={() => setCues((prev) => [...prev, ''])}
             />
           ) : null}
         </View>
       </ScrollView>
-    </FormScreen>
+
+      <FooterBar>
+        <Button
+          label={t('library.custom.save')}
+          size="lg"
+          loading={submitting}
+          disabled={name.trim() === ''}
+          onPress={() => void handleSubmit()}
+        />
+      </FooterBar>
+    </Screen>
   );
 }

@@ -5,7 +5,7 @@ import { Animated, View } from 'react-native';
 import { mapAuthError, OTP_EXPIRY_MINUTES } from '../../lib/auth/authErrors';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Button, Screen, Text } from '../../ui';
+import { Button, Icon, Screen, Text } from '../../ui';
 
 /** Client-side floor, independent of Supabase's own [auth.rate_limit] (2/hour default) —
  * gives clear feedback and keeps taps from hammering that server-side limit. */
@@ -134,7 +134,7 @@ export default function VerifyPending() {
           marginBottom: theme.space[6],
         }}
       >
-        <Text style={{ color: theme.colors.onAccentSurfaceSoft, fontSize: 28 }}>✉</Text>
+        <Icon name="mail" size={28} color={theme.colors.onAccentSurfaceSoft} />
       </View>
 
       <Text variant="h2" style={{ textAlign: 'center', marginBottom: theme.space[2] }}>
@@ -173,7 +173,7 @@ export default function VerifyPending() {
         label={t('auth.verifyPending.continue')}
         size="lg"
         onPress={handleContinue}
-        disabled={checking}
+        loading={checking}
         style={{ marginTop: theme.space[7] }}
       />
 
@@ -191,7 +191,7 @@ export default function VerifyPending() {
 
       <Button
         label={t('auth.verifyPending.changeEmail')}
-        variant="ghost"
+        variant="link"
         onPress={() => router.replace('/(auth)/sign-up')}
         style={{ marginTop: theme.space[1] }}
       />

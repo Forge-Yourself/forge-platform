@@ -6,13 +6,24 @@ import { View } from 'react-native';
 import { useAuth } from '../../lib/auth/AuthProvider';
 import { refreshAuthProfile } from '../../lib/auth/refreshProfile';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
-import { Avatar } from '../../lib/profile/Avatar';
 import { CertificationsEditor } from '../../lib/profile/CertificationsEditor';
 import { LANGUAGE_OPTIONS, SPECIALIZATION_OPTIONS, toggleOption } from '../../lib/profile/options';
 import { usePtProfileData } from '../../lib/profile/usePtProfileData';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, Button, Card, ChipRow, FormScreen, Row, StepProgress, Text, TextField } from '../../ui';
+import {
+  Avatar,
+  Banner,
+  Button,
+  Card,
+  ChipRow,
+  FormScreen,
+  Row,
+  SectionLabel,
+  StepProgress,
+  Text,
+  TextField,
+} from '../../ui';
 
 const TOTAL_STEPS = 4;
 const BIO_MAX = 300;
@@ -119,9 +130,14 @@ export default function PtProfile() {
     setError(null);
     await run(async () => {
       try {
-        if (saveLanguages) {
-          await upsertPtProfile({ languages });
-        }
+        // Upsert on BOTH paths, not just when languages are being saved. The row's
+        // mere existence is what app/_layout.tsx's post-onboarding check keys off,
+        // and Skip on every step reaches here having never run a single upsert — so
+        // this used to flip onboarding_completed with no pt_profiles row at all,
+        // and the gate then bounced the PT back to this screen forever. Every
+        // column but user_id is nullable or defaulted, so the empty upsert is a
+        // valid row.
+        await upsertPtProfile(saveLanguages ? { languages } : {});
         if (userId) {
           const { error: finishError } = await supabase
             .from('users')
@@ -178,17 +194,23 @@ export default function PtProfile() {
             <Button
               label={step === TOTAL_STEPS ? t('onboarding.ptProfile.step4.finish') : t('common.continue')}
               onPress={handleContinue}
-              disabled={submitting}
+              loading={submitting}
               style={{ flex: 1 }}
             />
           </Row>
-          <Button label={t('common.skip')} variant="ghost" onPress={handleSkip} disabled={submitting} />
+          {/* Skip is an escape hatch, not a third equal action — a bordered button
+              under a Back/Continue pair made the footer read as three choices. */}
+          <Button
+            label={t('common.skip')}
+            variant="link"
+            onPress={handleSkip}
+            disabled={submitting}
+            style={{ alignSelf: 'center' }}
+          />
         </View>
       }
     >
-      <Text variant="label" tone="muted" style={{ marginBottom: theme.space[2] }}>
-        {t('onboarding.ptProfile.stepOf', { step, total: TOTAL_STEPS })}
-      </Text>
+      <SectionLabel>{t('onboarding.ptProfile.stepOf', { step, total: TOTAL_STEPS })}</SectionLabel>
       <View style={{ marginBottom: theme.space[4] }}>
         <StepProgress
           progress={step / TOTAL_STEPS}
@@ -203,12 +225,11 @@ export default function PtProfile() {
         <>
           <View style={{ alignItems: 'center', marginBottom: theme.space[5] }}>
             <View style={{ marginBottom: theme.space[3] }}>
-              <Avatar displayName={displayName || auth.user?.display_name} />
+              <Avatar name={displayName || auth.user?.display_name} size={88} />
             </View>
             <Button
               label={t('onboarding.ptProfile.step1.addPhoto')}
-              variant="ghost"
-              size="md"
+              variant="link"
               // Avatar upload is deferred to M4's Storage layer (no bucket/policy
               // exists yet) — this deliberately does nothing beyond surfacing the
               // note below, rather than pretending to accept a photo it can't store.
@@ -246,9 +267,7 @@ export default function PtProfile() {
 
       {step === 3 ? (
         <>
-          <Text variant="label" tone="muted" style={{ marginBottom: theme.space[2] }}>
-            {t('onboarding.ptProfile.step3.specializationsLabel')}
-          </Text>
+          <SectionLabel>{t('onboarding.ptProfile.step3.specializationsLabel')}</SectionLabel>
           <View style={{ marginBottom: theme.space[5] }}>
             <ChipRow
               options={SPECIALIZATION_OPTIONS}
@@ -262,9 +281,7 @@ export default function PtProfile() {
 
       {step === 4 ? (
         <>
-          <Text variant="label" tone="muted" style={{ marginBottom: theme.space[2] }}>
-            {t('onboarding.ptProfile.step4.languagesLabel')}
-          </Text>
+          <SectionLabel>{t('onboarding.ptProfile.step4.languagesLabel')}</SectionLabel>
           <View style={{ marginBottom: theme.space[5] }}>
             <ChipRow
               options={LANGUAGE_OPTIONS}

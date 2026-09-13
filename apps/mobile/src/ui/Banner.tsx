@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import { useTheme, type Theme } from '../theme/ThemeProvider';
+import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
 export type BannerVariant = 'info' | 'success' | 'warn' | 'danger';
@@ -9,11 +10,13 @@ export type BannerProps = {
   message: string;
 };
 
-const GLYPH: Record<BannerVariant, string> = {
-  info: 'ℹ',
-  success: '✓',
-  warn: '⚠',
-  danger: '✕',
+const GLYPH: Record<BannerVariant, IconName> = {
+  info: 'alert',
+  success: 'check',
+  // A triangle, not the info circle: warn and info sat side by side on the AI result
+  // screen wearing the same glyph, so tone was the only thing separating them.
+  warn: 'warning',
+  danger: 'close',
 };
 
 function roles(t: Theme, variant: BannerVariant) {
@@ -41,15 +44,15 @@ export function Banner({ variant, message }: BannerProps) {
       accessibilityRole={isAssertive ? 'alert' : undefined}
       style={{
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: t.space[2],
         padding: t.space[3],
         borderRadius: t.radius.md,
         backgroundColor: surface,
       }}
     >
-      <Text style={{ fontSize: 16, color: text }}>{GLYPH[variant]}</Text>
-      <Text style={{ flex: 1, fontSize: 14, color: text }}>{message}</Text>
+      <Icon name={GLYPH[variant]} size={17} color={text} strokeWidth={2.2} />
+      <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: text }}>{message}</Text>
     </View>
   );
 }
