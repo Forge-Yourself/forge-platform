@@ -1,8 +1,17 @@
-import type { IntakeResponses } from '@forge/shared';
-import { evaluateParq, intakeCompletion, PARQ_QUESTIONS } from '@forge/shared';
+import type { IntakeNumericField, IntakeResponses } from '@forge/shared';
+import {
+  checkCalendarDate,
+  checkNumericField,
+  evaluateParq,
+  intakeCompletion,
+  intakeDateBounds,
+  INTAKE_LIMITS,
+  PARQ_QUESTIONS,
+} from '@forge/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { useIntakeForm } from '../../../lib/intake/useIntakeForm';
 import { useTheme } from '../../../theme/ThemeProvider';
@@ -10,10 +19,14 @@ import {
   Banner,
   Button,
   ChipRow,
+  DateField,
   FormScreen,
+  Icon,
+  ListRow,
+  NavHeader,
   Row,
   SectionCard,
-  ListRow,
+  SectionLabel,
   SegmentedPill,
   Spinner,
   StepProgress,
@@ -35,9 +48,8 @@ function emptyResponses(): IntakeResponses {
   };
 }
 
-/** The three free-typed number fields, tracked as raw text — see NumericField below. */
-type NumericFieldKey = 'years_training' | 'height_cm' | 'weight_kg';
-type NumericText = Record<NumericFieldKey, string>;
+/** The three free-typed number fields, tracked as raw text — see parseNumeric below. */
+type NumericText = Record<IntakeNumericField, string>;
 
 const EMPTY_NUMERIC_TEXT: NumericText = { years_training: '', height_cm: '', weight_kg: '' };
 
@@ -51,18 +63,16 @@ function sanitizeDecimal(input: string): string {
 /**
  * Raw text -> the number to store, or undefined for "not answered".
  *
- * `allowZero` mirrors the schemas exactly: historyResponsesSchema has
- * `years_training: z.number().nonnegative()` (a beginner really has trained zero
- * years), anthropometricsResponsesSchema has `height_cm`/`weight_kg` as
- * `.positive()` (nobody weighs nothing). A value the schema would reject is stored
- * as undefined rather than written through to be rejected later at submit.
+ * The accept/reject rule is `checkNumericField` in @forge/shared, built from the
+ * same INTAKE_LIMITS the zod schemas are, and the same one `numericError` below
+ * renders a message for. This function used to carry its own copy of the bounds —
+ * a bare `allowZero` flag — and silently stored undefined for anything it
+ * disliked, so a client who typed 1750 for their height saw the field keep the
+ * digits, saw no complaint, and had nothing recorded.
  */
-function parseDecimal(input: string, allowZero: boolean): number | undefined {
-  if (input.trim() === '') return undefined;
-  const value = Number(input);
-  if (!Number.isFinite(value)) return undefined;
-  if (allowZero ? value < 0 : value <= 0) return undefined;
-  return value;
+function parseNumeric(input: string, field: IntakeNumericField): number | undefined {
+  if (input.trim() === '' || checkNumericField(input, field) !== null) return undefined;
+  return Number(input.trim());
 }
 
 /**
@@ -72,7 +82,7 @@ function parseDecimal(input: string, allowZero: boolean): number | undefined {
  * to the wizard — there's nothing to resume yet.
  */
 export default function Intake() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id: string }>();
   const { loading, error, row, saveProgress, submit } = useIntakeForm(params.id);
@@ -109,7 +119,12 @@ export default function Intake() {
       height_cm: seeded.anthropometrics?.height_cm?.toString() ?? '',
       weight_kg: seeded.anthropometrics?.weight_kg?.toString() ?? '',
     });
-    setMode(row.state === 'in_progress' ? 'resume' : 'wizard');
+    // "Welcome back / what you've saved so far" only earns its place when something
+    // really is saved. saveProgress() flips the row to in_progress on the first
+    // Save & exit even if the client answered nothing, so state alone would show a
+    // resume checklist with five empty rows.
+    const saved = intakeCompletion(seeded).answered > 0;
+    setMode(row.state === 'in_progress' && saved ? 'resume' : 'wizard');
   }
 
   if (loading || mode === null) {
@@ -188,7 +203,9 @@ export default function Intake() {
       try {
         await saveProgress(currentSectionPartial());
         await submit({ ...responses, dietary: responses.dietary });
-        router.push({ pathname: '/(app)/intake/[id]/waiver', params: { id: intakeId } });
+        // replace, not push: the form is submitted now, so it must not sit behind
+        // the waiver as a back target that would re-open an already-submitted form.
+        router.replace({ pathname: '/(app)/intake/[id]/waiver', params: { id: intakeId } });
       } catch {
         setSubmitError(t('intake.submitError'));
       }
@@ -197,9 +214,57 @@ export default function Intake() {
 
   const parqComplete = PARQ_QUESTIONS.every((q) => responses.parq[q] !== undefined);
 
+  const dateBounds = intakeDateBounds();
+
+  const pickerLabels = {
+    open: t('common.datePicker.open'),
+    title: t('common.datePicker.title'),
+    clear: t('common.datePicker.clear'),
+    done: t('common.datePicker.done'),
+    previousMonth: t('common.datePicker.previousMonth'),
+    nextMonth: t('common.datePicker.nextMonth'),
+    chooseYear: t('common.datePicker.chooseYear'),
+  };
+
+  /** The inline message under a number field, or undefined while it is acceptable. */
+  function numericError(field: IntakeNumericField): string | undefined {
+    const problem = checkNumericField(numericText[field], field);
+    if (problem === null) return undefined;
+    if (problem === 'not_a_number') return t('intake.validation.notANumber');
+    const { min, max } = INTAKE_LIMITS[field];
+    return problem === 'below_min'
+      ? t('intake.validation.belowMin', { min })
+      : t('intake.validation.aboveMax', { max });
+  }
+
+  /**
+   * The picker cannot produce an out-of-range date, but a row saved before these
+   * bounds existed can hold one — and a target date set months ago is legitimately
+   * in the past now. Both need saying out loud rather than being quietly dropped.
+   */
+  function dateError(
+    value: string | undefined,
+    bounds: { min: string; max: string },
+  ): string | undefined {
+    const problem = checkCalendarDate(value, bounds);
+    if (problem === null) return undefined;
+    if (problem === 'malformed') return t('intake.validation.dateMalformed');
+    return problem === 'before_min'
+      ? t('intake.validation.dateBeforeMin', { min: bounds.min })
+      : t('intake.validation.dateAfterMax', { max: bounds.max });
+  }
+
   if (mode === 'resume') {
     return (
       <FormScreen
+        header={
+          <NavHeader
+            leading={
+              <Button label={t('common.back')} icon="chevronBack" variant="link" onPress={() => router.back()} />
+            }
+            divider={false}
+          />
+        }
         footer={
           <Button label={t('intake.resume.continueButton')} onPress={goToFirstIncompleteStep} size="lg" />
         }
@@ -210,15 +275,26 @@ export default function Intake() {
         <Text tone="secondary" style={{ marginBottom: theme.space[5] }}>
           {t('intake.resume.privacyNote')}
         </Text>
-        <Text variant="label" tone="muted" style={{ marginBottom: theme.space[2] }}>
-          {t('intake.resume.checklistNote')}
-        </Text>
+        <SectionLabel>{t('intake.resume.checklistNote')}</SectionLabel>
         <SectionCard>
           {stepIds.map((id, i) => (
             <ListRow
               key={id}
               title={t(`intake.steps.${id}`)}
-              trailing={<Text tone={completion.stepStatus[id] ? 'accent' : 'muted'}>{completion.stepStatus[id] ? '✓' : '—'}</Text>}
+              trailing={
+                completion.stepStatus[id] ? (
+                  <Icon name="check" size={17} color={theme.colors.successAccent} strokeWidth={2.4} />
+                ) : (
+                  <View
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: theme.colors.border,
+                    }}
+                  />
+                )
+              }
               isLast={i === stepIds.length - 1}
             />
           ))}
@@ -230,23 +306,36 @@ export default function Intake() {
   return (
     <FormScreen
       footer={
-        <Row style={{ gap: theme.space[3] }}>
-          {step > 1 ? (
-            <Button label={t('common.back')} variant="ghost" onPress={() => setStep(step - 1)} style={{ flex: 1 }} />
-          ) : null}
+        /* Back / Continue / "Save & exit", all sticky — the same three-control footer
+           pt-profile.tsx uses for its Skip. "Save & exit" lived at the bottom of the
+           scroll body, which put the only way out of step 1 below the fold: the
+           client saw a PAR-Q and a Continue and nothing else. */
+        <View style={{ gap: theme.space[2] }}>
+          <Row style={{ gap: theme.space[3] }}>
+            {step > 1 ? (
+              <Button label={t('common.back')} variant="ghost" onPress={() => setStep(step - 1)} style={{ flex: 1 }} />
+            ) : null}
+            <Button
+              label={
+                submitting
+                  ? t('intake.submitting')
+                  : step === TOTAL_STEPS
+                    ? t('intake.submit')
+                    : t('intake.continue')
+              }
+              onPress={() => void (step === TOTAL_STEPS ? handleSubmit() : handleContinue())}
+              disabled={submitting || (step === 1 && !parqComplete)}
+              style={{ flex: 2 }}
+            />
+          </Row>
           <Button
-            label={
-              submitting
-                ? t('intake.submitting')
-                : step === TOTAL_STEPS
-                  ? t('intake.submit')
-                  : t('intake.continue')
-            }
-            onPress={() => void (step === TOTAL_STEPS ? handleSubmit() : handleContinue())}
-            disabled={submitting || (step === 1 && !parqComplete)}
-            style={{ flex: 2 }}
+            label={t('intake.saveAndExit')}
+            variant="link"
+            onPress={() => void handleSaveAndExit()}
+            disabled={submitting}
+            style={{ alignSelf: 'center' }}
           />
-        </Row>
+        </View>
       }
     >
       <StepProgress
@@ -254,9 +343,7 @@ export default function Intake() {
         progress={step / TOTAL_STEPS}
         label={t('intake.stepOf', { step, total: TOTAL_STEPS })}
       />
-      <Text variant="label" tone="muted" style={{ marginTop: theme.space[2], marginBottom: theme.space[4] }}>
-        {t('intake.stepOf', { step, total: TOTAL_STEPS })}
-      </Text>
+      <SectionLabel>{t('intake.stepOf', { step, total: TOTAL_STEPS })}</SectionLabel>
 
       {submitError ? <Banner variant="danger" message={submitError} /> : null}
 
@@ -290,11 +377,18 @@ export default function Intake() {
             value={responses.goals?.primary_goal ?? ''}
             onChangeText={(v) => setResponses((prev) => ({ ...prev, goals: { ...prev.goals, primary_goal: v } }))}
           />
-          <TextField
+          <DateField
             label={t('intake.goals.targetDateLabel')}
-            placeholder="YYYY-MM-DD"
+            placeholder={t('common.datePicker.open')}
             value={responses.goals?.target_date ?? ''}
-            onChangeText={(v) => setResponses((prev) => ({ ...prev, goals: { ...prev.goals, target_date: v } }))}
+            onChange={(v) =>
+              setResponses((prev) => ({ ...prev, goals: { ...prev.goals, target_date: v || undefined } }))
+            }
+            minDate={dateBounds.target_date.min}
+            maxDate={dateBounds.target_date.max}
+            error={dateError(responses.goals?.target_date, dateBounds.target_date)}
+            locale={i18n.language}
+            labels={pickerLabels}
           />
           <TextField
             label={t('intake.goals.motivationLabel')}
@@ -315,10 +409,12 @@ export default function Intake() {
               setNumericText((prev) => ({ ...prev, years_training: text }));
               setResponses((prev) => ({
                 ...prev,
-                history: { ...prev.history, years_training: parseDecimal(text, true) },
+                history: { ...prev.history, years_training: parseNumeric(text, 'years_training') },
               }));
             }}
             keyboardType="decimal-pad"
+            error={numericError('years_training')}
+            helperText={t('intake.history.yearsTrainingHelper', INTAKE_LIMITS.years_training)}
           />
           <TextField
             label={t('intake.history.injuriesLabel')}
@@ -339,17 +435,25 @@ export default function Intake() {
 
       {step === 4 ? (
         <>
-          <TextField
+          <DateField
             label={t('intake.anthropometrics.dateOfBirthLabel')}
-            placeholder="YYYY-MM-DD"
+            placeholder={t('common.datePicker.open')}
             value={responses.anthropometrics?.date_of_birth ?? ''}
-            onChangeText={(v) =>
-              setResponses((prev) => ({ ...prev, anthropometrics: { ...prev.anthropometrics, date_of_birth: v } }))
+            onChange={(v) =>
+              setResponses((prev) => ({
+                ...prev,
+                anthropometrics: { ...prev.anthropometrics, date_of_birth: v || undefined },
+              }))
             }
+            minDate={dateBounds.date_of_birth.min}
+            maxDate={dateBounds.date_of_birth.max}
+            // A birthday is reached by year first — paging months back three decades is not an interaction.
+            startOnYear
+            error={dateError(responses.anthropometrics?.date_of_birth, dateBounds.date_of_birth)}
+            locale={i18n.language}
+            labels={pickerLabels}
           />
-          <Text variant="label" tone="muted" style={{ marginBottom: theme.space[2] }}>
-            {t('intake.anthropometrics.sexLabel')}
-          </Text>
+          <SectionLabel>{t('intake.anthropometrics.sexLabel')}</SectionLabel>
           <SegmentedPill
             items={[
               { value: 'male', label: t('intake.anthropometrics.sexMale') },
@@ -371,10 +475,12 @@ export default function Intake() {
               setNumericText((prev) => ({ ...prev, height_cm: text }));
               setResponses((prev) => ({
                 ...prev,
-                anthropometrics: { ...prev.anthropometrics, height_cm: parseDecimal(text, false) },
+                anthropometrics: { ...prev.anthropometrics, height_cm: parseNumeric(text, 'height_cm') },
               }));
             }}
             keyboardType="decimal-pad"
+            error={numericError('height_cm')}
+            helperText={t('intake.anthropometrics.heightHelper', INTAKE_LIMITS.height_cm)}
           />
           <TextField
             label={t('intake.anthropometrics.weightLabel')}
@@ -384,19 +490,19 @@ export default function Intake() {
               setNumericText((prev) => ({ ...prev, weight_kg: text }));
               setResponses((prev) => ({
                 ...prev,
-                anthropometrics: { ...prev.anthropometrics, weight_kg: parseDecimal(text, false) },
+                anthropometrics: { ...prev.anthropometrics, weight_kg: parseNumeric(text, 'weight_kg') },
               }));
             }}
             keyboardType="decimal-pad"
+            error={numericError('weight_kg')}
+            helperText={t('intake.anthropometrics.weightHelper', INTAKE_LIMITS.weight_kg)}
           />
         </>
       ) : null}
 
       {step === 5 ? (
         <>
-          <Text variant="label" tone="muted" style={{ marginBottom: theme.space[2] }}>
-            {t('intake.dietary.restrictionsLabel')}
-          </Text>
+          <SectionLabel>{t('intake.dietary.restrictionsLabel')}</SectionLabel>
           <ChipRow
             options={DIETARY_OPTIONS.map((o) => t(`intake.dietary.restriction_${o}`))}
             selected={(responses.dietary?.restrictions ?? []).map((r) => t(`intake.dietary.restriction_${r}`))}
@@ -420,14 +526,6 @@ export default function Intake() {
           />
         </>
       ) : null}
-
-      <Button
-        label={t('intake.saveAndExit')}
-        variant="ghost"
-        onPress={() => void handleSaveAndExit()}
-        disabled={submitting}
-        style={{ marginTop: theme.space[5] }}
-      />
     </FormScreen>
   );
 }

@@ -119,25 +119,35 @@ export const darkColors: ColorRoles = {
   accentText: palette.ember300,
   accentSurface: palette.charcoal700,
   // Semi-transparent ember (not a solid palette token) for the soft chip fill on dark surfaces.
-  accentSurfaceSoft: 'rgba(232,99,26,0.18)',
+  accentSurfaceSoft: 'rgba(232,99,26,0.26)',
   // Flattened onto `surface`, the fill above reads as a dark ember-brown — ember-300 (accentText)
-  // reaches 7.35:1 on it, well past 4.5:1, so the chip text reuses accentText here.
+  // reaches 6.4:1 on it, well past 4.5:1, so the chip text reuses accentText here.
   onAccentSurfaceSoft: palette.ember300,
 
-  // Unchanged: dark chips already use the pale tint (successBg/warnBg/dangerBg) as bright text on
-  // charcoal700, which passes at 11-13:1. The new hue-matched onSuccess/onWarn/onDanger trio is
-  // tuned for LIGHT tint backgrounds (successBg etc. as the surface) — on charcoal700 it inverts to
-  // dark-on-dark and fails badly (e.g. onSuccess on charcoal700 is ~1.5:1), so it is not used here.
+  // The four *Surface roles below are translucent tints of their own hue, not solid palette
+  // tokens. They used to be charcoal-700 — the SAME value as `surfaceRaised` — which meant a
+  // status chip, a tinted banner or an initials avatar drawn on any card was a 1:1 contrast
+  // rectangle: the fill was literally invisible, and only the coloured text inside it survived.
+  // The light scheme has always had real tints (successBg/warnBg/dangerBg); dark now does too.
+  //
+  // Alphas are tuned so each flattened fill clears ~1.35:1 against both `surface` and
+  // `surfaceRaised` (perceptible as a shape) while its pale on-tint text still clears 8:1 —
+  // tokens.test.ts flattens them and asserts both. Danger needs the highest alpha because
+  // crimson is the darkest of the three against a charcoal ground.
+  //
+  // The *Accent roles stay the PALE tints: on a dark ground those are the legible stroke/dot
+  // colour, and the hue-matched onSuccess/onWarn/onDanger trio is tuned for light tint
+  // backgrounds and inverts to dark-on-dark here.
   successAccent: palette.successBg,
-  successSurface: palette.charcoal700,
+  successSurface: 'rgba(46,139,87,0.30)',
   onSuccessSurface: palette.successBg,
 
   warnAccent: palette.warnBg,
-  warnSurface: palette.charcoal700,
+  warnSurface: 'rgba(199,120,0,0.30)',
   onWarnSurface: palette.warnBg,
 
   dangerAccent: palette.dangerBg,
-  dangerSurface: palette.charcoal700,
+  dangerSurface: 'rgba(192,57,43,0.38)',
   onDangerSurface: palette.dangerBg,
 
   focusRing: palette.ember500,

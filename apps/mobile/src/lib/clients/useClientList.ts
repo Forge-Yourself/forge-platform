@@ -67,6 +67,8 @@ export type ClientListData = {
   error: string | null;
   /** After search + state filtering. */
   items: ClientListItem[];
+  /** Roster size before search/state filtering — the "3 of 12 clients" denominator. */
+  total: number;
   /** True roster is empty — the empty state, not the no-match state. */
   isEmpty: boolean;
   /** Roster has clients, but none match the current search — the no-match state. */
@@ -130,6 +132,7 @@ export function useClientList(
     loading: raw.loading,
     error: raw.error,
     items: filtered,
+    total: raw.rows.length,
     isEmpty: !raw.loading && !raw.error && raw.rows.length === 0,
     isNoMatch: !raw.loading && !raw.error && raw.rows.length > 0 && filtered.length === 0,
     refetch,

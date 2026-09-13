@@ -2,7 +2,7 @@ import { forgotPasswordSchema } from '@forge/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { I18nManager, Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { mapAuthError, OTP_EXPIRY_MINUTES } from '../../lib/auth/authErrors';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { supabase } from '../../lib/supabase';
@@ -22,10 +22,6 @@ export default function ForgotPassword() {
     run,
   } = useAsyncSubmit();
   const [submitted, setSubmitted] = useState(false);
-
-  // The glyph, not just its position, flips: a plain mirrored layout would still point
-  // the wrong way. RTL "back" reads right, so the chevron itself swaps to '›'.
-  const backGlyph = I18nManager.isRTL ? '›' : '‹';
 
   async function handleSubmit() {
     setRateLimitError(null);
@@ -52,15 +48,15 @@ export default function ForgotPassword() {
 
   return (
     <FormScreen>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('common.back')}
+      {/* ui/Icon mirrors directional glyphs under RTL itself, so this screen no
+          longer has to swap '‹' for '›' by hand. */}
+      <Button
+        label={t('common.back')}
+        icon="chevronBack"
+        variant="link"
         onPress={() => router.back()}
-        style={{ flexDirection: 'row', alignItems: 'center', minHeight: theme.touchTarget, gap: 4 }}
-      >
-        <Text style={{ fontSize: 20 }}>{backGlyph}</Text>
-        <Text tone="secondary">{t('common.back')}</Text>
-      </Pressable>
+        style={{ alignSelf: 'flex-start' }}
+      />
 
       {submitted ? (
         <View style={{ marginTop: theme.space[6] }}>

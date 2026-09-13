@@ -11,7 +11,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, ScrollView, View } from 'react-native';
 import { CreditSheet } from '../../../lib/ai/CreditSheet';
 import { ProgramDraftError, requestProgramDraft } from '../../../lib/ai/requestProgramDraft';
 import { useCreditBalance } from '../../../lib/ai/useCreditBalance';
@@ -23,10 +23,13 @@ import { useTheme } from '../../../theme/ThemeProvider';
 import {
   Banner,
   Button,
-  Card,
+  FooterBar,
+  Icon,
+  NavHeader,
   Row,
   Screen,
-  Spinner,
+  SectionLabel,
+  Tag,
   Text,
   TextField,
 } from '../../../ui';
@@ -37,15 +40,52 @@ type Phase = 'prompt' | 'generating' | 'result';
 const BUDGET_MS = 12_000;
 const STEP_KEYS = ['ai.generating.step1', 'ai.generating.step2', 'ai.generating.step3', 'ai.generating.step4'];
 
-function Chip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
+/**
+ * A rotating ember arc, not the platform spinner.
+ *
+ * This is the one screen where the wait is the content: twelve seconds of a
+ * synchronous call, with a four-step checklist ticking underneath. A 20pt
+ * ActivityIndicator above an 18pt heading reads as a screen that is stuck; a
+ * 56pt ring reads as work in progress.
+ */
+function LoadingRing() {
+  const theme = useTheme();
+  const [spin] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [spin]);
+
+  return (
+    <Animated.View
+      accessible
+      accessibilityLabel="Loading"
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        borderWidth: 3,
+        borderColor: theme.colors.border,
+        borderTopColor: theme.colors.accent,
+        transform: [
+          { rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
+        ],
+      }}
+    />
+  );
+}
+
+/** Pill chip for goal and equipment — multi-value sets where the label sizes the target. */
+function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   const theme = useTheme();
   return (
     <Pressable
@@ -55,18 +95,81 @@ function Chip({
       onPress={onPress}
       style={{
         minHeight: 44,
-        paddingHorizontal: theme.space[3],
+        paddingHorizontal: 15,
         justifyContent: 'center',
         borderRadius: theme.radius.pill,
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: selected ? theme.colors.accent : theme.colors.border,
         backgroundColor: selected ? theme.colors.accentSurfaceSoft : theme.colors.surfaceRaised,
       }}
     >
-      <Text variant="caption" style={{ fontWeight: '600' }}>
+      <Text
+        style={{
+          fontSize: 13.5,
+          fontWeight: '600',
+          color: selected ? theme.colors.onAccentSurfaceSoft : theme.colors.textSecondary,
+        }}
+      >
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+/**
+ * Experience is three mutually exclusive levels, so it renders as one segmented
+ * row of equal-width rectangles rather than three pills of different widths —
+ * the shape says "pick one of these three", which pills do not.
+ */
+function LevelRow({
+  values,
+  selected,
+  labelFor,
+  onSelect,
+}: {
+  values: readonly AiExperienceLevel[];
+  selected: AiExperienceLevel;
+  labelFor: (value: AiExperienceLevel) => string;
+  onSelect: (value: AiExperienceLevel) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Row style={{ gap: 6 }}>
+      {values.map((value) => {
+        const isSelected = value === selected;
+        return (
+          <Pressable
+            key={value}
+            accessibilityRole="radio"
+            accessibilityLabel={labelFor(value)}
+            accessibilityState={{ selected: isSelected }}
+            onPress={() => onSelect(value)}
+            style={{
+              flex: 1,
+              minHeight: 46,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: 4,
+              borderRadius: theme.radius.md,
+              borderWidth: 1.5,
+              borderColor: isSelected ? theme.colors.accent : theme.colors.border,
+              backgroundColor: isSelected ? theme.colors.accentSurfaceSoft : theme.colors.surfaceRaised,
+            }}
+          >
+            <Text
+              numberOfLines={1}
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: isSelected ? theme.colors.onAccentSurfaceSoft : theme.colors.textSecondary,
+              }}
+            >
+              {labelFor(value)}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </Row>
   );
 }
 
@@ -80,6 +183,10 @@ function Chip({
  * Nothing is persisted until "Review in builder". Until that tap the draft
  * lives in this screen's state and nowhere else, which is exactly what makes
  * "AI never auto-publishes" true rather than merely intended.
+ *
+ * Each phase owns the footer: the cost sits under the prompt, and Redraft /
+ * Review sit under the result. Both used to be the last two of five stacked
+ * buttons at the end of the scroll body.
  */
 export default function AiDraft() {
   const { t } = useTranslation();
@@ -176,36 +283,48 @@ export default function AiDraft() {
     draft?.draft.weeks[0]?.days.flatMap((day) => day.blocks.flatMap((block) => block.exercises)) ?? [];
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[4] }} keyboardShouldPersistTaps="handled">
-        <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          {/* Only in the prompt phase: once a draft exists, leaving is the Discard
-              flow at the bottom, which confirms first. */}
-          {phase === 'prompt' ? (
-            <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
-          ) : null}
-          <Text variant="h2">✦ {t('ai.draftAction')}</Text>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text numeric variant="h3">
-              {credits.state === 'loading' ? '—' : (credits.balance ?? 0)}
+    <Screen padded={false}>
+      <NavHeader
+        title={
+          <Row style={{ gap: 6 }}>
+            <Icon name="sparkle" size={15} color={theme.colors.accentText} />
+            <Text accessibilityRole="header" numberOfLines={1} style={{ fontSize: 15, fontWeight: '700' }}>
+              {t('ai.draftAction')}
             </Text>
-            <Text variant="caption" tone="muted">
-              {t('credits.balanceLabel')}
+          </Row>
+        }
+        leading={
+          // Only in the prompt phase: once a draft exists, leaving is the Discard
+          // flow at the bottom, which confirms first.
+          phase === 'prompt' ? (
+            <Button label={t('common.cancel')} variant="link" onPress={() => router.back()} />
+          ) : undefined
+        }
+        trailing={
+          <Tag
+            numeric
+            tone="accent"
+            accessibilityLabel={t('credits.balanceLabel')}
+            label={credits.state === 'loading' ? '—' : String(credits.balance ?? 0)}
+          />
+        }
+      />
+
+      {phase === 'prompt' ? (
+        <>
+          <ScrollView
+            contentContainerStyle={{ padding: theme.space[4], gap: theme.space[5] }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {error ? <Banner variant="danger" message={error} /> : null}
+
+            <Text tone="secondary" style={{ fontSize: 13.5, lineHeight: 21 }}>
+              {t('ai.intro', { name: clientName })}
             </Text>
-          </View>
-        </Row>
-
-        {error ? <Banner variant="danger" message={error} /> : null}
-
-        {phase === 'prompt' ? (
-          <>
-            <Text tone="secondary">{t('ai.intro', { name: clientName })}</Text>
 
             <View style={{ gap: theme.space[2] }}>
-              <Text variant="label" tone="muted">
-                {t('ai.goalLabel')}
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space[2] }}>
+              <SectionLabel>{t('ai.goalLabel')}</SectionLabel>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
                 {AI_GOALS.map((value) => (
                   <Chip
                     key={value}
@@ -218,10 +337,8 @@ export default function AiDraft() {
             </View>
 
             <View style={{ gap: theme.space[2] }}>
-              <Text variant="label" tone="muted">
-                {t('ai.equipmentLabel')}
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space[2] }}>
+              <SectionLabel>{t('ai.equipmentLabel')}</SectionLabel>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
                 {EQUIPMENT.map((value) => (
                   <Chip
                     key={value}
@@ -238,19 +355,13 @@ export default function AiDraft() {
             </View>
 
             <View style={{ gap: theme.space[2] }}>
-              <Text variant="label" tone="muted">
-                {t('ai.experienceLabel')}
-              </Text>
-              <View style={{ flexDirection: 'row', gap: theme.space[2] }}>
-                {AI_EXPERIENCE_LEVELS.map((value) => (
-                  <Chip
-                    key={value}
-                    label={t('ai.experienceLabels.' + value)}
-                    selected={experience === value}
-                    onPress={() => setExperience(value)}
-                  />
-                ))}
-              </View>
+              <SectionLabel>{t('ai.experienceLabel')}</SectionLabel>
+              <LevelRow
+                values={AI_EXPERIENCE_LEVELS}
+                selected={experience}
+                labelFor={(value) => t('ai.experienceLabels.' + value)}
+                onSelect={setExperience}
+              />
             </View>
 
             <TextField
@@ -260,86 +371,138 @@ export default function AiDraft() {
               onChangeText={setAvoid}
               multiline
             />
+          </ScrollView>
 
+          <FooterBar>
             <Button
               label={t('ai.creditCost')}
+              icon="sparkle"
               size="lg"
-              disabled={submitting || equipment.length === 0 || credits.state === 'loading'}
+              disabled={equipment.length === 0 || credits.state === 'loading'}
+              loading={submitting}
               onPress={() => void handleGenerate()}
             />
-          </>
-        ) : null}
+          </FooterBar>
+        </>
+      ) : null}
 
-        {phase === 'generating' ? (
-          <View style={{ gap: theme.space[4], alignItems: 'center', paddingVertical: theme.space[8] }}>
-            <Spinner />
-            <Text variant="h3">{t('ai.generating.title')}</Text>
-            <Text tone="secondary" style={{ textAlign: 'center' }}>
-              {t('ai.generating.body')}
-            </Text>
-            <View style={{ gap: theme.space[2], alignSelf: 'stretch' }}>
-              {STEP_KEYS.map((key, index) => (
-                <Row key={key} style={{ gap: theme.space[2], alignItems: 'center' }}>
-                  <Text numeric tone={index < stepsDone ? 'accent' : 'muted'}>
-                    {index < stepsDone ? '✓' : '·'}
-                  </Text>
-                  <Text tone={index < stepsDone ? 'primary' : 'muted'} style={{ flex: 1 }}>
+      {phase === 'generating' ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: theme.space[4],
+            padding: theme.space[6],
+          }}
+        >
+          <LoadingRing />
+          <Text variant="h3">{t('ai.generating.title')}</Text>
+          <Text tone="secondary" style={{ textAlign: 'center', maxWidth: 260, lineHeight: 20 }}>
+            {t('ai.generating.body')}
+          </Text>
+          <View style={{ gap: 9, marginTop: theme.space[1], width: '100%', maxWidth: 260 }}>
+            {STEP_KEYS.map((key, index) => {
+              const done = index < stepsDone;
+              return (
+                <Row key={key} style={{ gap: 9 }}>
+                  <View
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 8,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: done ? theme.colors.accent : theme.colors.surfaceSunken,
+                    }}
+                  >
+                    {done ? (
+                      <Icon name="check" size={10} color={theme.colors.onAccent} strokeWidth={3} />
+                    ) : null}
+                  </View>
+                  <Text
+                    style={{ flex: 1, fontSize: 13, fontWeight: '500' }}
+                    tone={done ? 'primary' : 'muted'}
+                  >
                     {t(key, { name: clientName })}
                   </Text>
                 </Row>
-              ))}
-            </View>
+              );
+            })}
           </View>
-        ) : null}
+        </View>
+      ) : null}
 
-        {phase === 'result' && draft ? (
-          <>
+      {phase === 'result' && draft ? (
+        <>
+          <ScrollView contentContainerStyle={{ padding: theme.space[4], gap: theme.space[3] }}>
+            {error ? <Banner variant="danger" message={error} /> : null}
             <Banner variant="warn" message={t('ai.result.warning')} />
-            <Text variant="bodyBold">{draft.draft.summary}</Text>
 
-            <Card>
-              {draftRows.map((exercise, index) => (
-                <View key={exercise.exercise_id + ':' + index} style={{ gap: 2, paddingVertical: theme.space[2] }}>
-                  <Row style={{ justifyContent: 'space-between' }}>
-                    <Text variant="bodyBold" style={{ flex: 1 }} numberOfLines={1}>
-                      {exercise.exercise_name}
-                    </Text>
-                    <Text numeric tone="secondary">
-                      {formatSetSpec(exercise)}
-                    </Text>
-                  </Row>
-                  {/* The rationale is the whole point of the review moment —
-                      and it is deliberately never persisted with the program. */}
-                  <Text variant="caption" tone="secondary" style={{ fontSize: 12.5 }}>
-                    {exercise.why}
+            <Text style={{ fontSize: 20, fontWeight: '800', letterSpacing: -0.3 }}>
+              {draft.draft.summary}
+            </Text>
+
+            {draftRows.map((exercise, index) => (
+              <View
+                key={exercise.exercise_id + ':' + index}
+                style={{
+                  padding: theme.space[3] + 2,
+                  borderRadius: theme.radius.lg - 2,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.surfaceRaised,
+                  gap: 5,
+                }}
+              >
+                <Row style={{ gap: theme.space[2] }}>
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, fontWeight: '700' }}>
+                    {exercise.exercise_name}
                   </Text>
-                </View>
-              ))}
-            </Card>
+                  <Text numeric style={{ fontSize: 13, fontWeight: '700' }}>
+                    {formatSetSpec(exercise)}
+                  </Text>
+                </Row>
+                {/* The rationale is the whole point of the review moment —
+                    and it is deliberately never persisted with the program. */}
+                <Text tone="muted" style={{ fontSize: 12, lineHeight: 18 }}>
+                  {exercise.why}
+                </Text>
+              </View>
+            ))}
 
-            <Button
-              label={t('ai.result.reviewInBuilder')}
-              size="lg"
-              disabled={submitting}
-              onPress={() => void handleReviewInBuilder()}
-            />
-            <Button
-              label={t('ai.result.redraft')}
-              variant="ghost"
-              disabled={submitting}
-              onPress={() => {
-                setDraft(null);
-                setPhase('prompt');
-              }}
-            />
             <Button
               label={t('ai.result.discard')}
-              variant="ghost"
+              variant="link"
+              tone="danger"
               onPress={() => setDiscardOpen(true)}
+              style={{ alignSelf: 'center', marginTop: theme.space[2] }}
             />
-          </>
-        ) : null}
-      </ScrollView>
+          </ScrollView>
+
+          <FooterBar>
+            <Row style={{ gap: theme.space[2] }}>
+              <Button
+                label={t('ai.result.redraft')}
+                variant="ghost"
+                size="lg"
+                disabled={submitting}
+                onPress={() => {
+                  setDraft(null);
+                  setPhase('prompt');
+                }}
+              />
+              <Button
+                label={t('ai.result.reviewInBuilder')}
+                size="lg"
+                loading={submitting}
+                onPress={() => void handleReviewInBuilder()}
+                style={{ flex: 1 }}
+              />
+            </Row>
+          </FooterBar>
+        </>
+      ) : null}
 
       <CreditSheet
         visible={sheetOpen}
@@ -347,37 +510,47 @@ export default function AiDraft() {
         onDismiss={() => setSheetOpen(false)}
       />
 
-      {discardOpen ? (
-        <View
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            padding: theme.space[4],
-            gap: theme.space[3],
-            backgroundColor: theme.colors.surfaceRaised,
-            borderTopWidth: 1,
-            borderTopColor: theme.colors.border,
-          }}
+      <Modal
+        visible={discardOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setDiscardOpen(false)}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('ai.result.discardCancel')}
+          onPress={() => setDiscardOpen(false)}
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}
         >
-          <Text variant="h3">{t('ai.result.discardTitle')}</Text>
-          <Text tone="secondary">{t('ai.result.discardBody')}</Text>
-          <Button
-            label={t('ai.result.discardConfirm')}
-            onPress={() => {
-              setDiscardOpen(false);
-              setDraft(null);
-              router.back();
+          <View
+            style={{
+              padding: theme.space[5],
+              gap: theme.space[3],
+              backgroundColor: theme.colors.surface,
+              borderTopLeftRadius: theme.radius.xl,
+              borderTopRightRadius: theme.radius.xl,
             }}
-          />
-          <Button
-            label={t('ai.result.discardCancel')}
-            variant="ghost"
-            onPress={() => setDiscardOpen(false)}
-          />
-        </View>
-      ) : null}
+          >
+            <Text variant="h3">{t('ai.result.discardTitle')}</Text>
+            <Text tone="secondary">{t('ai.result.discardBody')}</Text>
+            <Button
+              label={t('ai.result.discardConfirm')}
+              tone="danger"
+              size="lg"
+              onPress={() => {
+                setDiscardOpen(false);
+                setDraft(null);
+                router.back();
+              }}
+            />
+            <Button
+              label={t('ai.result.discardCancel')}
+              variant="ghost"
+              onPress={() => setDiscardOpen(false)}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }

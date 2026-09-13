@@ -1,8 +1,9 @@
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../lib/auth/AuthProvider';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { Text } from '../../../ui';
+import { Icon } from '../../../ui';
 
 /**
  * The PT's four top-level destinations: Today, Clients, Programs, Library.
@@ -15,8 +16,10 @@ import { Text } from '../../../ui';
  * by deep link (href: null removes them from the navigator entirely). One
  * tree, one branch — not a duplicated layout whose two copies drift.
  *
- * Icons are text glyphs on purpose: no icon font is in the dependency tree,
- * and M3 is not the milestone to add one. Revisit at M4.
+ * Icons come from ui/Icon, the app's own SVG set drawn on react-native-svg
+ * (already a dependency). They replace the text glyphs (◆ ◎ ▦ ▤) this tab bar
+ * shipped with, which rendered at a different weight and baseline on each
+ * platform and had no Android system-font coverage for two of the four.
  *
  * Href form, per the regenerated .expo/types/router.d.ts (that file is the
  * arbiter, not this comment — it is gitignored and regenerates with the dev
@@ -32,6 +35,16 @@ export default function TabsLayout() {
   const auth = useAuth();
   const isClient = auth.user?.role === 'client';
 
+  // TEMP DEBUG — remove once the client sign-in update loop is diagnosed.
+  // In an effect with no dependency array, so it runs once per COMMIT: counting
+  // in the render body both trips react-hooks/immutability and double-counts
+  // under StrictMode, which is the opposite of what a loop counter needs.
+  useEffect(() => {
+    const g = globalThis as unknown as { __tabsN?: number };
+    g.__tabsN = (g.__tabsN ?? 0) + 1;
+    if (g.__tabsN <= 60) console.log('[tabs]', g.__tabsN, 'isClient=', isClient);
+  });
+
   return (
     <Tabs
       tabBar={isClient ? () => null : undefined}
@@ -42,14 +55,21 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
+          borderTopWidth: 1,
+          height: 62,
+          paddingTop: 6,
         },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarItemStyle: { paddingVertical: 2 },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: t('common.tabs.today'),
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◆</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name="flame" size={23} color={color} strokeWidth={focused ? 2.2 : 1.8} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -57,7 +77,9 @@ export default function TabsLayout() {
         options={{
           title: t('common.tabs.clients'),
           href: isClient ? null : undefined,
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◎</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name="users" size={23} color={color} strokeWidth={focused ? 2.2 : 1.8} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -65,7 +87,9 @@ export default function TabsLayout() {
         options={{
           title: t('common.tabs.programs'),
           href: isClient ? null : undefined,
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▦</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name="calendar" size={23} color={color} strokeWidth={focused ? 2.2 : 1.8} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -73,7 +97,9 @@ export default function TabsLayout() {
         options={{
           title: t('common.tabs.library'),
           href: isClient ? null : undefined,
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▤</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name="dumbbell" size={23} color={color} strokeWidth={focused ? 2.2 : 1.8} />
+          ),
         }}
       />
     </Tabs>

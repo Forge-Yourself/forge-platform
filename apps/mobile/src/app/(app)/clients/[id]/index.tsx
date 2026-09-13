@@ -1,3 +1,4 @@
+import { weekCompletion } from '@forge/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,8 +7,26 @@ import { useAuth } from '../../../../lib/auth/AuthProvider';
 import { resendInvite, revokeInvite, setClientState } from '../../../../lib/clients/clientActions';
 import { useClientDetail } from '../../../../lib/clients/useClientDetail';
 import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
+import { useProgramList } from '../../../../lib/programs/useProgramList';
 import { useTheme } from '../../../../theme/ThemeProvider';
-import { Banner, Button, Card, ListRow, Row, SectionCard, Screen, Spinner, Text } from '../../../../ui';
+import {
+  Avatar,
+  Banner,
+  Button,
+  Card,
+  FooterBar,
+  Icon,
+  ListRow,
+  NavHeader,
+  Row,
+  Screen,
+  SectionCard,
+  SectionLabel,
+  Spinner,
+  StatTile,
+  Tag,
+  Text,
+} from '../../../../ui';
 
 type ConfirmAction = 'pause' | 'deactivate' | 'reactivate' | 'revoke';
 
@@ -21,12 +40,82 @@ function withUnit(value: number | null, unit: string): string {
   return value === null ? '—' : `${value} ${unit}`;
 }
 
+/** "Feb 26" — a stat tile has room for a month and a two-digit year, not a full date. */
+function shortMonthYear(iso: string | null): string {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+}
+
 /**
- * PT client detail — red-flag banner above the stats (warn, not danger, per
+ * The red-flag card.
+ *
+ * This was a plain one-line Banner, which put the single most important thing on
+ * the screen — the reason the PT opened it before session one — at the same visual
+ * weight as a form-validation message and gave it nothing to tap. It is warn, not
+ * danger: the flags need reading, not panic.
+ */
+function RedFlagCard({ count, onReview }: { count: number; onReview: () => void }) {
+  const { t } = useTranslation();
+  const theme = useTheme();
+
+  return (
+    <View
+      accessibilityRole="alert"
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.space[3],
+        padding: theme.space[4],
+        borderRadius: theme.radius.lg,
+        backgroundColor: theme.colors.warnSurface,
+      }}
+    >
+      <View
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          backgroundColor: theme.colors.warnAccent,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {/* `surface`, not `warnSurface`: the tinted chip fills are translucent in dark
+            mode, so drawing the glyph in one on top of the solid warn disc left it
+            invisible. The screen ground is the one value guaranteed to contrast with
+            warnAccent in both schemes. */}
+        <Icon name="warning" size={16} color={theme.colors.surface} strokeWidth={2.2} />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ fontSize: 13.5, fontWeight: '700', color: theme.colors.onWarnSurface }}>
+          {t('clients.detail.redFlagTitle', { count })}
+        </Text>
+        <Text style={{ fontSize: 12, color: theme.colors.onWarnSurface }}>
+          {t('clients.detail.redFlagBody')}
+        </Text>
+      </View>
+      <Button
+        label={t('clients.detail.redFlagAction')}
+        variant="link"
+        onPress={onReview}
+        style={{ paddingHorizontal: theme.space[2] }}
+      />
+    </View>
+  );
+}
+
+/**
+ * PT client detail — red-flag card above the stats (warn, not danger, per
  * the annotation), essentials from `intakeSummary()`, intake status that
  * shows counts only while pending/in_progress and never response content
- * (the UI-side half of Task 1's RLS guarantee), and state actions behind an
+ * (the UI-side half of M2's RLS guarantee), and state actions behind an
  * inline confirm card (same pattern as settings' MFA-unenroll confirm).
+ *
+ * "Start session" is pinned to the foot of the screen rather than sitting at the
+ * bottom of the scroll body, where a client with a full intake pushed it two
+ * screens down.
  */
 export default function ClientDetail() {
   const { t } = useTranslation();
@@ -38,12 +127,23 @@ export default function ClientDetail() {
     params.id,
     unitSystem,
   );
+  const programs = useProgramList('assigned');
   const { submitting, error: actionError, setError: setActionError, run } = useAsyncSubmit();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
+  const back = (
+    <Button
+      label={t('clients.title')}
+      icon="chevronBack"
+      variant="link"
+      onPress={() => router.back()}
+    />
+  );
+
   if (loading) {
     return (
-      <Screen>
+      <Screen padded={false}>
+        <NavHeader leading={back} divider={false} />
         <Spinner />
       </Screen>
     );
@@ -51,8 +151,11 @@ export default function ClientDetail() {
 
   if (error || !client) {
     return (
-      <Screen>
-        <Banner variant="danger" message={error ?? 'Not found'} />
+      <Screen padded={false}>
+        <NavHeader leading={back} divider={false} />
+        <View style={{ padding: theme.space[4] }}>
+          <Banner variant="danger" message={error ?? t('clients.offlineError.body')} />
+        </View>
       </Screen>
     );
   }
@@ -62,6 +165,20 @@ export default function ClientDetail() {
   const hasSubmittedIntake = intake !== null;
   const waiverSigned = intake?.state === 'waiver_signed';
   const startSessionEnabled = hasSubmittedIntake;
+
+  const clientProgram = programs.items.find((p) => p.client_id === client.id && p.state === 'active');
+  const programWeek = clientProgram
+    ? weekCompletion(
+        { duration_weeks: clientProgram.duration_weeks, start_date: clientProgram.start_date },
+        new Date(),
+      ).currentWeek
+    : null;
+
+  const intakeStat = hasSubmittedIntake
+    ? t('clients.detail.stats.intakeDone')
+    : progress
+      ? `${progress.answeredSections}/${progress.totalSections}`
+      : t('clients.detail.stats.none');
 
   async function handleConfirm() {
     if (!confirmAction) return;
@@ -73,7 +190,8 @@ export default function ClientDetail() {
           router.replace('/(app)/(tabs)/clients');
           return;
         }
-        const targetState = confirmAction === 'pause' ? 'paused' : confirmAction === 'deactivate' ? 'deactivated' : 'active';
+        const targetState =
+          confirmAction === 'pause' ? 'paused' : confirmAction === 'deactivate' ? 'deactivated' : 'active';
         await setClientState(client!.id, targetState);
         await refetch();
       } catch {
@@ -106,134 +224,193 @@ export default function ClientDetail() {
     revoke: { title: t('clients.detail.revokeConfirmTitle'), body: t('clients.detail.revokeConfirmBody') },
   };
 
+  const essentials: { label: string; value: string }[] = summary
+    ? [
+        { label: t('clients.detail.ageLabel'), value: String(summary.ageYears ?? '—') },
+        { label: t('clients.detail.sexLabel'), value: summary.sex ?? '—' },
+        {
+          label: t('clients.detail.heightLabel'),
+          value: withUnit(summary.height, t(unitSystem === 'imperial' ? 'units.inch' : 'units.cm')),
+        },
+        {
+          label: t('clients.detail.weightLabel'),
+          value: withUnit(summary.weight, t(unitSystem === 'imperial' ? 'units.lb' : 'units.kg')),
+        },
+        { label: t('clients.detail.goalLabel'), value: summary.primaryGoal ?? '—' },
+      ]
+    : [];
+
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
-        <Row>
-          <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
+    <Screen padded={false}>
+      <NavHeader leading={back} divider={false} />
+
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: theme.space[4],
+          paddingBottom: theme.space[5],
+          gap: theme.space[4],
+        }}
+      >
+        <Row style={{ gap: theme.space[4], paddingHorizontal: 4 }}>
+          <Avatar name={displayName} photoUrl={clientUser?.avatar_url} size={60} />
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text
+              accessibilityRole="header"
+              numberOfLines={1}
+              style={{ fontSize: 21, fontWeight: '800', letterSpacing: -0.3 }}
+            >
+              {displayName}
+            </Text>
+            <Text tone="muted" style={{ fontSize: 13 }}>
+              {t('clients.stateLabels.' + client.state)}
+              {clientProgram ? ` · ${clientProgram.name}` : ''}
+            </Text>
+          </View>
         </Row>
-        <Text variant="h1">{displayName}</Text>
-        <Text tone="secondary">{t(`clients.stateLabels.${client.state}`)}</Text>
 
         {flagCount > 0 ? (
-          <Banner
-            variant="warn"
-            message={t(flagCount === 1 ? 'clients.detail.redFlagBanner_one' : 'clients.detail.redFlagBanner_other', {
-              count: flagCount,
-            })}
+          <RedFlagCard
+            count={flagCount}
+            onReview={() =>
+              router.push({ pathname: '/(app)/clients/[id]/intake', params: { id: client.id } })
+            }
           />
         ) : null}
 
         {actionError ? <Banner variant="danger" message={actionError} /> : null}
 
-        {summary ? (
-          <Card>
-            <Text variant="label" tone="muted">
-              {t('clients.detail.essentialsTitle')}
-            </Text>
-            <Row style={{ justifyContent: 'space-between' }}>
-              <Text tone="secondary">{t('clients.detail.ageLabel')}</Text>
-              <Text numeric>{summary.ageYears ?? '—'}</Text>
-            </Row>
-            <Row style={{ justifyContent: 'space-between' }}>
-              <Text tone="secondary">{t('clients.detail.sexLabel')}</Text>
-              <Text>{summary.sex ?? '—'}</Text>
-            </Row>
-            <Row style={{ justifyContent: 'space-between' }}>
-              <Text tone="secondary">{t('clients.detail.heightLabel')}</Text>
-              <Text numeric>
-                {withUnit(summary.height, t(unitSystem === 'imperial' ? 'units.inch' : 'units.cm'))}
-              </Text>
-            </Row>
-            <Row style={{ justifyContent: 'space-between' }}>
-              <Text tone="secondary">{t('clients.detail.weightLabel')}</Text>
-              <Text numeric>
-                {withUnit(summary.weight, t(unitSystem === 'imperial' ? 'units.lb' : 'units.kg'))}
-              </Text>
-            </Row>
-            <Row style={{ justifyContent: 'space-between' }}>
-              <Text tone="secondary">{t('clients.detail.goalLabel')}</Text>
-              <Text>{summary.primaryGoal ?? '—'}</Text>
-            </Row>
-          </Card>
-        ) : null}
+        <Row style={{ gap: theme.space[2], alignItems: 'stretch' }}>
+          <StatTile label={t('clients.detail.stats.since')} value={shortMonthYear(client.created_at)} />
+          <StatTile
+            label={t('clients.detail.stats.week')}
+            value={programWeek === null ? t('clients.detail.stats.none') : String(programWeek)}
+          />
+          <StatTile
+            label={t('clients.detail.stats.intake')}
+            value={intakeStat}
+            tone={hasSubmittedIntake ? 'neutral' : 'accent'}
+          />
+        </Row>
 
-        <SectionCard>
-          <ListRow
-            title={t('clients.detail.intakeTitle')}
-            subtitle={
-              !progress
-                ? t('clients.detail.intakeNotStarted')
-                : hasSubmittedIntake
-                  ? t(`clients.stateLabels.${client.state}`)
-                  : t('clients.detail.intakeProgress', {
-                      answered: progress.answeredSections,
-                      total: progress.totalSections,
-                    })
-            }
-            trailing={
-              hasSubmittedIntake ? (
-                <Button
-                  label={t('clients.detail.reviewIntake')}
-                  variant="ghost"
-                  onPress={() =>
-                    router.push({ pathname: '/(app)/clients/[id]/intake', params: { id: client.id } })
+        {essentials.length > 0 ? (
+          <View style={{ gap: theme.space[2] }}>
+            <SectionLabel>{t('clients.detail.essentialsTitle')}</SectionLabel>
+            <SectionCard>
+              {essentials.map((entry, index) => (
+                <ListRow
+                  key={entry.label}
+                  minHeight={48}
+                  title={entry.label}
+                  chevron={false}
+                  isLast={index === essentials.length - 1}
+                  trailing={
+                    <Text numeric style={{ fontSize: 14, fontWeight: '600' }}>
+                      {entry.value}
+                    </Text>
                   }
                 />
-              ) : undefined
-            }
-            isLast={!waiverSigned}
-          />
-          {waiverSigned ? (
-            <ListRow title={t('clients.detail.waiverSigned')} isLast />
-          ) : hasSubmittedIntake ? (
-            <ListRow title={t('clients.detail.waiverUnsigned')} isLast />
-          ) : null}
-        </SectionCard>
-
-        {client.state === 'invited' ? (
-          <Row style={{ gap: theme.space[3] }}>
-            <Button
-              label={t('clients.detail.resendInvite')}
-              variant="ghost"
-              onPress={() => void handleResend()}
-              disabled={submitting}
-              style={{ flex: 1 }}
-            />
-            <Button
-              label={t('clients.detail.revokeInvite')}
-              variant="ghost"
-              onPress={() => setConfirmAction('revoke')}
-              disabled={submitting}
-              style={{ flex: 1 }}
-            />
-          </Row>
+              ))}
+            </SectionCard>
+          </View>
         ) : null}
 
-        {client.state === 'active' || client.state === 'accepted' ? (
-          <Button label={t('clients.detail.pause')} variant="ghost" onPress={() => setConfirmAction('pause')} />
-        ) : null}
-        {client.state === 'paused' ? (
-          <Button
-            label={t('clients.detail.reactivate')}
-            variant="ghost"
-            onPress={() => setConfirmAction('reactivate')}
-          />
-        ) : null}
-        {client.state !== 'deactivated' && client.state !== 'invited' ? (
-          <Button
-            label={t('clients.detail.deactivate')}
-            variant="ghost"
-            onPress={() => setConfirmAction('deactivate')}
-          />
-        ) : null}
-        {client.state === 'deactivated' ? (
-          <Button
-            label={t('clients.detail.reactivate')}
-            variant="ghost"
-            onPress={() => setConfirmAction('reactivate')}
-          />
-        ) : null}
+        <View style={{ gap: theme.space[2] }}>
+          <SectionLabel>{t('clients.detail.intakeTitle')}</SectionLabel>
+          <SectionCard>
+            <ListRow
+              title={t('clients.detail.intakeTitle')}
+              subtitle={
+                !progress
+                  ? t('clients.detail.intakeNotStarted')
+                  : hasSubmittedIntake
+                    ? undefined
+                    : t('clients.detail.intakeProgress', {
+                        answered: progress.answeredSections,
+                        total: progress.totalSections,
+                      })
+              }
+              chevron={hasSubmittedIntake}
+              onPress={
+                hasSubmittedIntake
+                  ? () => router.push({ pathname: '/(app)/clients/[id]/intake', params: { id: client.id } })
+                  : undefined
+              }
+              trailing={
+                hasSubmittedIntake ? (
+                  <Tag label={t('clients.detail.stats.intakeDone')} tone="success" />
+                ) : undefined
+              }
+              isLast={!hasSubmittedIntake}
+            />
+            {hasSubmittedIntake ? (
+              <ListRow
+                leading={<Icon name="document" size={19} color={theme.colors.textMuted} />}
+                title={t('clients.detail.waiverHeading')}
+                chevron={false}
+                trailing={
+                  <Tag
+                    label={
+                      waiverSigned
+                        ? t('clients.detail.waiverTagSigned')
+                        : t('clients.detail.waiverTagUnsigned')
+                    }
+                    tone={waiverSigned ? 'success' : 'warn'}
+                  />
+                }
+                isLast
+              />
+            ) : null}
+          </SectionCard>
+        </View>
+
+        <View style={{ gap: theme.space[2] }}>
+          <SectionLabel>{t('clients.detail.manageHeading')}</SectionLabel>
+          <SectionCard>
+            {client.state === 'invited' ? (
+              <ListRow
+                title={t('clients.detail.resendInvite')}
+                onPress={() => void handleResend()}
+                chevron={false}
+                trailing={<Icon name="mail" size={19} color={theme.colors.textMuted} />}
+              />
+            ) : null}
+            {client.state === 'invited' ? (
+              <ListRow
+                title={t('clients.detail.revokeInvite')}
+                onPress={() => setConfirmAction('revoke')}
+                chevron={false}
+                trailing={<Icon name="trash" size={19} color={theme.colors.dangerAccent} />}
+                isLast
+              />
+            ) : null}
+            {client.state === 'active' || client.state === 'accepted' ? (
+              <ListRow
+                title={t('clients.detail.pause')}
+                onPress={() => setConfirmAction('pause')}
+                chevron={false}
+                trailing={<Icon name="clock" size={19} color={theme.colors.textMuted} />}
+              />
+            ) : null}
+            {client.state === 'paused' || client.state === 'deactivated' ? (
+              <ListRow
+                title={t('clients.detail.reactivate')}
+                onPress={() => setConfirmAction('reactivate')}
+                chevron={false}
+                trailing={<Icon name="check" size={19} color={theme.colors.successAccent} />}
+                isLast={client.state === 'deactivated'}
+              />
+            ) : null}
+            {client.state !== 'deactivated' && client.state !== 'invited' ? (
+              <ListRow
+                title={t('clients.detail.deactivate')}
+                onPress={() => setConfirmAction('deactivate')}
+                chevron={false}
+                trailing={<Icon name="trash" size={19} color={theme.colors.dangerAccent} />}
+                isLast
+              />
+            ) : null}
+          </SectionCard>
+        </View>
 
         {confirmAction ? (
           <Card style={{ borderColor: theme.colors.dangerAccent, gap: theme.space[3] }}>
@@ -250,32 +427,33 @@ export default function ClientDetail() {
               />
               <Button
                 label={t('clients.detail.confirm')}
+                tone="danger"
+                loading={submitting}
                 onPress={() => void handleConfirm()}
-                disabled={submitting}
                 style={{ flex: 1 }}
               />
             </Row>
           </Card>
         ) : null}
-
-        <View style={{ marginTop: theme.space[6] }}>
-          <Button
-            label={t('clients.detail.startSession')}
-            size="lg"
-            disabled={!startSessionEnabled}
-            onPress={() => {
-              // Session logging is M4 — this button exists now and is
-              // correctly gated on submitted intake (EP-03's own acceptance
-              // criterion), but there is nowhere to route it to yet.
-            }}
-          />
-          <Text tone="muted" style={{ marginTop: theme.space[2] }}>
-            {startSessionEnabled
-              ? t('clients.detail.startSessionComingSoon')
-              : t('clients.detail.startSessionBlocked')}
-          </Text>
-        </View>
       </ScrollView>
+
+      <FooterBar>
+        <Button
+          label={t('clients.detail.startSession')}
+          size="lg"
+          disabled={!startSessionEnabled}
+          onPress={() => {
+            // Session logging is M4 — this button exists now and is correctly gated
+            // on submitted intake (EP-03's own acceptance criterion), but there is
+            // nowhere to route it to yet.
+          }}
+        />
+        <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
+          {startSessionEnabled
+            ? t('clients.detail.startSessionComingSoon')
+            : t('clients.detail.startSessionBlocked')}
+        </Text>
+      </FooterBar>
     </Screen>
   );
 }

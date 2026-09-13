@@ -1,18 +1,4 @@
 {
-  "boot": {
-    "tagline": "Forge yourself.",
-    "status": "Foundation online",
-    "scheme": "Theme",
-    "schemeLight": "Light",
-    "schemeDark": "Dark",
-    "direction": "Direction",
-    "language": "Language",
-    "switchLanguage": "العربية",
-    "connection": "Supabase",
-    "connectionChecking": "Checking…",
-    "connectionOk": "Reachable",
-    "connectionFailed": "Unreachable"
-  },
   "common": {
     "retry": "Retry",
     "cancel": "Cancel",
@@ -22,12 +8,63 @@
     "save": "Save",
     "finish": "Finish",
     "close": "Close",
+    "datePicker": {
+      "open": "Choose a date",
+      "title": "Choose a date",
+      "clear": "Clear",
+      "done": "Done",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "chooseYear": "Choose a year"
+    },
     "tabs": {
       "today": "Today",
       "clients": "Clients",
       "programs": "Programs",
       "library": "Library"
-    }
+    },
+    "seeAll": "See all",
+    "loadMore": "Load more",
+    "done": "Done",
+    "share": "Share"
+  },
+  "home": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "stats": {
+      "clients": "Clients",
+      "programs": "Running",
+      "credits": "AI credits"
+    },
+    "attention": {
+      "heading": "Needs attention",
+      "allClearTitle": "Nothing waiting on you",
+      "allClearBody": "Every client is linked, reviewed and programmed.",
+      "invited": "Invite not accepted yet",
+      "redFlags_one": "1 intake answer to review",
+      "redFlags_other": "{{count}} intake answers to review",
+      "waiver": "Waiver not signed yet",
+      "noProgram": "No program assigned",
+      "tagInvited": "INVITED",
+      "tagFlags": "REVIEW",
+      "tagWaiver": "WAIVER",
+      "tagProgram": "PROGRAM"
+    },
+    "actions": {
+      "heading": "Quick actions",
+      "invite": "Invite a client",
+      "newProgram": "New program",
+      "aiDraft": "Draft with AI",
+      "library": "Exercises"
+    },
+    "roster": {
+      "heading": "Your roster",
+      "seeAll": "See all",
+      "more_one": "{{count}} more client",
+      "more_other": "{{count}} more clients"
+    },
+    "error": "Couldn't load your dashboard."
   },
   "auth": {
     "signIn": {
@@ -36,8 +73,10 @@
       "passwordLabel": "Password",
       "submit": "Sign in",
       "forgotPassword": "Forgot password?",
-      "noAccount": "No account? Sign up"
+      "noAccountPrefix": "No account?",
+      "noAccountAction": "Sign up"
     },
+    "orDivider": "or",
     "google": {
       "continue": "Continue with Google"
     },
@@ -49,7 +88,8 @@
       "passwordLabel": "Password",
       "termsLabel": "I agree to the Terms of Service and Privacy Policy",
       "submit": "Create account",
-      "haveAccount": "Already have an account? Sign in"
+      "haveAccountPrefix": "Already have an account?",
+      "haveAccountAction": "Sign in"
     },
     "verifyPending": {
       "title": "Check your email",
@@ -331,8 +371,24 @@
       "revokeConfirmTitle": "Revoke this invite?",
       "revokeConfirmBody": "The link will stop working immediately.",
       "changeEmail": "Change invite email",
-      "actionError": "Something went wrong. Please try again."
-    }
+      "actionError": "Something went wrong. Please try again.",
+      "stats": {
+        "since": "Since",
+        "week": "Week",
+        "intake": "Intake",
+        "intakeDone": "DONE",
+        "none": "—"
+      },
+      "redFlagTitle_one": "1 red flag in the intake",
+      "redFlagTitle_other": "{{count}} red flags in the intake",
+      "redFlagBody": "Read these before the first session.",
+      "redFlagAction": "Review",
+      "waiverHeading": "Waiver",
+      "waiverTagSigned": "SIGNED",
+      "waiverTagUnsigned": "UNSIGNED",
+      "manageHeading": "Manage"
+    },
+    "countFooter": "{{shown}} of {{total}} clients"
   },
   "intake": {
     "stepOf": "Step {{step}} of {{total}}",
@@ -369,6 +425,7 @@
     },
     "history": {
       "yearsTrainingLabel": "Years of training experience",
+      "yearsTrainingHelper": "{{min}}–{{max}} years",
       "injuriesLabel": "Past injuries or surgeries",
       "previousProgramsLabel": "Programs you've followed before"
     },
@@ -378,7 +435,9 @@
       "sexMale": "Male",
       "sexFemale": "Female",
       "heightLabel": "Height",
-      "weightLabel": "Weight"
+      "heightHelper": "{{min}}–{{max}} cm",
+      "weightLabel": "Weight",
+      "weightHelper": "{{min}}–{{max}} kg"
     },
     "dietary": {
       "restrictionsLabel": "Dietary restrictions",
@@ -390,6 +449,14 @@
       "restriction_dairy_free": "Dairy-free",
       "restriction_nut_allergy": "Nut allergy",
       "notesLabel": "Anything else your trainer should know?"
+    },
+    "validation": {
+      "notANumber": "Enter a number",
+      "belowMin": "Must be at least {{min}}",
+      "aboveMax": "Must be {{max}} or less",
+      "dateMalformed": "That isn't a real date",
+      "dateBeforeMin": "Choose a date on or after {{min}}",
+      "dateAfterMax": "Choose a date on or before {{max}}"
     },
     "resume": {
       "title": "Welcome back",
@@ -453,7 +520,7 @@
     }
   },
   "library": {
-    "title": "Library",
+    "title": "Exercises",
     "searchPlaceholder": "Search {{count}} exercises",
     "mineTag": "MINE",
     "filterGroups": {
@@ -559,7 +626,9 @@
       "save": "Save to my library",
       "successTitle": "Saved to your library",
       "error": "Couldn't save the exercise. Please try again."
-    }
+    },
+    "customAction": "+ Custom",
+    "loadMore": "Load more"
   },
   "programs": {
     "title": "Programs",
@@ -604,7 +673,9 @@
       "templateLabel": "Save as a template",
       "create": "Create program",
       "error": "Couldn't create the program. Please try again."
-    }
+    },
+    "assignedTag": "ASSIGNED",
+    "unassigned": "No client yet"
   },
   "builder": {
     "save": "Save",

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseCalendarDate, toCalendarDate } from './dates';
+import {
+  checkCalendarDate,
+  parseCalendarDate,
+  shiftCalendarYears,
+  toCalendarDate,
+  todayCalendarDate,
+} from './dates';
 
 describe('parseCalendarDate', () => {
   it('parses a calendar date as local midnight, not UTC midnight', () => {
@@ -63,5 +69,61 @@ describe('toCalendarDate', () => {
     const parsed = parseCalendarDate(original);
     expect(parsed).not.toBeNull();
     expect(toCalendarDate(parsed as Date)).toBe(original);
+  });
+});
+
+describe('todayCalendarDate', () => {
+  it('is the local calendar day, matching toCalendarDate(new Date())', () => {
+    expect(todayCalendarDate()).toBe(toCalendarDate(new Date()));
+  });
+});
+
+describe('shiftCalendarYears', () => {
+  it('moves a date by whole years', () => {
+    expect(shiftCalendarYears('2026-09-14', 10)).toBe('2036-09-14');
+    expect(shiftCalendarYears('2026-09-14', -30)).toBe('1996-09-14');
+  });
+
+  it('clamps Feb 29 to Feb 28 rather than rolling into March', () => {
+    expect(shiftCalendarYears('2028-02-29', 1)).toBe('2029-02-28');
+    // …and keeps the 29th when the target year is also a leap year.
+    expect(shiftCalendarYears('2028-02-29', 4)).toBe('2032-02-29');
+  });
+
+  it('passes a malformed value straight through rather than inventing a date', () => {
+    expect(shiftCalendarYears('not a date', 1)).toBe('not a date');
+  });
+});
+
+describe('checkCalendarDate', () => {
+  it('treats an unanswered field as fine, not as an error', () => {
+    expect(checkCalendarDate('')).toBeNull();
+    expect(checkCalendarDate('   ')).toBeNull();
+    expect(checkCalendarDate(null)).toBeNull();
+    expect(checkCalendarDate(undefined)).toBeNull();
+  });
+
+  it('reports malformed for both bad shapes and impossible days', () => {
+    expect(checkCalendarDate('14/09/2026')).toBe('malformed');
+    expect(checkCalendarDate('next June')).toBe('malformed');
+    expect(checkCalendarDate('2026-02-30')).toBe('malformed');
+    expect(checkCalendarDate('2026-13-40')).toBe('malformed');
+  });
+
+  it('reports which bound was crossed', () => {
+    const bounds = { min: '2026-01-01', max: '2026-12-31' };
+    expect(checkCalendarDate('2025-12-31', bounds)).toBe('before_min');
+    expect(checkCalendarDate('2027-01-01', bounds)).toBe('after_max');
+    expect(checkCalendarDate('2026-06-15', bounds)).toBeNull();
+  });
+
+  it('treats both bounds as inclusive', () => {
+    const bounds = { min: '2026-01-01', max: '2026-12-31' };
+    expect(checkCalendarDate('2026-01-01', bounds)).toBeNull();
+    expect(checkCalendarDate('2026-12-31', bounds)).toBeNull();
+  });
+
+  it('checks the shape before the bounds, so garbage is never a range error', () => {
+    expect(checkCalendarDate('2026-02-30', { min: '2026-01-01' })).toBe('malformed');
   });
 });

@@ -6,7 +6,18 @@ import { useTranslation } from 'react-i18next';
 import { I18nManager, ScrollView, View } from 'react-native';
 import { supabase } from '../../../../lib/supabase';
 import { useTheme } from '../../../../theme/ThemeProvider';
-import { Banner, Button, Row, Screen, SectionCard, Spinner, Text } from '../../../../ui';
+import {
+  Banner,
+  Button,
+  NavHeader,
+  Row,
+  Screen,
+  SectionCard,
+  SectionLabel,
+  Spinner,
+  Tag,
+  Text,
+} from '../../../../ui';
 
 type IntakeFormRow = Database['public']['Tables']['intake_forms']['Row'];
 
@@ -52,18 +63,31 @@ export default function IntakeReview() {
     };
   }, [params.id]);
 
+  // Both of these were dead ends: no header, no back control, and every stack in
+  // this app sets headerShown: false — so a PT who opened a still-pending intake
+  // could only leave with the Android hardware button.
+  const back = (
+    <Button label={t('common.back')} icon="chevronBack" variant="link" onPress={() => router.back()} />
+  );
+
   if (state.loading) {
     return (
-      <Screen>
-        <Spinner />
+      <Screen padded={false}>
+        <NavHeader leading={back} title={t('intake.review.title')} />
+        <View style={{ padding: theme.space[5] }}>
+          <Spinner />
+        </View>
       </Screen>
     );
   }
 
   if (!state.intake) {
     return (
-      <Screen>
-        <Banner variant="info" message={t('intake.review.notSubmittedYet')} />
+      <Screen padded={false}>
+        <NavHeader leading={back} title={t('intake.review.title')} />
+        <View style={{ padding: theme.space[4] }}>
+          <Banner variant="info" message={t('intake.review.notSubmittedYet')} />
+        </View>
       </Screen>
     );
   }
@@ -89,13 +113,18 @@ export default function IntakeReview() {
   }
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
-        <Row>
-          <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
-        </Row>
-        <Text variant="h1">{t('intake.review.title')}</Text>
-
+    <Screen padded={false}>
+      <NavHeader
+        title={t('intake.review.title')}
+        leading={back}
+      />
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: theme.space[4],
+          paddingVertical: theme.space[4],
+          gap: theme.space[4],
+        }}
+      >
         <SectionCard>
           {PARQ_QUESTIONS.map((q, i) => {
             const isFlagged = flags.has(q);
@@ -131,9 +160,11 @@ export default function IntakeReview() {
                   {value === true ? t('intake.parq.yes') : value === false ? t('intake.parq.no') : '—'}
                 </Text>
                 {isFlagged ? (
-                  <Text variant="caption" style={{ color: theme.colors.onDangerSurface, marginTop: 2 }}>
-                    {t('intake.review.flaggedLabel')}
-                  </Text>
+                  <Tag
+                    tone="danger"
+                    label={t('intake.review.flaggedLabel')}
+                    style={{ marginTop: 6 }}
+                  />
                 ) : null}
               </View>
             );
@@ -145,9 +176,7 @@ export default function IntakeReview() {
           if (rows.length === 0) return null;
           return (
             <View key={section.id} style={{ gap: theme.space[2] }}>
-              <Text variant="label" tone="muted">
-                {t(`intake.steps.${section.id}`)}
-              </Text>
+              <SectionLabel>{t(`intake.steps.${section.id}`)}</SectionLabel>
               <SectionCard>
                 {rows.map((row, i) => (
                   <Row key={row.label} style={{ justifyContent: 'space-between', padding: theme.space[3], borderBottomWidth: i === rows.length - 1 ? 0 : 1, borderBottomColor: theme.colors.border }}>

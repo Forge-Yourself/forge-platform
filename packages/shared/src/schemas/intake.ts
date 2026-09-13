@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { parseCalendarDate } from './dates';
+import { checkCalendarDate, parseCalendarDate, shiftCalendarYears, todayCalendarDate } from './dates';
 
 /**
  * The seven fixed PAR-Q ids. Mirrored byte-for-byte by the ARRAY literal in
@@ -48,17 +48,87 @@ export const parqResponsesSchema = z.object(
 );
 export type ParqResponses = z.infer<typeof parqResponsesSchema>;
 
+/**
+ * Bounds for the intake's three free-typed numbers, shared by the zod schemas
+ * below and by the form's inline validation, so the range the client is told
+ * about and the range the schema accepts cannot drift apart.
+ *
+ * These are sanity rails, not clinical limits: wide enough that no real client
+ * is turned away, narrow enough to catch the unit slip (a height typed in
+ * metres, a weight typed in pounds-as-kilos) and the stray extra digit.
+ */
+export const INTAKE_LIMITS = {
+  years_training: { min: 0, max: 80 },
+  height_cm: { min: 50, max: 280 },
+  weight_kg: { min: 20, max: 400 },
+} as const;
+
+export type IntakeNumericField = keyof typeof INTAKE_LIMITS;
+
+/**
+ * A birthday earlier than this is a typo, not a client. Deliberately NOT a
+ * minimum-age rule: whether Forge accepts minors, and with what guardian
+ * consent, is a product and compliance decision (EP-20) and not something this
+ * field should invent by refusing a 15-year-old's real birthday.
+ */
+export const DATE_OF_BIRTH_EARLIEST = '1900-01-01';
+
+/** A goal more than this far out is a typed year, not a plan. */
+export const TARGET_DATE_MAX_YEARS_AHEAD = 10;
+
+/** The selectable window for each of the intake's two dates, as of today. */
+export function intakeDateBounds(): {
+  date_of_birth: { min: string; max: string };
+  target_date: { min: string; max: string };
+} {
+  const today = todayCalendarDate();
+  return {
+    // Born today at the latest — a future birthday is always a mistake.
+    date_of_birth: { min: DATE_OF_BIRTH_EARLIEST, max: today },
+    // A target date is a date to train towards, so today is the earliest useful one.
+    target_date: { min: today, max: shiftCalendarYears(today, TARGET_DATE_MAX_YEARS_AHEAD) },
+  };
+}
+
+/**
+ * Why a typed number is not acceptable, or null when it is fine (or empty —
+ * every field on the intake but PAR-Q is optional).
+ */
+export type NumericFieldProblem = 'not_a_number' | 'below_min' | 'above_max';
+
+export function checkNumericField(text: string, field: IntakeNumericField): NumericFieldProblem | null {
+  const trimmed = text.trim();
+  if (trimmed === '') return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value)) return 'not_a_number';
+  const { min, max } = INTAKE_LIMITS[field];
+  if (value < min) return 'below_min';
+  if (value > max) return 'above_max';
+  return null;
+}
+
+/**
+ * A `DATE` column's value, validated as a real calendar day inside `bounds`.
+ * Bare `z.string()` let "not a date at all" through to the database and on to
+ * intakeSummary(), where a garbage date_of_birth silently showed the PT no age.
+ */
+function calendarDateSchema(bounds: () => { min: string; max: string }) {
+  return z.string().refine((value) => checkCalendarDate(value, bounds()) === null, {
+    message: 'Enter a real date inside the allowed range',
+  });
+}
+
 export const goalsResponsesSchema = z
   .object({
     primary_goal: z.string().trim().min(1).max(200),
-    target_date: z.string(),
+    target_date: calendarDateSchema(() => intakeDateBounds().target_date),
     motivation: z.string().max(500),
   })
   .partial();
 
 export const historyResponsesSchema = z
   .object({
-    years_training: z.number().nonnegative(),
+    years_training: z.number().min(INTAKE_LIMITS.years_training.min).max(INTAKE_LIMITS.years_training.max),
     injuries: z.string().max(500),
     previous_programs: z.string().max(500),
   })
@@ -66,10 +136,10 @@ export const historyResponsesSchema = z
 
 export const anthropometricsResponsesSchema = z
   .object({
-    date_of_birth: z.string(),
+    date_of_birth: calendarDateSchema(() => intakeDateBounds().date_of_birth),
     sex: z.enum(['male', 'female']),
-    height_cm: z.number().positive(),
-    weight_kg: z.number().positive(),
+    height_cm: z.number().min(INTAKE_LIMITS.height_cm.min).max(INTAKE_LIMITS.height_cm.max),
+    weight_kg: z.number().min(INTAKE_LIMITS.weight_kg.min).max(INTAKE_LIMITS.weight_kg.max),
   })
   .partial();
 
@@ -114,19 +184,49 @@ export function evaluateParq(responses: Partial<Record<ParqQuestionId, boolean>>
 }
 
 /**
- * `stepStatus` marks a section complete once its top-level key exists in
- * `responses`, regardless of how thoroughly that section's own fields were
- * filled — "step count is the honest signal of remaining work" per the
- * annotation, not a percentage of fields answered. Matches the shape
- * `intake_progress()`'s SQL returns (state + counts, never content).
+ * Is this one field actually answered?
+ *
+ * Deliberately not a truthiness test: `years_training: 0` is a real answer from a
+ * beginner and `parq_heart: false` is the answer that matters most, so only
+ * undefined/null, the empty string and the empty array count as unanswered.
+ */
+function hasAnswer(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.trim() !== '';
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
+/**
+ * `stepStatus` marks a section complete when it actually holds an answer — not
+ * when its top-level key merely exists.
+ *
+ * Key presence was the original rule, and it made the resume checklist lie: the
+ * intake screen seeds its state from `emptyResponses()`, which sets every section
+ * to `{}` so the typed shape is whole, so all five sections were "complete" before
+ * the client had typed anything. A client who saved and exited at step 1 came back
+ * to five ticks, and `goToFirstIncompleteStep()` found no incomplete step and
+ * dropped them on step 5 with the PAR-Q never asked.
+ *
+ * PAR-Q is the one section with a stricter rule than "at least one field": it is a
+ * seven-question safety screen and a partially answered one is not a screen, so it
+ * counts only once every question has a boolean — the same gate the wizard's own
+ * Continue button uses.
  */
 export function intakeCompletion(responses: Partial<IntakeResponses>): {
   answered: number;
   total: number;
   stepStatus: Record<IntakeSectionId, boolean>;
 } {
+  const parq = responses.parq;
+  const parqComplete = parq !== undefined && PARQ_QUESTIONS.every((q) => typeof parq[q] === 'boolean');
+
   const stepStatus = Object.fromEntries(
-    INTAKE_TEMPLATE_V1.map((section) => [section.id, responses[section.id] !== undefined]),
+    INTAKE_TEMPLATE_V1.map((section) => {
+      if (section.id === 'parq') return [section.id, parqComplete];
+      const values = responses[section.id];
+      return [section.id, values !== undefined && Object.values(values).some(hasAnswer)];
+    }),
   ) as Record<IntakeSectionId, boolean>;
 
   return {

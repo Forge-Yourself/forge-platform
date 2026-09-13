@@ -1,8 +1,8 @@
-import { weekCompletion, type WeekProgressState } from '@forge/shared';
+import { weekCompletion } from '@forge/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, ScrollView, View } from 'react-native';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { createProgram } from '../../../lib/programs/programActions';
 import {
@@ -12,62 +12,153 @@ import {
 } from '../../../lib/programs/useProgramList';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
+  Avatar,
   Banner,
   Button,
-  ListRow,
+  Card,
+  EmptyState,
+  IconButton,
+  NavHeader,
   Row,
   Screen,
-  SectionCard,
+  ScreenHeader,
+  SectionLabel,
   SegmentedPill,
   Skeleton,
+  Tag,
   Text,
   TextField,
   Toggle,
+  WeekStrip,
+  type TagTone,
 } from '../../../ui';
 
 const WEEK_OPTIONS = [4, 6, 8, 12];
 
 /**
- * The week strip under an assigned program: filled bars for weeks that have
- * passed, an outlined one for the live week. Mono bars, no percentages — the
- * annotation is explicit that this is a glance, not a metric.
+ * An assigned program, drawn as a card rather than a list row.
+ *
+ * The week strip belongs here, inside the card it describes. It used to render as
+ * a second, detached list below the roster — every program's name repeated once
+ * more above a bar row with no visual tie to the card it summarised.
  */
-function WeekStrip({ program }: { program: ProgramListItem }) {
+function ProgramCard({ program }: { program: ProgramListItem }) {
+  const { t } = useTranslation();
   const theme = useTheme();
-  const { weeks } = weekCompletion(
+
+  const isDraft = program.state === 'draft';
+  const { weeks, currentWeek } = weekCompletion(
     { duration_weeks: program.duration_weeks, start_date: program.start_date },
     new Date(),
   );
 
-  const colorFor = (state: WeekProgressState) => {
-    if (state === 'done') return theme.colors.accent;
-    if (state === 'current') return theme.colors.accentSurfaceSoft;
-    return theme.colors.surfaceSunken;
-  };
+  const tag: { label: string; tone: TagTone } | null = isDraft
+    ? { label: t('programs.draftTag'), tone: 'warn' }
+    : currentWeek === null
+      ? null
+      : { label: t('programs.weekTag', { week: currentWeek }), tone: 'accent' };
 
   return (
-    <View style={{ flexDirection: 'row', gap: 3, marginTop: 6 }}>
-      {weeks.map((week) => (
-        <View
-          key={week.weekNumber}
-          style={{
-            flex: 1,
-            height: 4,
-            borderRadius: 2,
-            backgroundColor: colorFor(week.state),
-            borderWidth: week.state === 'current' ? 1 : 0,
-            borderColor: theme.colors.accent,
-          }}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={program.name}
+      onPress={() =>
+        router.push({ pathname: '/(app)/programs/[id]/builder', params: { id: program.id } })
+      }
+      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+    >
+      <Card style={{ gap: theme.space[2], padding: 15 }}>
+        <Row style={{ gap: theme.space[3] }}>
+          <Avatar name={program.clientName ?? '—'} size={34} />
+          <View style={{ flex: 1, gap: 1 }}>
+            <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700' }}>
+              {program.name}
+            </Text>
+            <Text numberOfLines={1} tone="muted" style={{ fontSize: 12.5 }}>
+              {program.clientName ?? t('programs.unassigned')}
+            </Text>
+          </View>
+          {tag ? <Tag label={tag.label} tone={tag.tone} numeric={!isDraft} /> : null}
+        </Row>
+
+        {isDraft ? null : (
+          <WeekStrip
+            weeks={weeks}
+            label={t('clientHome.program.weekOf', {
+              week: currentWeek ?? 1,
+              total: program.duration_weeks,
+            })}
+          />
+        )}
+
+        <Text numeric tone="muted" style={{ fontSize: 11.5 }}>
+          {program.is_ai_generated && isDraft
+            ? t('programs.aiDraftMeta', { weeks: program.duration_weeks })
+            : t('programs.meta', {
+                weeks: program.duration_weeks,
+                days: program.days_per_week,
+                exercises: program.exercise_count,
+              })}
+        </Text>
+      </Card>
+    </Pressable>
+  );
+}
+
+/**
+ * A template. No week strip and no client — a template is not running anywhere.
+ * Assign is inline because, per the design annotation, it is the only thing a PT
+ * does from this list.
+ */
+function TemplateCard({ program }: { program: ProgramListItem }) {
+  const { t } = useTranslation();
+  const theme = useTheme();
+
+  return (
+    <Card style={{ gap: theme.space[2], padding: 15 }}>
+      <Row style={{ gap: theme.space[3] }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={program.name}
+          onPress={() =>
+            router.push({ pathname: '/(app)/programs/[id]/builder', params: { id: program.id } })
+          }
+          style={{ flex: 1, gap: 2 }}
+        >
+          <Text numberOfLines={2} style={{ fontSize: 15, fontWeight: '700' }}>
+            {program.name}
+          </Text>
+          <Text numeric tone="muted" style={{ fontSize: 11.5 }}>
+            {t('programs.meta', {
+              weeks: program.duration_weeks,
+              days: program.days_per_week,
+              exercises: program.exercise_count,
+            })}
+          </Text>
+        </Pressable>
+        <Button
+          label={t('programs.assignAction')}
+          variant="ghost"
+          onPress={() =>
+            router.push({
+              pathname: '/(app)/programs/[id]/assign',
+              params: { id: program.id, template: '1' },
+            })
+          }
         />
-      ))}
-    </View>
+      </Row>
+      {program.description ? (
+        <Text tone="secondary" style={{ fontSize: 12.5, lineHeight: 19 }}>
+          {program.description}
+        </Text>
+      ) : null}
+    </Card>
   );
 }
 
 /**
  * Program and template lists. Assigned | Templates is one route behind a
- * SegmentedPill, not two routes, per the annotation. Templates carry an
- * inline Assign because that is the only thing a PT does from that list.
+ * SegmentedPill, not two routes, per the annotation.
  */
 export default function ProgramsIndex() {
   const { t } = useTranslation();
@@ -97,33 +188,20 @@ export default function ProgramsIndex() {
     });
   }
 
-  const metaFor = (program: ProgramListItem) =>
-    t('programs.meta', {
-      weeks: program.duration_weeks,
-      days: program.days_per_week,
-      exercises: program.exercise_count,
-    });
-
-  const tagFor = (program: ProgramListItem) => {
-    if (program.is_ai_generated && program.state === 'draft') return t('programs.draftTag');
-    if (program.state === 'draft') return t('programs.draftTag');
-    const { currentWeek } = weekCompletion(
-      { duration_weeks: program.duration_weeks, start_date: program.start_date },
-      new Date(),
-    );
-    return currentWeek === null ? null : t('programs.weekTag', { week: currentWeek });
-  };
-
   const emptyCopy = tab === 'templates' ? 'programs.emptyTemplates' : 'programs.empty';
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[4] }} keyboardShouldPersistTaps="handled">
-        <Row style={{ justifyContent: 'space-between' }}>
-          <Text variant="h1">{t('programs.title')}</Text>
-          <Button label={t('programs.newProgram')} onPress={() => setCreateOpen(true)} />
-        </Row>
-
+    <Screen padded={false}>
+      <ScreenHeader
+        title={t('programs.title')}
+        action={
+          <IconButton
+            icon="plus"
+            accessibilityLabel={t('programs.newProgram')}
+            onPress={() => setCreateOpen(true)}
+          />
+        }
+      >
         <SegmentedPill
           items={[
             { value: 'assigned', label: t('programs.tabs.assigned') },
@@ -132,108 +210,48 @@ export default function ProgramsIndex() {
           selected={tab}
           onChange={(v) => setTab(v as ProgramListTab)}
         />
+      </ScreenHeader>
 
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: theme.space[4],
+          paddingBottom: theme.space[6],
+          gap: 9,
+        }}
+      >
         {loading ? (
-          <SectionCard>
-            <Skeleton height={72} />
-            <Skeleton height={72} />
-            <Skeleton height={72} />
-          </SectionCard>
+          <>
+            <Skeleton height={104} radius={theme.radius.lg} />
+            <Skeleton height={104} radius={theme.radius.lg} />
+            <Skeleton height={104} radius={theme.radius.lg} />
+          </>
         ) : error ? (
-          <View style={{ gap: theme.space[3] }}>
-            <Banner variant="danger" message={t('programs.offlineError.body')} />
-            <Button
-              label={t('programs.offlineError.retry')}
-              variant="ghost"
-              onPress={() => void refetch()}
-            />
-          </View>
+          <EmptyState
+            icon="alert"
+            tone="danger"
+            title={t('programs.offlineError.title')}
+            body={t('programs.offlineError.body')}
+            actionLabel={t('programs.offlineError.retry')}
+            actionVariant="ghost"
+            onAction={() => void refetch()}
+          />
         ) : isEmpty ? (
-          <View style={{ gap: theme.space[3], alignItems: 'center', paddingVertical: theme.space[8] }}>
-            <Text variant="h3">{t(emptyCopy + '.title')}</Text>
-            <Text tone="secondary">{t(emptyCopy + '.body')}</Text>
-            <Button label={t(emptyCopy + '.createButton')} onPress={() => setCreateOpen(true)} />
-          </View>
+          <EmptyState
+            icon="calendar"
+            title={t(emptyCopy + '.title')}
+            body={t(emptyCopy + '.body')}
+            actionLabel={t(emptyCopy + '.createButton')}
+            onAction={() => setCreateOpen(true)}
+          />
         ) : (
-          <SectionCard>
-            {items.map((program) => {
-              const tag = tagFor(program);
-              return (
-                <ListRow
-                  key={program.id}
-                  minHeight={72}
-                  title={program.clientName ? program.name + ' · ' + program.clientName : program.name}
-                  subtitle={
-                    program.is_ai_generated && program.state === 'draft'
-                      ? t('programs.aiDraftMeta', { weeks: program.duration_weeks })
-                      : metaFor(program)
-                  }
-                  trailing={
-                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                      {tag ? (
-                        <View
-                          style={{
-                            paddingHorizontal: 6,
-                            paddingVertical: 2,
-                            borderRadius: theme.radius.sm,
-                            backgroundColor:
-                              program.state === 'draft'
-                                ? theme.colors.warnSurface
-                                : theme.colors.surfaceSunken,
-                          }}
-                        >
-                          <Text
-                            numeric
-                            variant="caption"
-                            style={{
-                              fontWeight: '700',
-                              color:
-                                program.state === 'draft'
-                                  ? theme.colors.onWarnSurface
-                                  : theme.colors.textSecondary,
-                            }}
-                          >
-                            {tag}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {tab === 'templates' ? (
-                        <Button
-                          label={t('programs.assignAction')}
-                          variant="ghost"
-                          onPress={() =>
-                            router.push({
-                              pathname: '/(app)/programs/[id]/assign',
-                              params: { id: program.id, template: '1' },
-                            })
-                          }
-                        />
-                      ) : null}
-                    </View>
-                  }
-                  onPress={() =>
-                    router.push({ pathname: '/(app)/programs/[id]/builder', params: { id: program.id } })
-                  }
-                />
-              );
-            })}
-          </SectionCard>
+          items.map((program) =>
+            tab === 'templates' ? (
+              <TemplateCard key={program.id} program={program} />
+            ) : (
+              <ProgramCard key={program.id} program={program} />
+            ),
+          )
         )}
-
-        {tab === 'assigned' && !loading && !error && !isEmpty ? (
-          <View style={{ gap: theme.space[2] }}>
-            {items
-              .filter((p) => p.state === 'active')
-              .map((program) => (
-                <View key={program.id}>
-                  <Text variant="caption" tone="muted">
-                    {program.name}
-                  </Text>
-                  <WeekStrip program={program} />
-                </View>
-              ))}
-          </View>
-        ) : null}
       </ScrollView>
 
       <Modal
@@ -242,10 +260,17 @@ export default function ProgramsIndex() {
         presentationStyle="pageSheet"
         onRequestClose={() => setCreateOpen(false)}
       >
-        <Screen>
-          <ScrollView contentContainerStyle={{ gap: theme.space[4] }} keyboardShouldPersistTaps="handled">
-            <Text variant="h2">{t('programs.create.title')}</Text>
-
+        <Screen padded={false}>
+          <NavHeader
+            title={t('programs.create.title')}
+            leading={
+              <Button label={t('common.cancel')} variant="link" onPress={() => setCreateOpen(false)} />
+            }
+          />
+          <ScrollView
+            contentContainerStyle={{ padding: theme.space[5], gap: theme.space[4] }}
+            keyboardShouldPersistTaps="handled"
+          >
             {createError ? <Banner variant="danger" message={createError} /> : null}
 
             <TextField
@@ -253,12 +278,11 @@ export default function ProgramsIndex() {
               placeholder={t('programs.create.namePlaceholder')}
               value={name}
               onChangeText={setName}
+              autoFocus
             />
 
             <View style={{ gap: theme.space[2] }}>
-              <Text variant="label" tone="muted">
-                {t('programs.create.weeksLabel')}
-              </Text>
+              <SectionLabel>{t('programs.create.weeksLabel')}</SectionLabel>
               <SegmentedPill
                 items={WEEK_OPTIONS.map((w) => ({
                   value: String(w),
@@ -274,15 +298,16 @@ export default function ProgramsIndex() {
               value={asTemplate}
               onValueChange={setAsTemplate}
             />
-
+          </ScrollView>
+          <View style={{ padding: theme.space[5], paddingTop: theme.space[3] }}>
             <Button
               label={t('programs.create.create')}
               size="lg"
-              disabled={submitting || name.trim() === ''}
+              loading={submitting}
+              disabled={name.trim() === ''}
               onPress={() => void handleCreate()}
             />
-            <Button label={t('common.cancel')} variant="ghost" onPress={() => setCreateOpen(false)} />
-          </ScrollView>
+          </View>
         </Screen>
       </Modal>
     </Screen>

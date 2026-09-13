@@ -1,18 +1,38 @@
-import { isRTL, weekCompletion, type Database, type Locale } from '@forge/shared';
+import { weekCompletion, type Database } from '@forge/shared';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { I18nManager, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { useCreditBalance } from '../../../lib/ai/useCreditBalance';
 import { useAuth } from '../../../lib/auth/AuthProvider';
+import { usePtDashboard, type AttentionItem } from '../../../lib/home/usePtDashboard';
 import { claimClientInvites } from '../../../lib/intake/claimInvites';
 import { openWaiverDocument } from '../../../lib/intake/openWaiver';
 import { useProgramList } from '../../../lib/programs/useProgramList';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { Banner, Button, Card, ListRow, Row, SectionCard, Screen, Spinner, Text } from '../../../ui';
+import {
+  Avatar,
+  Banner,
+  Button,
+  Card,
+  Icon,
+  IconButton,
+  ListRow,
+  Row,
+  Screen,
+  SectionCard,
+  SectionLabel,
+  Skeleton,
+  Spinner,
+  StatTile,
+  Tag,
+  Text,
+  WeekStrip,
+  type IconName,
+} from '../../../ui';
 
-type Reachability = 'checking' | 'ok' | 'failed';
 type ClientRow = Database['public']['Tables']['clients']['Row'];
 type IntakeFormRow = Database['public']['Tables']['intake_forms']['Row'];
 type PtInfo = { display_name: string; avatar_url: string | null };
@@ -30,95 +50,286 @@ type PtInfo = { display_name: string; avatar_url: string | null };
 function SettingsButton() {
   const { t } = useTranslation();
   return (
-    <Button
-      label="⚙"
+    <IconButton
+      icon="sliders"
       variant="ghost"
-      size="md"
       accessibilityLabel={t('settings.title')}
       onPress={() => router.push('/(app)/settings')}
     />
   );
 }
 
-/** Signed-in PT home placeholder. Real dashboard content lands in later milestones. */
-function PtHome() {
-  const { t, i18n } = useTranslation();
+/** "Good morning / afternoon / evening" — the device clock, no locale calendar needed. */
+function greetingKey(hour: number): string {
+  if (hour < 12) return 'home.greetingMorning';
+  if (hour < 18) return 'home.greetingAfternoon';
+  return 'home.greetingEvening';
+}
+
+/**
+ * The greeting block both personas share: a muted time-of-day line, the person's
+ * own name at screen-title size, and the settings control.
+ */
+function HomeHeader({ name }: { name: string }) {
+  const { t } = useTranslation();
   const theme = useTheme();
-  const [reachability, setReachability] = useState<Reachability>('checking');
-
-  useEffect(() => {
-    let cancelled = false;
-    void supabase
-      .from('users')
-      .select('id', { head: true, count: 'exact' })
-      .then(({ error }) => {
-        if (!cancelled) setReachability(error ? 'failed' : 'ok');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const locale = i18n.language as Locale;
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
-        <Row style={styles.between}>
-          <Text variant="display" tone="accent">
-            FORGE
-          </Text>
-          <SettingsButton />
-        </Row>
-        <Text variant="h3" tone="secondary">
-          {t('boot.tagline')}
+    <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: theme.space[3] }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="caption" tone="muted">
+          {t(greetingKey(new Date().getHours()))}
         </Text>
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
+          style={{ fontSize: 27, fontWeight: '800', letterSpacing: -0.5 }}
+        >
+          {name}
+        </Text>
+      </View>
+      <SettingsButton />
+    </Row>
+  );
+}
 
-        <Card>
-          <Text variant="label" tone="muted">
-            {t('boot.status')}
-          </Text>
-          <Row style={styles.between}>
-            <Text tone="secondary">{t('boot.scheme')}</Text>
-            <Text numeric>
-              {theme.scheme === 'dark' ? t('boot.schemeDark') : t('boot.schemeLight')}
-            </Text>
-          </Row>
-          <Row style={styles.between}>
-            <Text tone="secondary">{t('boot.direction')}</Text>
-            <Text numeric>
-              {I18nManager.isRTL ? 'RTL' : 'LTR'}
-              {isRTL(locale) === I18nManager.isRTL ? '' : ' · reload'}
-            </Text>
-          </Row>
-          <Row style={styles.between}>
-            <Text tone="secondary">{t('boot.connection')}</Text>
-            <Text numeric tone={reachability === 'failed' ? 'primary' : 'secondary'}>
-              {reachability === 'checking'
-                ? t('boot.connectionChecking')
-                : reachability === 'ok'
-                  ? t('boot.connectionOk')
-                  : t('boot.connectionFailed')}
-            </Text>
-          </Row>
-        </Card>
+/** One square of the quick-actions grid: icon disc, label, whole tile is the target. */
+function ActionTile({
+  icon,
+  label,
+  accent,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  accent?: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
 
-        <Button label={t('clients.title')} onPress={() => router.push('/(app)/(tabs)/clients')} />
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexGrow: 1,
+        flexBasis: '47%',
+        minHeight: 96,
+        justifyContent: 'space-between',
+        padding: theme.space[4],
+        borderRadius: theme.radius.lg,
+        borderWidth: 1,
+        borderColor: accent ? theme.colors.accent : theme.colors.border,
+        backgroundColor: accent ? theme.colors.accentSurfaceSoft : theme.colors.surfaceRaised,
+        opacity: pressed ? 0.85 : 1,
+      })}
+    >
+      <Icon
+        name={icon}
+        size={22}
+        color={accent ? theme.colors.onAccentSurfaceSoft : theme.colors.textSecondary}
+      />
+      <Text
+        numberOfLines={2}
+        style={{
+          fontSize: 14,
+          fontWeight: '700',
+          color: accent ? theme.colors.onAccentSurfaceSoft : theme.colors.textPrimary,
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
-        <Card>
-          <Text variant="display">Aa</Text>
-          <Text variant="h1">{t('boot.tagline')}</Text>
-          <Text variant="h2">Push day · Week 3</Text>
-          <Text variant="h3">Bench Press</Text>
-          <Text>Two more sets. You&apos;ve got this.</Text>
-          <Text variant="bodyBold">Maya Khoury · Week 4 · Day 2</Text>
-          <Text variant="caption" tone="muted">
-            Logged 6 minutes ago
-          </Text>
-          <Text variant="h2" numeric>
-            80 kg × 8 @ RPE 8
-          </Text>
-        </Card>
+const ATTENTION_TAG_TONE = {
+  flags: 'danger',
+  waiver: 'warn',
+  invited: 'neutral',
+  noProgram: 'accent',
+} as const;
+
+function AttentionRow({ item, isLast }: { item: AttentionItem; isLast: boolean }) {
+  const { t } = useTranslation();
+
+  const subtitle =
+    item.reason === 'flags'
+      ? t('home.attention.redFlags', { count: item.count ?? 0 })
+      : t('home.attention.' + item.reason);
+
+  const tagKey =
+    item.reason === 'flags'
+      ? 'tagFlags'
+      : item.reason === 'waiver'
+        ? 'tagWaiver'
+        : item.reason === 'invited'
+          ? 'tagInvited'
+          : 'tagProgram';
+
+  return (
+    <ListRow
+      minHeight={68}
+      leading={<Avatar name={item.name} photoUrl={item.avatarUrl} size={38} />}
+      title={item.name}
+      subtitle={subtitle}
+      trailing={<Tag label={t('home.attention.' + tagKey)} tone={ATTENTION_TAG_TONE[item.reason]} />}
+      isLast={isLast}
+      onPress={() => router.push({ pathname: '/(app)/clients/[id]', params: { id: item.clientId } })}
+    />
+  );
+}
+
+/**
+ * The PT's home. Three bands: where the roster stands, who is blocking, and the
+ * four things a PT starts a day by doing.
+ *
+ * What this replaced was M0 scaffolding that never got swapped out — a "Foundation
+ * online" card reporting the colour scheme, the layout direction and a Supabase
+ * reachability probe, followed by a typography specimen ("Aa", one line per type
+ * style). Useful on the day the monorepo booted; the PT's home screen for three
+ * milestones after that.
+ *
+ * There is no session list and no adherence figure here, because logging is M4 and
+ * scheduling is M5. Every number below is read from a table that exists today.
+ */
+function PtHome() {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const auth = useAuth();
+  const dashboard = usePtDashboard(auth.user?.id);
+  const credits = useCreditBalance(auth.user?.id);
+
+  const rosterPreview = dashboard.activeClients.slice(0, 4);
+  const remaining = dashboard.activeClients.length - rosterPreview.length;
+
+  return (
+    <Screen padded={false}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: theme.space[5],
+          paddingBottom: theme.space[9],
+          gap: theme.space[5],
+        }}
+      >
+        <HomeHeader name={auth.user?.display_name ?? ''} />
+
+        {dashboard.error ? <Banner variant="danger" message={t('home.error')} /> : null}
+
+        {dashboard.loading ? (
+          <Skeleton height={66} radius={theme.radius.lg - 2} />
+        ) : (
+          <Row style={{ gap: theme.space[2], alignItems: 'stretch' }}>
+            <StatTile label={t('home.stats.clients')} value={String(dashboard.activeClients.length)} />
+            <StatTile label={t('home.stats.programs')} value={String(dashboard.runningProgramCount)} />
+            <StatTile
+              label={t('home.stats.credits')}
+              value={credits.state === 'loading' ? '—' : String(credits.balance ?? 0)}
+              tone="accent"
+            />
+          </Row>
+        )}
+
+        {!dashboard.loading && dashboard.activeClients.length > 0 ? (
+          <View style={{ gap: theme.space[2] }}>
+            <SectionLabel>{t('home.attention.heading')}</SectionLabel>
+            {dashboard.attention.length === 0 ? (
+              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space[3] }}>
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    backgroundColor: theme.colors.successSurface,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Icon name="check" size={19} color={theme.colors.onSuccessSurface} strokeWidth={2.4} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text variant="bodyBold">{t('home.attention.allClearTitle')}</Text>
+                  <Text variant="caption" tone="muted">
+                    {t('home.attention.allClearBody')}
+                  </Text>
+                </View>
+              </Card>
+            ) : (
+              <SectionCard>
+                {dashboard.attention.map((item, index) => (
+                  <AttentionRow
+                    key={item.clientId}
+                    item={item}
+                    isLast={index === dashboard.attention.length - 1}
+                  />
+                ))}
+              </SectionCard>
+            )}
+          </View>
+        ) : null}
+
+        <View style={{ gap: theme.space[2] }}>
+          <SectionLabel>{t('home.actions.heading')}</SectionLabel>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space[2] }}>
+            <ActionTile
+              icon="users"
+              label={t('home.actions.invite')}
+              onPress={() => router.push('/(app)/clients/invite')}
+            />
+            <ActionTile
+              icon="calendar"
+              label={t('home.actions.newProgram')}
+              onPress={() => router.push('/(app)/(tabs)/programs')}
+            />
+            <ActionTile
+              icon="sparkle"
+              label={t('home.actions.aiDraft')}
+              accent
+              onPress={() => router.push('/(app)/(tabs)/programs')}
+            />
+            <ActionTile
+              icon="dumbbell"
+              label={t('home.actions.library')}
+              onPress={() => router.push('/(app)/(tabs)/library')}
+            />
+          </View>
+        </View>
+
+        {rosterPreview.length > 0 ? (
+          <View style={{ gap: theme.space[2] }}>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <SectionLabel>{t('home.roster.heading')}</SectionLabel>
+              <Button
+                label={t('home.roster.seeAll')}
+                variant="link"
+                onPress={() => router.push('/(app)/(tabs)/clients')}
+              />
+            </Row>
+            <SectionCard>
+              {rosterPreview.map((client, index) => (
+                <ListRow
+                  key={client.id}
+                  minHeight={64}
+                  leading={<Avatar name={client.displayName} photoUrl={client.avatarUrl} size={36} />}
+                  title={client.displayName}
+                  subtitle={t('clients.stateLabels.' + client.state)}
+                  isLast={index === rosterPreview.length - 1 && remaining <= 0}
+                  onPress={() =>
+                    router.push({ pathname: '/(app)/clients/[id]', params: { id: client.id } })
+                  }
+                />
+              ))}
+              {remaining > 0 ? (
+                <ListRow
+                  title={t('home.roster.more', { count: remaining })}
+                  isLast
+                  onPress={() => router.push('/(app)/(tabs)/clients')}
+                />
+              ) : null}
+            </SectionCard>
+          </View>
+        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -132,10 +343,14 @@ type ClientHomeState = {
 };
 
 /**
- * Signed-in client home — PT name, an intake status card that is itself the
- * entry point (start/resume/waiting/waiver/done), and the signed waiver as a
- * downloadable row once it exists. No logging, programs, or metrics here —
- * those are M3/M4.
+ * Signed-in client home — their trainer, the one thing they owe next (intake,
+ * waiver, or nothing), their assigned program, and the signed waiver as a
+ * downloadable row once it exists. No logging or metrics — those are M4.
+ *
+ * The three intake states used to render as three sibling cards that each looked
+ * equally urgent next to the program card. They are mutually exclusive by
+ * definition, so they now collapse into one ember "next step" card — the client
+ * sees exactly one thing they owe, or none.
  */
 function ClientHome() {
   const { t } = useTranslation();
@@ -220,20 +435,30 @@ function ClientHome() {
 
   if (!state.client) {
     return (
-      <Screen>
-        <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
-          <Row style={styles.between}>
-            <Text variant="h1" style={{ flex: 1 }}>
-              {t('clientHome.noTrainerTitle')}
-            </Text>
-            <SettingsButton />
-          </Row>
-          <Text tone="secondary">{t('clientHome.noTrainerBody')}</Text>
-          <Text variant="bodyBold" numeric>
-            {auth.user?.email}
-          </Text>
-          <Button label={t('clientHome.copyEmail')} onPress={() => void handleCopyEmail()} />
-          {emailCopied ? <Text tone="secondary">{t('clientHome.emailCopied')}</Text> : null}
+      <Screen padded={false}>
+        <ScrollView contentContainerStyle={{ padding: theme.space[5], gap: theme.space[4] }}>
+          <HomeHeader name={auth.user?.display_name ?? ''} />
+          <Card style={{ gap: theme.space[3] }}>
+            <Text variant="h3">{t('clientHome.noTrainerTitle')}</Text>
+            <Text tone="secondary">{t('clientHome.noTrainerBody')}</Text>
+            <View
+              style={{
+                padding: theme.space[3],
+                borderRadius: theme.radius.md,
+                backgroundColor: theme.colors.surfaceSunken,
+              }}
+            >
+              <Text numeric style={{ fontSize: 13 }}>
+                {auth.user?.email}
+              </Text>
+            </View>
+            <Button
+              label={emailCopied ? t('clientHome.emailCopied') : t('clientHome.copyEmail')}
+              icon={emailCopied ? 'check' : 'copy'}
+              variant="ghost"
+              onPress={() => void handleCopyEmail()}
+            />
+          </Card>
         </ScrollView>
       </Screen>
     );
@@ -242,119 +467,155 @@ function ClientHome() {
   const intakeState = state.intake?.state ?? 'pending';
   const waiverSigned = intakeState === 'waiver_signed';
   const needsWaiver = intakeState === 'completed' || intakeState === 'red_flag_review';
+  const intakeId = state.intake?.id;
+
+  const nextStep =
+    intakeState === 'pending'
+      ? {
+          title: t('clientHome.intake.notStarted'),
+          body: t('clientHome.intake.notStartedBody'),
+          action: t('clientHome.intake.startButton'),
+          go: () =>
+            intakeId && router.push({ pathname: '/(app)/intake/[id]', params: { id: intakeId } }),
+        }
+      : intakeState === 'in_progress'
+        ? {
+            title: t('clientHome.intake.inProgress'),
+            body: null,
+            action: t('clientHome.intake.resumeButton'),
+            go: () =>
+              intakeId && router.push({ pathname: '/(app)/intake/[id]', params: { id: intakeId } }),
+          }
+        : needsWaiver
+          ? {
+              title: t('clientHome.intake.signWaiver'),
+              body: null,
+              action: t('clientHome.intake.signWaiverButton'),
+              go: () =>
+                intakeId &&
+                router.push({ pathname: '/(app)/intake/[id]/waiver', params: { id: intakeId } }),
+            }
+          : null;
+
+  const programWeeks = myProgram
+    ? weekCompletion(
+        { duration_weeks: myProgram.duration_weeks, start_date: myProgram.start_date },
+        new Date(),
+      )
+    : null;
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[4] }}>
-        <Row style={styles.between}>
-          <Text variant="h1" style={{ flex: 1 }} numberOfLines={1}>
-            {t('clientHome.greeting', { name: auth.user?.display_name ?? '' })}
-          </Text>
-          <SettingsButton />
-        </Row>
-
-        <Card>
-          <Text variant="label" tone="muted">
-            {t('clientHome.trainerLabel')}
-          </Text>
-          <Text variant="h3">{state.ptInfo?.display_name ?? '—'}</Text>
-        </Card>
+    <Screen padded={false}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: theme.space[5],
+          paddingBottom: theme.space[9],
+          gap: theme.space[5],
+        }}
+      >
+        <HomeHeader name={auth.user?.display_name ?? ''} />
 
         {waiverError ? <Banner variant="danger" message={waiverError} /> : null}
 
-        <Card>
-          <Text variant="label" tone="muted">
-            {t('clientHome.program.cardLabel')}
-          </Text>
-          {myProgram === null ? (
-            <Text tone="secondary">{t('clientHome.program.none')}</Text>
-          ) : (
-            <>
-              <Text variant="h3">{myProgram.name}</Text>
-              <Text tone="secondary">
-                {t('programs.meta', {
-                  weeks: myProgram.duration_weeks,
-                  days: myProgram.days_per_week,
-                  exercises: myProgram.exercise_count,
-                })}
+        {nextStep ? (
+          <Card
+            style={{
+              gap: theme.space[3],
+              borderColor: theme.colors.accent,
+              backgroundColor: theme.colors.accentSurfaceSoft,
+            }}
+          >
+            <Text variant="h3" style={{ color: theme.colors.onAccentSurfaceSoft }}>
+              {nextStep.title}
+            </Text>
+            {nextStep.body ? (
+              <Text style={{ fontSize: 13.5, lineHeight: 20, color: theme.colors.onAccentSurfaceSoft }}>
+                {nextStep.body}
               </Text>
-              {(() => {
-                const { currentWeek } = weekCompletion(
-                  {
-                    duration_weeks: myProgram.duration_weeks,
-                    start_date: myProgram.start_date,
-                  },
-                  new Date(),
-                );
-                return currentWeek === null ? null : (
-                  <Text numeric tone="secondary">
-                    {t('clientHome.program.weekOf', {
-                      week: currentWeek,
-                      total: myProgram.duration_weeks,
-                    })}
-                  </Text>
-                );
-              })()}
-              <Button
-                label={t('clientHome.program.view')}
-                onPress={() =>
-                  router.push({ pathname: '/(app)/my-program', params: { id: myProgram.id } })
-                }
-              />
-            </>
-          )}
-        </Card>
-
-        {intakeState === 'pending' ? (
-          <Card>
-            <Text variant="h3">{t('clientHome.intake.notStarted')}</Text>
-            <Text tone="secondary">{t('clientHome.intake.notStartedBody')}</Text>
-            <Button
-              label={t('clientHome.intake.startButton')}
-              onPress={() =>
-                state.intake &&
-                router.push({ pathname: '/(app)/intake/[id]', params: { id: state.intake.id } })
-              }
-            />
-          </Card>
-        ) : intakeState === 'in_progress' ? (
-          <Card>
-            <Text variant="h3">{t('clientHome.intake.inProgress')}</Text>
-            <Button
-              label={t('clientHome.intake.resumeButton')}
-              onPress={() =>
-                state.intake &&
-                router.push({ pathname: '/(app)/intake/[id]', params: { id: state.intake.id } })
-              }
-            />
-          </Card>
-        ) : needsWaiver ? (
-          <Card>
-            <Text variant="h3">{t('clientHome.intake.signWaiver')}</Text>
-            <Button
-              label={t('clientHome.intake.signWaiverButton')}
-              onPress={() =>
-                state.intake &&
-                router.push({ pathname: '/(app)/intake/[id]/waiver', params: { id: state.intake.id } })
-              }
-            />
+            ) : null}
+            <Button label={nextStep.action} size="lg" onPress={nextStep.go} />
           </Card>
         ) : null}
 
-        {waiverSigned && state.intake ? (
+        <View style={{ gap: theme.space[2] }}>
+          <SectionLabel>{t('clientHome.trainerLabel')}</SectionLabel>
           <SectionCard>
             <ListRow
-              title={t('clientHome.waiver.rowTitle')}
-              subtitle={
-                state.intake.signed_at
-                  ? t('clientHome.waiver.rowSubtitle', {
-                      date: new Date(state.intake.signed_at).toLocaleDateString(),
-                    })
-                  : undefined
+              leading={
+                <Avatar name={state.ptInfo?.display_name} photoUrl={state.ptInfo?.avatar_url} size={38} />
               }
-              onPress={() => void handleOpenWaiver()}
+              title={state.ptInfo?.display_name ?? '—'}
+              chevron={false}
+              isLast
             />
           </SectionCard>
+        </View>
+
+        <View style={{ gap: theme.space[2] }}>
+          <SectionLabel>{t('clientHome.program.cardLabel')}</SectionLabel>
+          {myProgram === null ? (
+            <Card>
+              <Text tone="secondary">{t('clientHome.program.none')}</Text>
+            </Card>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={myProgram.name}
+              onPress={() => router.push({ pathname: '/(app)/my-program', params: { id: myProgram.id } })}
+              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+            >
+              <Card style={{ gap: theme.space[3] }}>
+                <Row style={{ justifyContent: 'space-between', gap: theme.space[2] }}>
+                  <Text variant="h3" numberOfLines={1} style={{ flex: 1 }}>
+                    {myProgram.name}
+                  </Text>
+                  {programWeeks?.currentWeek ? (
+                    <Tag
+                      numeric
+                      tone="accent"
+                      label={t('programs.weekTag', { week: programWeeks.currentWeek })}
+                    />
+                  ) : null}
+                </Row>
+                {programWeeks ? (
+                  <WeekStrip
+                    weeks={programWeeks.weeks}
+                    label={t('clientHome.program.weekOf', {
+                      week: programWeeks.currentWeek ?? 1,
+                      total: myProgram.duration_weeks,
+                    })}
+                  />
+                ) : null}
+                <Text numeric variant="caption" tone="muted">
+                  {t('programs.meta', {
+                    weeks: myProgram.duration_weeks,
+                    days: myProgram.days_per_week,
+                    exercises: myProgram.exercise_count,
+                  })}
+                </Text>
+              </Card>
+            </Pressable>
+          )}
+        </View>
+
+        {waiverSigned && state.intake ? (
+          <View style={{ gap: theme.space[2] }}>
+            <SectionLabel>{t('clients.detail.waiverHeading')}</SectionLabel>
+            <SectionCard>
+              <ListRow
+                leading={<Icon name="document" size={20} color={theme.colors.textMuted} />}
+                title={t('clientHome.waiver.rowTitle')}
+                subtitle={
+                  state.intake.signed_at
+                    ? t('clientHome.waiver.rowSubtitle', {
+                        date: new Date(state.intake.signed_at).toLocaleDateString(),
+                      })
+                    : undefined
+                }
+                onPress={() => void handleOpenWaiver()}
+              />
+            </SectionCard>
+          </View>
         ) : null}
       </ScrollView>
     </Screen>
@@ -365,7 +626,3 @@ export default function Home() {
   const auth = useAuth();
   return auth.user?.role === 'client' ? <ClientHome /> : <PtHome />;
 }
-
-const styles = StyleSheet.create({
-  between: { justifyContent: 'space-between' },
-});

@@ -1,18 +1,4 @@
 {
-  "boot": {
-    "tagline": "اصنع نفسك.",
-    "status": "الأساس جاهز",
-    "scheme": "المظهر",
-    "schemeLight": "فاتح",
-    "schemeDark": "داكن",
-    "direction": "الاتجاه",
-    "language": "اللغة",
-    "switchLanguage": "English",
-    "connection": "سوبابيس",
-    "connectionChecking": "جارٍ التحقق…",
-    "connectionOk": "متصل",
-    "connectionFailed": "غير متصل"
-  },
   "common": {
     "retry": "إعادة المحاولة",
     "cancel": "إلغاء",
@@ -22,12 +8,63 @@
     "save": "حفظ",
     "finish": "إنهاء",
     "close": "إغلاق",
+    "datePicker": {
+      "open": "اختر تاريخًا",
+      "title": "اختر تاريخًا",
+      "clear": "مسح",
+      "done": "تم",
+      "previousMonth": "الشهر السابق",
+      "nextMonth": "الشهر التالي",
+      "chooseYear": "اختر السنة"
+    },
     "tabs": {
       "today": "اليوم",
       "clients": "العملاء",
       "programs": "البرامج",
       "library": "المكتبة"
-    }
+    },
+    "seeAll": "عرض الكل",
+    "loadMore": "تحميل المزيد",
+    "done": "تم",
+    "share": "مشاركة"
+  },
+  "home": {
+    "greetingMorning": "صباح الخير",
+    "greetingAfternoon": "مساء الخير",
+    "greetingEvening": "مساء الخير",
+    "stats": {
+      "clients": "العملاء",
+      "programs": "الجارية",
+      "credits": "رصيد الذكاء"
+    },
+    "attention": {
+      "heading": "يحتاج انتباهك",
+      "allClearTitle": "لا شيء ينتظرك",
+      "allClearBody": "كل عميل مرتبط ومُراجَع ولديه برنامج.",
+      "invited": "لم تُقبل الدعوة بعد",
+      "redFlags_one": "إجابة واحدة في الاستبيان تحتاج مراجعة",
+      "redFlags_other": "{{count}} إجابات في الاستبيان تحتاج مراجعة",
+      "waiver": "لم يُوقَّع الإقرار بعد",
+      "noProgram": "لا يوجد برنامج مُسنَد",
+      "tagInvited": "مدعو",
+      "tagFlags": "مراجعة",
+      "tagWaiver": "إقرار",
+      "tagProgram": "برنامج"
+    },
+    "actions": {
+      "heading": "إجراءات سريعة",
+      "invite": "دعوة عميل",
+      "newProgram": "برنامج جديد",
+      "aiDraft": "مسودة بالذكاء الاصطناعي",
+      "library": "التمارين"
+    },
+    "roster": {
+      "heading": "قائمة عملائك",
+      "seeAll": "عرض الكل",
+      "more_one": "عميل واحد إضافي",
+      "more_other": "{{count}} عملاء إضافيون"
+    },
+    "error": "تعذّر تحميل لوحتك."
   },
   "auth": {
     "signIn": {
@@ -36,8 +73,10 @@
       "passwordLabel": "كلمة المرور",
       "submit": "تسجيل الدخول",
       "forgotPassword": "نسيت كلمة المرور؟",
-      "noAccount": "ليس لديك حساب؟ أنشئ حسابًا"
+      "noAccountPrefix": "ليس لديك حساب؟",
+      "noAccountAction": "أنشئ حسابًا"
     },
+    "orDivider": "أو",
     "google": {
       "continue": "المتابعة باستخدام جوجل"
     },
@@ -49,7 +88,8 @@
       "passwordLabel": "كلمة المرور",
       "termsLabel": "أوافق على شروط الخدمة وسياسة الخصوصية",
       "submit": "إنشاء حساب",
-      "haveAccount": "لديك حساب بالفعل؟ سجّل الدخول"
+      "haveAccountPrefix": "لديك حساب بالفعل؟",
+      "haveAccountAction": "سجّل الدخول"
     },
     "verifyPending": {
       "title": "تحقق من بريدك الإلكتروني",
@@ -331,8 +371,24 @@
       "revokeConfirmTitle": "إلغاء هذه الدعوة؟",
       "revokeConfirmBody": "سيتوقف الرابط عن العمل فورًا.",
       "changeEmail": "تغيير بريد الدعوة",
-      "actionError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
-    }
+      "actionError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+      "stats": {
+        "since": "منذ",
+        "week": "الأسبوع",
+        "intake": "الاستبيان",
+        "intakeDone": "مكتمل",
+        "none": "—"
+      },
+      "redFlagTitle_one": "إشارة حمراء واحدة في الاستبيان",
+      "redFlagTitle_other": "{{count}} إشارات حمراء في الاستبيان",
+      "redFlagBody": "اقرأها قبل الجلسة الأولى.",
+      "redFlagAction": "مراجعة",
+      "waiverHeading": "الإقرار",
+      "waiverTagSigned": "موقَّع",
+      "waiverTagUnsigned": "غير موقَّع",
+      "manageHeading": "إدارة"
+    },
+    "countFooter": "{{shown}} من {{total}} عميل"
   },
   "intake": {
     "stepOf": "الخطوة {{step}} من {{total}}",
@@ -369,6 +425,7 @@
     },
     "history": {
       "yearsTrainingLabel": "سنوات الخبرة في التدريب",
+      "yearsTrainingHelper": "{{min}}–{{max}} سنة",
       "injuriesLabel": "إصابات أو عمليات جراحية سابقة",
       "previousProgramsLabel": "برامج تدريب اتبعتها من قبل"
     },
@@ -378,7 +435,9 @@
       "sexMale": "ذكر",
       "sexFemale": "أنثى",
       "heightLabel": "الطول",
-      "weightLabel": "الوزن"
+      "heightHelper": "{{min}}–{{max}} سم",
+      "weightLabel": "الوزن",
+      "weightHelper": "{{min}}–{{max}} كجم"
     },
     "dietary": {
       "restrictionsLabel": "القيود الغذائية",
@@ -390,6 +449,14 @@
       "restriction_dairy_free": "خالٍ من الألبان",
       "restriction_nut_allergy": "حساسية من المكسرات",
       "notesLabel": "أي شيء آخر يجب أن يعرفه مدربك؟"
+    },
+    "validation": {
+      "notANumber": "أدخل رقمًا",
+      "belowMin": "يجب ألا يقل عن {{min}}",
+      "aboveMax": "يجب ألا يزيد عن {{max}}",
+      "dateMalformed": "هذا ليس تاريخًا صحيحًا",
+      "dateBeforeMin": "اختر تاريخًا في {{min}} أو بعده",
+      "dateAfterMax": "اختر تاريخًا في {{max}} أو قبله"
     },
     "resume": {
       "title": "مرحبًا بعودتك",
@@ -453,7 +520,7 @@
     }
   },
   "library": {
-    "title": "المكتبة",
+    "title": "التمارين",
     "searchPlaceholder": "ابحث في {{count}} تمرين",
     "mineTag": "تماريني",
     "filterGroups": {
@@ -559,7 +626,9 @@
       "save": "حفظ في مكتبتي",
       "successTitle": "تم الحفظ في مكتبتك",
       "error": "تعذّر حفظ التمرين. حاول مجددًا."
-    }
+    },
+    "customAction": "+ مخصّص",
+    "loadMore": "تحميل المزيد"
   },
   "programs": {
     "title": "البرامج",
@@ -604,7 +673,9 @@
       "templateLabel": "احفظه كقالب",
       "create": "إنشاء البرنامج",
       "error": "تعذّر إنشاء البرنامج. حاول مجددًا."
-    }
+    },
+    "assignedTag": "مُسنَد",
+    "unassigned": "لا يوجد عميل بعد"
   },
   "builder": {
     "save": "حفظ",

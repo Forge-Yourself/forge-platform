@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -6,7 +7,7 @@ import { refreshAuthProfile } from '../../lib/auth/refreshProfile';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, Button, ChoiceCard, Screen, Text } from '../../ui';
+import { Banner, Button, ChoiceCard, Screen, SectionLabel, Text } from '../../ui';
 
 type SelfServiceRole = 'pt' | 'client';
 
@@ -60,19 +61,28 @@ export default function Role() {
 
       // Both the RPC above and the plain UPDATE just above are raw table writes, not
       // an `auth.updateUser()` call — neither fires USER_UPDATED, so useAuth().user
-      // (and the gate that reads it) would otherwise stay stale. No manual navigation
-      // follows this: once the refreshed state lands, the gate reacts on its own —
-      // 'pt' goes to (onboarding)/pt-profile, 'client' (now onboarding_completed)
-      // falls through to (app).
+      // (and the gate that reads it) would otherwise stay stale.
       await refreshAuthProfile();
+
+      // 'pt' needs no navigation: the gate has an ACTIVE redirect for role='pt' with
+      // onboarding_completed=false, and sends them to (onboarding)/pt-profile itself
+      // once the refreshed state lands.
+      //
+      // 'client' does need it. Once onboarding_completed flips true the gate falls
+      // through to its last branch, which is a passive <Slot/> (app/_layout.tsx) —
+      // that re-renders whatever route already matched, i.e. THIS screen. The DB
+      // write succeeds, the refresh lands, and the user sits on the role picker
+      // watching nothing happen. Same hand-off, for the same reason, as
+      // pt-profile.tsx's handleFinish and mfa-enroll.tsx's handleVerified.
+      if (selected === 'client') {
+        router.replace('/');
+      }
     });
   }
 
   return (
     <Screen>
-      <Text variant="label" tone="muted" style={{ marginBottom: theme.space[2] }}>
-        {t('onboarding.role.step')}
-      </Text>
+      <SectionLabel>{t('onboarding.role.step')}</SectionLabel>
       <Text variant="h2" style={{ marginBottom: theme.space[2] }}>
         {t('onboarding.role.title')}
       </Text>
@@ -105,7 +115,8 @@ export default function Role() {
         label={t('onboarding.role.continue')}
         size="lg"
         onPress={handleContinue}
-        disabled={!selected || submitting}
+        loading={submitting}
+        disabled={!selected}
         style={{ marginTop: theme.space[6] }}
       />
     </Screen>

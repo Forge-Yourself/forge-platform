@@ -1,5 +1,6 @@
 import { Pressable, View } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import { Icon } from './Icon';
 import { Text } from './Text';
 
 export type NumericKeypadProps = {
@@ -86,9 +87,7 @@ export function NumericKeypad({ onKey, onDelete, extraKey }: NumericKeypadProps)
           onPress={onDelete}
           style={keyStyle}
         >
-          <Text numeric style={{ fontSize: 20, fontWeight: '700' }}>
-            ⌫
-          </Text>
+          <Icon name="backspace" size={22} color={t.colors.textPrimary} />
         </Pressable>
       </View>
     </View>

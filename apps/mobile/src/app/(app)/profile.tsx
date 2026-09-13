@@ -2,10 +2,23 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { useAuth } from '../../lib/auth/AuthProvider';
-import { Avatar } from '../../lib/profile/Avatar';
 import { usePtProfileData } from '../../lib/profile/usePtProfileData';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, Button, Card, Row, Screen, Skeleton, Text } from '../../ui';
+import {
+  Avatar,
+  Banner,
+  Button,
+  FooterBar,
+  Icon,
+  ListRow,
+  NavHeader,
+  Screen,
+  SectionCard,
+  SectionLabel,
+  Skeleton,
+  Tag,
+  Text,
+} from '../../ui';
 
 type RoleKey = 'pt' | 'client' | 'gym_account' | 'admin';
 
@@ -27,120 +40,157 @@ export default function Profile() {
   // profile fetch (or AuthProvider itself still resolving) should show the skeleton.
   const showLoading = auth.status === 'loading' || (isPt && loading);
 
+  const back = (
+    <Button label={t('common.back')} icon="chevronBack" variant="link" onPress={() => router.back()} />
+  );
+
   if (showLoading) {
     return (
-      <Screen>
-        <View style={{ alignItems: 'center', marginBottom: theme.space[5] }}>
+      <Screen padded={false}>
+        <NavHeader leading={back} divider={false} />
+        <View style={{ padding: theme.space[5], alignItems: 'center', gap: theme.space[3] }}>
           <Skeleton width={88} height={88} radius={44} />
+          <Skeleton height={24} width="60%" />
+          <Skeleton height={16} width="40%" />
+          <View style={{ height: theme.space[4] }} />
+          <Skeleton height={80} />
         </View>
-        <Skeleton height={24} width="60%" />
-        <View style={{ height: theme.space[3] }} />
-        <Skeleton height={16} width="40%" />
-        <View style={{ height: theme.space[6] }} />
-        <Skeleton height={80} />
       </Screen>
     );
   }
 
   if (isPt && error) {
     return (
-      <Screen>
-        <Banner variant="danger" message={t('profile.loadFailed')} />
-        <Button
-          label={t('common.retry')}
-          variant="ghost"
-          onPress={() => void refetch()}
-          style={{ marginTop: theme.space[4] }}
-        />
+      <Screen padded={false}>
+        <NavHeader leading={back} divider={false} />
+        <View style={{ padding: theme.space[5], gap: theme.space[4] }}>
+          <Banner variant="danger" message={t('profile.loadFailed')} />
+          <Button label={t('common.retry')} variant="ghost" onPress={() => void refetch()} />
+        </View>
       </Screen>
     );
   }
 
   const roleKey: RoleKey = (auth.user?.role as RoleKey | undefined) ?? 'client';
 
+  const specializations = ptProfile?.specializations ?? [];
+  const languages = ptProfile?.languages ?? [];
+
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: theme.space[5] }}>
-        <Row>
-          <Button label={t('common.back')} variant="ghost" size="md" onPress={() => router.back()} />
-        </Row>
-        <View style={{ alignItems: 'center' }}>
-          <View style={{ marginBottom: theme.space[3] }}>
-            <Avatar
-              displayName={auth.user?.display_name}
-              photoUrl={ptProfile?.profile_photo_url ?? auth.user?.avatar_url}
-            />
-          </View>
-          <Text variant="h2">{auth.user?.display_name}</Text>
+    <Screen padded={false}>
+      <NavHeader leading={back} divider={false} />
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: theme.space[4],
+          paddingBottom: theme.space[5],
+          gap: theme.space[4],
+        }}
+      >
+        <View style={{ alignItems: 'center', gap: theme.space[2], paddingVertical: theme.space[3] }}>
+          <Avatar
+            name={auth.user?.display_name}
+            photoUrl={ptProfile?.profile_photo_url ?? auth.user?.avatar_url}
+            size={88}
+          />
+          <Text
+            accessibilityRole="header"
+            numberOfLines={1}
+            style={{ fontSize: 23, fontWeight: '800', letterSpacing: -0.4 }}
+          >
+            {auth.user?.display_name}
+          </Text>
+          <Tag label={t(`profile.roles.${roleKey}`).toUpperCase()} tone="accent" />
         </View>
 
-        <Card>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Text tone="secondary">{t('profile.emailLabel')}</Text>
-            <Text>{auth.user?.email}</Text>
-          </Row>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Text tone="secondary">{t('profile.roleLabel')}</Text>
-            <Text>{t(`profile.roles.${roleKey}`)}</Text>
-          </Row>
-        </Card>
+        <SectionCard>
+          <ListRow
+            leading={<Icon name="mail" size={19} color={theme.colors.textMuted} />}
+            title={t('profile.emailLabel')}
+            chevron={false}
+            isLast
+            trailing={
+              <Text numeric numberOfLines={1} tone="secondary" style={{ fontSize: 13, maxWidth: 190 }}>
+                {auth.user?.email}
+              </Text>
+            }
+          />
+        </SectionCard>
 
         {isPt ? (
           <>
-            <Card>
-              <Text variant="label" tone="muted">
-                {t('profile.bioLabel')}
+            <View style={{ gap: theme.space[2] }}>
+              <SectionLabel>{t('profile.bioLabel')}</SectionLabel>
+              <Text
+                tone={ptProfile?.bio ? 'secondary' : 'muted'}
+                style={{ fontSize: 14, lineHeight: 21, paddingHorizontal: 4 }}
+              >
+                {ptProfile?.bio || t('profile.bioEmpty')}
               </Text>
-              <Text>{ptProfile?.bio || t('profile.bioEmpty')}</Text>
-            </Card>
+            </View>
 
-            <Card>
-              <Text variant="label" tone="muted">
-                {t('profile.specializationsLabel')}
-              </Text>
-              <Text>
-                {ptProfile?.specializations?.length
-                  ? ptProfile.specializations.join(', ')
-                  : t('profile.specializationsEmpty')}
-              </Text>
-            </Card>
-
-            <Card>
-              <Text variant="label" tone="muted">
-                {t('profile.languagesLabel')}
-              </Text>
-              <Text>
-                {ptProfile?.languages?.length ? ptProfile.languages.join(', ') : t('profile.languagesEmpty')}
-              </Text>
-            </Card>
-
-            <Card>
-              <Text variant="label" tone="muted" style={{ marginBottom: theme.space[1] }}>
-                {t('profile.certificationsLabel')}
-              </Text>
-              {certifications.length === 0 ? (
-                <Text tone="muted">{t('profile.certificationsEmpty')}</Text>
+            <View style={{ gap: theme.space[2] }}>
+              <SectionLabel>{t('profile.specializationsLabel')}</SectionLabel>
+              {specializations.length === 0 ? (
+                <Text tone="muted" style={{ paddingHorizontal: 4 }}>
+                  {t('profile.specializationsEmpty')}
+                </Text>
               ) : (
-                certifications.map((cert) => (
-                  <View key={cert.id} style={{ marginBottom: theme.space[2] }}>
-                    <Text variant="bodyBold">{cert.name}</Text>
-                    {cert.issuer || cert.expires_on ? (
-                      <Text tone="muted" variant="caption">
-                        {[cert.issuer, cert.expires_on].filter(Boolean).join(' · ')}
-                      </Text>
-                    ) : null}
-                  </View>
-                ))
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 4 }}>
+                  {specializations.map((item) => (
+                    <Tag key={item} label={item} />
+                  ))}
+                </View>
               )}
-            </Card>
+            </View>
+
+            <View style={{ gap: theme.space[2] }}>
+              <SectionLabel>{t('profile.languagesLabel')}</SectionLabel>
+              {languages.length === 0 ? (
+                <Text tone="muted" style={{ paddingHorizontal: 4 }}>
+                  {t('profile.languagesEmpty')}
+                </Text>
+              ) : (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 4 }}>
+                  {languages.map((item) => (
+                    <Tag key={item} label={item} />
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={{ gap: theme.space[2] }}>
+              <SectionLabel>{t('profile.certificationsLabel')}</SectionLabel>
+              {certifications.length === 0 ? (
+                <Text tone="muted" style={{ paddingHorizontal: 4 }}>
+                  {t('profile.certificationsEmpty')}
+                </Text>
+              ) : (
+                <SectionCard>
+                  {certifications.map((cert, index) => (
+                    <ListRow
+                      key={cert.id}
+                      leading={<Icon name="shield" size={19} color={theme.colors.textMuted} />}
+                      title={cert.name}
+                      subtitle={[cert.issuer, cert.expires_on].filter(Boolean).join(' · ') || undefined}
+                      chevron={false}
+                      isLast={index === certifications.length - 1}
+                    />
+                  ))}
+                </SectionCard>
+              )}
+            </View>
           </>
         ) : null}
+      </ScrollView>
 
+      <FooterBar>
         <Button
           label={t('profile.editButton')}
+          icon="edit"
+          size="lg"
           onPress={() => router.push('/(app)/profile-edit')}
         />
-      </ScrollView>
+      </FooterBar>
     </Screen>
   );
 }

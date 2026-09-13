@@ -3,21 +3,33 @@ import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Share } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Share, View } from 'react-native';
 import { inviteClient } from '../../../lib/clients/clientActions';
 import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { zodIssuesToFieldErrors } from '../../../lib/forms/zodFieldErrors';
 import { joinInviteUrl } from '../../../lib/webHost';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { Banner, Button, FormScreen, Row, Text, TextField } from '../../../ui';
+import {
+  Banner,
+  Button,
+  Card,
+  FooterBar,
+  Icon,
+  NavHeader,
+  Row,
+  Screen,
+  SectionLabel,
+  Text,
+  TextField,
+} from '../../../ui';
 
 type Field = 'name' | 'email';
 
 /**
- * Invite a client — "link first, email second" per the annotation: Copy link
- * is the accent action, Share invite is ghost (only one accent button per
- * section). Success state shows both, plus the expiry/single-use copy stated
- * directly in the sheet rather than buried in help.
+ * Invite a client — "link first, email second" per the annotation: the PT is the
+ * delivery mechanism (invite_client() writes a row and an audit entry; it
+ * dispatches nothing), so the link is the product of this screen and Copy is its
+ * one accent action.
  */
 export default function InviteClient() {
   const { t } = useTranslation();
@@ -72,77 +84,136 @@ export default function InviteClient() {
 
   if (sentEmail) {
     return (
-      <FormScreen
-        footer={<Button label={t('common.close')} onPress={() => router.replace('/(app)/(tabs)/clients')} />}
-      >
-        <Text variant="h1" style={{ marginBottom: theme.space[2] }}>
-          {t('clients.invite.successTitle')}
-        </Text>
-        <Text tone="secondary" style={{ marginBottom: theme.space[5] }}>
-          {t('clients.invite.successBody', { name: name.trim() || sentEmail })}
-        </Text>
+      <Screen padded={false}>
+        <NavHeader
+          title={t('clients.invite.successTitle')}
+          trailing={
+            <Button
+              label={t('common.done')}
+              variant="link"
+              onPress={() => router.replace('/(app)/(tabs)/clients')}
+            />
+          }
+        />
+        <ScrollView contentContainerStyle={{ padding: theme.space[5], gap: theme.space[4] }}>
+          <Row style={{ gap: theme.space[3] }}>
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: theme.colors.successSurface,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon name="check" size={19} color={theme.colors.onSuccessSurface} strokeWidth={2.4} />
+            </View>
+            <Text tone="secondary" style={{ flex: 1, fontSize: 13.5, lineHeight: 20 }}>
+              {t('clients.invite.successBody', { name: name.trim() || sentEmail })}
+            </Text>
+          </Row>
 
-        <Button label={t('clients.invite.copyLink')} onPress={() => void handleCopyLink()} style={{ marginBottom: theme.space[3] }} />
-        {linkCopied ? (
-          <Text tone="secondary" style={{ marginBottom: theme.space[3] }}>
-            {t('clients.invite.linkCopied')}
-          </Text>
-        ) : null}
-        <Button label={t('clients.invite.sendInvite')} variant="ghost" onPress={() => void handleShare()} />
-
-        <Text tone="muted" style={{ marginTop: theme.space[5] }}>
-          {t('clients.invite.expiryNote')}
-        </Text>
-        <Text tone="muted">{t('clients.invite.singleUseNote')}</Text>
-      </FormScreen>
+          <View style={{ gap: theme.space[2] }}>
+            <SectionLabel>{t('clients.invite.copyLink')}</SectionLabel>
+            <Card style={{ gap: theme.space[3] }}>
+              <View
+                style={{
+                  padding: theme.space[3],
+                  borderRadius: theme.radius.md,
+                  backgroundColor: theme.colors.surfaceSunken,
+                }}
+              >
+                <Text numeric numberOfLines={1} tone="secondary" style={{ fontSize: 12 }}>
+                  {joinInviteUrl(sentEmail)}
+                </Text>
+              </View>
+              <Row style={{ gap: theme.space[2] }}>
+                <Button
+                  label={linkCopied ? t('clients.invite.linkCopied') : t('clients.invite.copyLink')}
+                  icon={linkCopied ? 'check' : 'copy'}
+                  onPress={() => void handleCopyLink()}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label={t('common.share')}
+                  icon="share"
+                  variant="ghost"
+                  onPress={() => void handleShare()}
+                  style={{ flex: 1 }}
+                />
+              </Row>
+              <Text tone="muted" style={{ fontSize: 12, lineHeight: 18 }}>
+                {t('clients.invite.expiryNote')} {t('clients.invite.singleUseNote')}
+              </Text>
+            </Card>
+          </View>
+        </ScrollView>
+      </Screen>
     );
   }
 
   return (
-    <FormScreen
-      footer={
-        <Button
-          label={submitting ? t('intake.submitting') : t('clients.invite.submit')}
-          onPress={() => void handleSubmit()}
-          disabled={submitting}
-        />
-      }
-    >
-      <Row style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.space[5] }}>
-        <Text variant="h1" style={{ flex: 1 }}>
-          {t('clients.invite.title')}
-        </Text>
-        <Button label={t('common.cancel')} variant="ghost" size="md" onPress={() => router.back()} />
-      </Row>
-
-      {error ? <Banner variant="danger" message={error} /> : null}
-
-      <TextField
-        label={t('clients.invite.nameLabel')}
-        placeholder={t('clients.invite.namePlaceholder')}
-        value={name}
-        onChangeText={setName}
-        error={fieldErrors.name}
+    <Screen padded={false}>
+      <NavHeader
+        title={t('clients.invite.title')}
+        leading={<Button label={t('common.cancel')} variant="link" onPress={() => router.back()} />}
       />
-      <TextField
-        label={t('clients.invite.emailLabel')}
-        placeholder={t('clients.invite.emailPlaceholder')}
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="email-address"
-        error={fieldErrors.email}
-      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={{ padding: theme.space[5], gap: theme.space[2] }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {error ? <Banner variant="danger" message={error} /> : null}
 
-      {/* invite_client() writes a row and an audit entry; it dispatches nothing.
-          The PT is the delivery mechanism, so the screen says so before they tap
-          rather than leaving them waiting for an email that was never sent. */}
-      <Text tone="muted" style={{ marginTop: theme.space[3] }}>
-        {t('clients.invite.noEmailNote')}
-      </Text>
-      <Text tone="muted">{t('clients.invite.expiryNote')}</Text>
-      <Text tone="muted">{t('clients.invite.singleUseNote')}</Text>
-    </FormScreen>
+          <TextField
+            label={t('clients.invite.nameLabel')}
+            placeholder={t('clients.invite.namePlaceholder')}
+            value={name}
+            onChangeText={setName}
+            error={fieldErrors.name}
+          />
+          <TextField
+            label={t('clients.invite.emailLabel')}
+            placeholder={t('clients.invite.emailPlaceholder')}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            error={fieldErrors.email}
+            onSubmitEditing={() => void handleSubmit()}
+          />
+
+          {/* invite_client() writes a row and an audit entry; it dispatches nothing.
+              The PT is the delivery mechanism, so the screen says so before they tap
+              rather than leaving them waiting for an email that was never sent. */}
+          <Card style={{ flexDirection: 'row', gap: theme.space[3], alignItems: 'flex-start' }}>
+            <Icon name="inbox" size={19} color={theme.colors.textMuted} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text tone="secondary" style={{ fontSize: 13, lineHeight: 19 }}>
+                {t('clients.invite.noEmailNote')}
+              </Text>
+              <Text tone="muted" style={{ fontSize: 12, lineHeight: 18 }}>
+                {t('clients.invite.expiryNote')} {t('clients.invite.singleUseNote')}
+              </Text>
+            </View>
+          </Card>
+        </ScrollView>
+
+        <FooterBar>
+          <Button
+            label={t('clients.invite.submit')}
+            size="lg"
+            loading={submitting}
+            disabled={email.trim() === ''}
+            onPress={() => void handleSubmit()}
+          />
+        </FooterBar>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }

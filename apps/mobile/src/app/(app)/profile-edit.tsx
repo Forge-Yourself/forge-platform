@@ -7,13 +7,24 @@ import { Linking, ScrollView, View } from 'react-native';
 import { useAuth } from '../../lib/auth/AuthProvider';
 import { refreshAuthProfile } from '../../lib/auth/refreshProfile';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
-import { Avatar } from '../../lib/profile/Avatar';
 import { CertificationsEditor } from '../../lib/profile/CertificationsEditor';
 import { LANGUAGE_OPTIONS, SPECIALIZATION_OPTIONS, toggleOption } from '../../lib/profile/options';
 import { usePtProfileData } from '../../lib/profile/usePtProfileData';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, Button, Card, ChipRow, Row, Screen, Text, TextField } from '../../ui';
+import {
+  Avatar,
+  Banner,
+  Button,
+  Card,
+  ChipRow,
+  NavHeader,
+  Row,
+  Screen,
+  SectionLabel,
+  Text,
+  TextField,
+} from '../../ui';
 
 const SUPPORT_EMAIL = 'support@forge.app';
 
@@ -140,33 +151,31 @@ export default function ProfileEdit() {
   }
 
   return (
-    <Screen style={{ padding: 0 }}>
-      <Row
-        style={{
-          justifyContent: 'space-between',
-          paddingHorizontal: theme.space[5],
-          paddingVertical: theme.space[3],
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.border,
-        }}
-      >
-        <Button label={t('common.cancel')} variant="ghost" size="md" onPress={handleCancel} />
-        <Text variant="bodyBold">{t('profileEdit.title')}</Text>
-        <Button label={t('common.save')} variant="ghost" size="md" onPress={handleSave} disabled={submitting} />
-      </Row>
+    <Screen padded={false}>
+      <NavHeader
+        title={t('profileEdit.title')}
+        leading={<Button label={t('common.cancel')} variant="link" onPress={handleCancel} />}
+        trailing={
+          <Button
+            label={t('common.save')}
+            variant="link"
+            onPress={handleSave}
+            disabled={submitting}
+            style={{ paddingHorizontal: 0 }}
+          />
+        }
+      />
 
       <ScrollView contentContainerStyle={{ padding: theme.space[5], gap: theme.space[5] }}>
         {error ? <Banner variant="danger" message={error} /> : null}
         {saved ? <Banner variant="success" message={t('profileEdit.saved')} /> : null}
 
         <View style={{ alignItems: 'center' }}>
-          <Avatar displayName={displayName || auth.user?.display_name} photoUrl={photoUrl || avatarUrl} />
+          <Avatar name={displayName || auth.user?.display_name} photoUrl={photoUrl || avatarUrl} size={88} />
         </View>
 
         <View>
-          <Text variant="label" tone="muted" style={{ marginBottom: theme.space[3] }}>
-            {t('profileEdit.accountSection')}
-          </Text>
+          <SectionLabel>{t('profileEdit.accountSection')}</SectionLabel>
           <TextField
             label={t('profileEdit.displayNameLabel')}
             value={displayName}
@@ -191,9 +200,7 @@ export default function ProfileEdit() {
         {isPt ? (
           <>
             <View>
-              <Text variant="label" tone="muted" style={{ marginBottom: theme.space[3] }}>
-                {t('profileEdit.ptSection')}
-              </Text>
+              <SectionLabel>{t('profileEdit.ptSection')}</SectionLabel>
               <TextField
                 label={t('profileEdit.bioLabel')}
                 value={bio}
@@ -212,18 +219,14 @@ export default function ProfileEdit() {
                 keyboardType="url"
               />
 
-              <Text variant="label" tone="muted" style={{ marginTop: theme.space[2], marginBottom: theme.space[2] }}>
-                {t('profileEdit.specializationsLabel')}
-              </Text>
+              <SectionLabel>{t('profileEdit.specializationsLabel')}</SectionLabel>
               <ChipRow
                 options={SPECIALIZATION_OPTIONS}
                 selected={specializations}
                 onToggle={(option) => toggleOption(specializations, setSpecializations, option)}
               />
 
-              <Text variant="label" tone="muted" style={{ marginTop: theme.space[4], marginBottom: theme.space[2] }}>
-                {t('profileEdit.languagesLabel')}
-              </Text>
+              <SectionLabel>{t('profileEdit.languagesLabel')}</SectionLabel>
               <ChipRow
                 options={LANGUAGE_OPTIONS}
                 selected={languages}
@@ -232,9 +235,7 @@ export default function ProfileEdit() {
             </View>
 
             <View>
-              <Text variant="label" tone="muted" style={{ marginBottom: theme.space[3] }}>
-                {t('profileEdit.certificationsSection')}
-              </Text>
+              <SectionLabel>{t('profileEdit.certificationsSection')}</SectionLabel>
               <CertificationsEditor
                 userId={userId}
                 certifications={certifications}
@@ -248,8 +249,10 @@ export default function ProfileEdit() {
         <Button
           label={t('profileEdit.deleteAccount')}
           variant="ghost"
+          tone="danger"
+          icon="trash"
           onPress={() => setDeleteSheetOpen(true)}
-          style={{ borderColor: theme.colors.dangerAccent, marginTop: theme.space[4] }}
+          style={{ marginTop: theme.space[4] }}
         />
         {/* TODO(M10): real GDPR account-deletion job — this button only opens a
             support-contact message; there is no self-service deletion in M1. */}
@@ -267,6 +270,7 @@ export default function ProfileEdit() {
               />
               <Button
                 label={t('profileEdit.deleteAccountContact')}
+                tone="danger"
                 onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Delete%20my%20Forge%20account`)}
                 style={{ flex: 1 }}
               />

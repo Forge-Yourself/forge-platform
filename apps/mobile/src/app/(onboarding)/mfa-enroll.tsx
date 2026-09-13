@@ -12,8 +12,10 @@ import {
   Banner,
   Button,
   CodeCells,
+  NavHeader,
   NumericKeypad,
   Screen,
+  SectionLabel,
   SegmentedPill,
   Spinner,
   Text,
@@ -89,20 +91,27 @@ export default function MfaEnroll() {
   const ready = !!qrXml && !!secret && !!challengeId && !initError;
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        {/* MFA is offered, never forced — verify-success says as much. Without a way
-            back, a user who taps "Set up two-factor" and changes their mind (or whose
-            enroll() call failed) has only the Android hardware button, and nothing at
-            all on iOS but the edge swipe. router.replace('/') rather than back(),
-            since this screen is also reachable from Settings. */}
-        <Button
-          label={t('common.back')}
-          variant="ghost"
-          size="md"
-          onPress={() => router.replace('/')}
-          style={{ alignSelf: 'flex-start', marginBottom: theme.space[2] }}
-        />
+    <Screen padded={false}>
+      {/* MFA is offered, never forced — verify-success says as much. Without a way
+          back, a user who taps "Set up two-factor" and changes their mind (or whose
+          enroll() call failed) has only the Android hardware button, and nothing at
+          all on iOS but the edge swipe. router.replace('/') rather than back(),
+          since this screen is also reachable from Settings. */}
+      <NavHeader
+        leading={
+          <Button
+            label={t('common.back')}
+            icon="chevronBack"
+            variant="link"
+            onPress={() => router.replace('/')}
+          />
+        }
+        divider={false}
+      />
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: theme.space[5], paddingBottom: theme.space[5] }}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text variant="h1" style={{ marginBottom: theme.space[2] }}>
           {t('auth.mfaEnroll.title')}
         </Text>
@@ -167,21 +176,21 @@ export default function MfaEnroll() {
               {qrXml ? <SvgXml xml={qrXml} width={QR_SIZE} height={QR_SIZE} /> : null}
             </View>
 
-            <Text tone="muted" style={{ marginBottom: theme.space[2] }}>
-              {t('auth.mfaEnroll.manualEntryLabel')}
-            </Text>
-            <Text
-              numeric
-              selectable
-              style={{
-                fontSize: 16,
-                letterSpacing: 1,
-                marginBottom: theme.space[5],
-                textAlign: 'center',
-              }}
-            >
-              {secret}
-            </Text>
+            <View style={{ gap: theme.space[2], marginBottom: theme.space[5] }}>
+              <SectionLabel>{t('auth.mfaEnroll.manualEntryLabel')}</SectionLabel>
+              <View
+                style={{
+                  paddingVertical: theme.space[3],
+                  paddingHorizontal: theme.space[4],
+                  borderRadius: theme.radius.md,
+                  backgroundColor: theme.colors.surfaceSunken,
+                }}
+              >
+                <Text numeric selectable style={{ fontSize: 16, letterSpacing: 1, textAlign: 'center' }}>
+                  {secret}
+                </Text>
+              </View>
+            </View>
 
             <View style={{ marginBottom: theme.space[5] }}>
               <Banner variant="warn" message={t('auth.mfaEnroll.recoveryWarning')} />

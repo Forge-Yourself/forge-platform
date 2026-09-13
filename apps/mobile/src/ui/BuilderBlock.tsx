@@ -26,7 +26,6 @@ export function BuilderBlock({ tag, title, rest, children }: BuilderBlockProps) 
 
   return (
     <View
-      accessible={false}
       style={{
         borderRadius: t.radius.lg,
         borderWidth: 1,
