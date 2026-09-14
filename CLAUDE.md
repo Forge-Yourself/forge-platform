@@ -25,6 +25,7 @@ All product documentation lives in `docs/`. Start at `docs/index.html` for the h
 | `docs/Forge_DesignBrief_M1-M4.md` | Screen-by-screen design brief for the first four build milestones |
 | `docs/Forge_Prototype.html` | Claude Design clickable prototype (M1–M4 screens + designer annotations) |
 | `docs/DESIGN_SYSTEM_GAPS.md` | Components the prototype needs that the design system doesn't have yet — built vs. outstanding |
+| `docs/PITFALLS.md` | **Read before adding a screen, an input, or an `/api/*` caller.** Traps this codebase already fell into, each with the rule that prevents a repeat: screens own their own back control (every stack sets `headerShown: false`), escape affordances never live in the scroll body, `replace` not `push` after a state-changing submit, dates go through `DateField` not a bare `TextField`, key presence is not an answer, a rule written in both TS and SQL needs tests on both sides, every `/api/*` route the mobile app calls needs CORS (web target only — native `fetch` has no same-origin policy), the root auth gate is passive so a screen that changes gate state must navigate itself, a gate `<Redirect>` re-fires every render unless guarded by `isCurrentRoute`, and `href: null` hides a tab button without unregistering the route |
 | `docs/superpowers/plans/2026-09-12-m3-programming.md` | M3's plan. Where it and `Forge_Prototype.html` disagree, the plan's "Corrections" section wins: the library search count and credit balance are read live rather than hardcoded, and the AI generating state says "Usually under 12 seconds. Keep this screen open." rather than promising a notification (M9 builds notifications; the call is synchronous by design) |
 
 ## Tech Stack (Actual — see `docs/superpowers/specs/2026-09-09-forge-v1-implementation-design.md`)
@@ -98,6 +99,18 @@ After any migration touching RLS policies, run the security harness and expect e
 ```bash
 "/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -v ON_ERROR_STOP=1 -f db/rls_assertions.sql
 ```
+
+`$PGURL` is not stored anywhere — build it from `SUPABASE_DB_PASSWORD` in the repo-root
+`.env` plus the project ref and region above:
+
+```bash
+set -a && . ./.env && set +a
+PGURL="postgresql://postgres.qkmgmzhrwduvigccwgcz:$SUPABASE_DB_PASSWORD@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require"
+```
+
+A read-only query against the live project is usually the fastest way to settle "did that
+write actually land?" — see `docs/PITFALLS.md` N5 for a bug where reasoning about RLS from
+the migrations would have pointed at the wrong layer entirely.
 
 ## Build Order (M0–M10)
 
