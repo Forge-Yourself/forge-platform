@@ -122,12 +122,33 @@ export default async function AdminUserDetailPage({
     roster = data ?? [];
   }
 
+  // M4a (Task 14): a client's logged session history, for support cases.
+  // Read-only, same posture as the rest of this page — the is_admin() branch
+  // on workout_sessions_select / sets_select is what permits it.
+  type SessionRow = Pick<
+    Database['public']['Tables']['workout_sessions']['Row'],
+    | 'id'
+    | 'status'
+    | 'started_at'
+    | 'completed_at'
+    | 'duration_min'
+    | 'is_pt_led'
+    | 'day_label'
+    | 'week_number'
+    | 'day_number'
+    | 'logged_by_user_id'
+  >;
+  let sessions: (SessionRow & { setCount: number; loggedBy: string })[] = [];
+
+  let clientRow: { id: string; pt_user_id: string } | null = null;
+
   if (target.role === 'client') {
-    const { data: clientRow } = await supabase
+    const { data } = await supabase
       .from('clients')
       .select('id, pt_user_id')
       .eq('client_user_id', id)
       .maybeSingle();
+    clientRow = data ?? null;
 
     if (clientRow) {
       const [{ data: ptUser }, { data: intake }] = await Promise.all([
@@ -145,6 +166,43 @@ export default async function AdminUserDetailPage({
         flagCount: Array.isArray(intake?.red_flags) ? intake.red_flags.length : 0,
         waiverSigned: !!intake?.waiver_pdf_url,
       };
+
+      const { data: rows } = await supabase
+        .from('workout_sessions')
+        .select(
+          'id, status, started_at, completed_at, duration_min, is_pt_led, day_label, week_number, day_number, logged_by_user_id',
+        )
+        .eq('client_id', clientRow.id)
+        // started_at is nullable — Postgres sorts NULLS FIRST on DESC by default,
+        // which would float M5's future `programmed` rows to the top.
+        .order('started_at', { ascending: false, nullsFirst: false })
+        .limit(50);
+      const list = rows ?? [];
+      const ids = list.map((r) => r.id);
+      const loggerIds = [...new Set(list.map((r) => r.logged_by_user_id))];
+
+      const [countResults, { data: loggers }] = await Promise.all([
+        // One HEAD count per session rather than one row per set: the per-set
+        // query silently truncates at PostgREST's max_rows (1000) for a busy client.
+        Promise.all(
+          ids.map((sessionId) =>
+            supabase.from('sets').select('id', { head: true, count: 'exact' }).eq('workout_session_id', sessionId),
+          ),
+        ),
+        loggerIds.length
+          ? supabase.from('users').select('id, display_name').in('id', loggerIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      const counts: Record<string, number> = {};
+      ids.forEach((sessionId, i) => {
+        counts[sessionId] = countResults[i]?.count ?? 0;
+      });
+      const names = Object.fromEntries((loggers ?? []).map((u) => [u.id, u.display_name]));
+      sessions = list.map((r) => ({
+        ...r,
+        setCount: counts[r.id] ?? 0,
+        loggedBy: names[r.logged_by_user_id] ?? r.logged_by_user_id,
+      }));
     }
   }
 
@@ -295,6 +353,51 @@ export default async function AdminUserDetailPage({
             </>
           ) : (
             <p style={ui.muted}>Not linked to a trainer yet.</p>
+          )}
+        </section>
+      ) : null}
+
+      {target.role === 'client' ? (
+        <section style={ui.card}>
+          <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Sessions</h2>
+          {sessions.length === 0 ? (
+            <p style={ui.muted}>No sessions logged yet.</p>
+          ) : (
+            <table style={ui.table}>
+              <thead>
+                <tr>
+                  <th style={ui.th}>Started</th>
+                  <th style={ui.th}>Day</th>
+                  <th style={ui.th}>Logged by</th>
+                  <th style={ui.th}>Sets</th>
+                  <th style={ui.th}>Duration</th>
+                  <th style={ui.th}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessions.map((s) => (
+                  <tr key={s.id}>
+                    <td style={ui.td}>
+                      <Link href={`/admin/sessions/${s.id}`} style={ui.link}>
+                        {s.started_at ? new Date(s.started_at).toLocaleString() : '—'}
+                      </Link>
+                    </td>
+                    <td style={ui.td}>
+                      {s.week_number === null ? 'Freestyle' : `${s.day_label ?? `Day ${s.day_number}`} · Week ${s.week_number}`}
+                    </td>
+                    <td style={ui.td}>
+                      {s.loggedBy}
+                      {s.is_pt_led ? ' (PT)' : ''}
+                    </td>
+                    <td style={ui.td}>{s.setCount}</td>
+                    <td style={ui.td}>{s.duration_min === null ? '—' : `${s.duration_min} min`}</td>
+                    <td style={ui.td}>
+                      <span style={s.status === 'in_progress' ? ui.neutralBadge : ui.badge}>{s.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </section>
       ) : null}
