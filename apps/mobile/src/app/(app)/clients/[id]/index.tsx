@@ -7,7 +7,7 @@ import { useAuth } from '../../../../lib/auth/AuthProvider';
 import { resendInvite, revokeInvite, setClientState } from '../../../../lib/clients/clientActions';
 import { useClientDetail } from '../../../../lib/clients/useClientDetail';
 import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
-import { useProgramList } from '../../../../lib/programs/useProgramList';
+import { useClientActiveProgram } from '../../../../lib/programs/useClientActiveProgram';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import {
   Avatar,
@@ -127,7 +127,7 @@ export default function ClientDetail() {
     params.id,
     unitSystem,
   );
-  const programs = useProgramList('assigned');
+  const program = useClientActiveProgram(params.id);
   const { submitting, error: actionError, setError: setActionError, run } = useAsyncSubmit();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
@@ -140,7 +140,11 @@ export default function ClientDetail() {
     />
   );
 
-  if (loading) {
+  // Gated on the program fetch too. Without it the body painted while that
+  // query was still in flight, so the Week tile showed "—" and the header
+  // subtitle silently omitted the program name before both popped in — a
+  // mid-week-3 client indistinguishable from an unprogrammed one.
+  if (loading || program.loading) {
     return (
       <Screen padded={false}>
         <NavHeader leading={back} divider={false} />
@@ -166,7 +170,7 @@ export default function ClientDetail() {
   const waiverSigned = intake?.state === 'waiver_signed';
   const startSessionEnabled = hasSubmittedIntake;
 
-  const clientProgram = programs.items.find((p) => p.client_id === client.id && p.state === 'active');
+  const clientProgram = program.program;
   const programWeek = clientProgram
     ? weekCompletion(
         { duration_weeks: clientProgram.duration_weeks, start_date: clientProgram.start_date },
@@ -278,6 +282,10 @@ export default function ClientDetail() {
         ) : null}
 
         {actionError ? <Banner variant="danger" message={actionError} /> : null}
+        {/* A failed program fetch used to be indistinguishable from "no program
+            assigned": the Week tile read "—" and the name vanished, with no
+            banner anywhere on the screen to say a request had failed. */}
+        {program.error ? <Banner variant="danger" message={t('clients.offlineError.body')} /> : null}
 
         <Row style={{ gap: theme.space[2], alignItems: 'stretch' }}>
           <StatTile label={t('clients.detail.stats.since')} value={shortMonthYear(client.created_at)} />
@@ -370,6 +378,11 @@ export default function ClientDetail() {
               <ListRow
                 title={t('clients.detail.resendInvite')}
                 onPress={() => void handleResend()}
+                // The only row here that fires an RPC straight from the tap —
+                // the other four just open the confirm card, whose Button maps
+                // `loading` to disabled. useAsyncSubmit has no in-flight bail,
+                // so without this a double tap resent the invite twice.
+                disabled={submitting}
                 chevron={false}
                 trailing={<Icon name="mail" size={19} color={theme.colors.textMuted} />}
               />

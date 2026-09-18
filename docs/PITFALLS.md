@@ -135,7 +135,150 @@ tab would strand every client persona. Today is the one screen both personas lan
 **Rule:** don't relocate or gate that button without giving clients another route in.
 Adding a second entry point is fine; removing the only one is not.
 
+### N9. Pushing a tab route from a stack screen mounts a *second* tab navigator
+
+`(tabs)` is one screen of the `(app)` stack. From a sibling stack screen,
+`router.push('/(app)/(tabs)/library')` diverges at the `(app)` stack
+(`expo-router/build/global-state/getNavigationAction.js` → `findDivergentState`), so
+the action stays a `PUSH` and pushes the whole `(tabs)` route again — a second tab
+navigator mounts on top of the screen you came from. What you land on is a **tab
+root**, which by N1 draws no back control. There is no way back, and the screen
+underneath keeps its unsaved state where nobody can reach it.
+
+From *inside* the tab navigator the same call is fine: divergence happens at the tab
+navigator instead, the action becomes `JUMP_TO`/`NAVIGATE`, and it switches tabs.
+That is why `(tabs)/index.tsx`'s link to the Library tab is correct.
+
+**Rule:** a tab route is a destination for tab *switching* only. A stack screen that
+needs a list to pick from gets its own pushed route with its own `NavHeader` Cancel.
+Share the body as a component so the two entry points cannot drift.
+
+**Seen in:** the program builder's "+ Add exercise" routed to `(app)/(tabs)/library`.
+Choosing an exercise popped the detail screen and left the PT stranded on the library
+list with the unsaved program buried two frames below. Fixed by
+`(app)/programs/[id]/pick-exercise.tsx`, which renders the shared
+`lib/exercises/ExerciseLibrary` and returns with `router.dismissTo` — `POP_TO` matches
+by route name and keeps the builder's route key, so its draft survives the round trip.
+
+
+### N10. A value set just before navigating must not be cleared by the effect that reads it
+
+`useFocusEffect(useCallback(fn, [x]))` does not only run on the way back. `x` is a
+dep, so setting `x` re-runs the effect **immediately, while the screen is still
+focused**, before the queued navigation has committed.
+
+**Rule:** an effect consuming a cross-screen handoff must bail *before* touching the
+slot unless the handoff is actually present. Clear-on-every-run is what breaks —
+arming the slot instantly disarms it.
+
+**Seen in:** the builder's exercise pick-up. `setPendingBlockIndex(blockIndex)`
+re-ran its own focus effect, which cleared `pendingBlockIndex` "in case the picker was
+cancelled" — so every chosen exercise came back to a null slot and was silently
+dropped. The cancel case that guard existed for was unreachable anyway: the slot is
+re-armed before every push, and only the picker's detail screen can produce a pick.
+
+### N11. A gate carve-out must name exact routes, never a whole group
+
+N6 says a gate branch has to yield when it is already on its own target. The
+mirror of that: a branch must **not** yield for any other route, because the
+carve-out and the redirect then take turns.
+
+`Gate` returns a redirect *instead of* `<Slot />`, so rendering one unmounts the
+root navigator. A navigator that remounts comes up on its default route —
+`(app)/(tabs)` — one commit before the URL is applied, and any navigation issued
+while it was unmounted is dropped. So with a group-wide carve-out the cycle is:
+
+```
+segments = (auth)/sign-in   -> carve-out returns <Slot/>      -> navigator mounts
+segments = (app)/(tabs)     -> branch returns <Redirect .../> -> navigator unmounts
+segments = (auth)/sign-in   -> carve-out returns <Slot/>      -> ...
+```
+
+The `<Redirect>`'s own effect never gets to run before it is unmounted, so the
+`replace` never happens and the URL never moves off `/sign-in`. React gives up
+with `Maximum update depth exceeded` inside `<BottomTabNavigator>`, and the app
+shows a blank screen.
+
+**Rule:** carve-outs are `isCurrentRoute(segments, group, route)` per route, the
+same call N6 uses. `segments[0] === '(group)'` is only safe in a branch whose
+redirect target is itself inside that group — as in the `signedOut` branch, which
+sends you to `(auth)/sign-in`. Ask of every carve-out: if the navigator remounts
+on `(app)/(tabs)` right now, does this branch flip? If yes, it oscillates.
+
+**Seen in:** the `onboarding_completed === false` branch carved out all of
+`(auth)`. Sign-in does not navigate on success (N5 — it lets the gate route
+onward), so a user signing in with onboarding still to do was signedIn while
+parked on `(auth)/sign-in`, and hung there. It reproduced for every such account,
+PT or client. Now carved out per route: `(auth)/verify-success`,
+`(auth)/reset-password`, `(onboarding)/mfa-enroll`.
+
+**Reproducing a gate loop at all** is the hard part, because nothing in
+typecheck, lint or the test suite can see it. What worked: drive the web build in
+headless Chrome over CDP, sign in through the real form, and log
+`{status, role, onboarding_completed, aal, segments}` from an effect in `Gate`
+with **no dependency array** — one line per commit. Counting in the render body
+trips `react-hooks/immutability` and double-counts under StrictMode. The
+oscillation is obvious the moment the commits are in order; reasoning about the
+branch table is not enough, and two plausible root causes were wrong before the
+log settled it.
+
 ---
+
+### N12. A tab list stays mounted under a pushed screen, so a mount effect never re-runs
+
+A tab screen is not unmounted when a stack screen is pushed over it, and
+`router.back()` returns to the same instance. A list hook that fetches in a plain
+`useEffect(..., [])` therefore runs exactly once per app session: rename a program
+in the builder, assign it, instantiate a template, come back, and the Programs tab
+still shows the old rows until pull-to-refresh. The Today tab had the same hook and
+the same staleness.
+
+**Rule:** a list a pushed screen can mutate must refetch on focus (`useFocusEffect`
+from `expo-router`) or subscribe to an explicit change signal. Pick by cost of
+refetching: `useProgramList` refetches on focus because it has no pagination to
+lose; the exercise library uses a counter (`customExerciseSignal.ts`) because a
+focus refetch would reset "load more". Do not fix this per screen with a
+`refetch()` before `router.back()` — that covers one caller and misses the rest.
+
+### N13. A screen with two entry points must work from both
+
+`programs/ai` was written for the builder, which always passes `clientId`. Then
+Today grew a "Draft with AI" tile that pushed the same route with no params. The
+screen rendered, the intro read "...before anything reaches ." (empty
+interpolation), and Generate could only fail with "You're not this client's
+trainer." Reviewers read the screen in isolation and passed it.
+
+**Rule:** before wiring a new caller to an existing route, grep every
+`pathname: '/(app)/<route>'` and read what each caller passes. A param the screen
+cannot work without is either supplied by every caller or chosen on the screen
+(the AI screen now shows a client chip row when it arrives without one). Never
+let a missing param surface as an unrelated error.
+
+### N14. If the copy says "do X first", X is tappable on that screen
+
+The builder footer said "Assign this program to a client first" next to a
+disabled button, and no screen in the app offered Assign for a non-template
+program (the only Assign lived on the Programs tab's *template* cards). The
+route existed, was typed, and was unreachable for the state that needed it.
+
+**Rule:** an instruction in UI copy is a promise of an affordance on the same
+screen. When a button is disabled for a fixable reason, replace it with the
+button that fixes it (builder: Assign when `client_id` is null, Draft with AI
+otherwise). When adding a route, grep its callers and ask which states can
+reach it. A route with one caller guarding one variant is usually an orphan for
+the others.
+
+### N15. `router.back()` is not an escape control on a cold deep link
+
+On web, a screen opened directly (`/forgot-password` in a fresh tab, or any
+email link) has no stack beneath it. `router.canGoBack()` reported true and
+`GO_BACK` was then dropped as "not handled by any navigator", so the Back
+button did nothing. Device users hit the same thing from `forge://` links.
+
+**Rule:** a Back/Cancel control whose parent is known uses
+`router.dismissTo('/(auth)/sign-in')` (pops to it when present, replaces when
+not). Bare `router.back()` is only for controls with no fixed parent. Test every
+auth and invite screen by loading its URL directly.
 
 ## Forms and input
 
@@ -286,6 +429,36 @@ at all, and a caller must already hold a token — which a hostile page cannot
 obtain from here. `ALLOWED_ORIGINS` (comma-separated) replaces the default
 localhost-only allowlist in production.
 
+### W4. A native-only API called unconditionally errors on web
+
+`BackHandler` logs `BackHandler is not supported on web and should not be used` on
+every registration under `expo start --web`, and it is not alone — anything backed by
+a native module (haptics, the `Animated` native driver, camera) warns or degrades.
+
+**Rule:** guard native-only APIs with `Platform.OS` and say in the comment what the
+web equivalent is, or why there is none. Browser back goes through history; a
+`BackHandler` could never have intercepted it.
+
+**Seen in:** `(app)/programs/[id]/builder.tsx`'s unsaved-changes guard, which logged
+the error twice per visit because its effect re-runs on `dirty`.
+
+### W5. react-native-web forwards RN props it does not recognise straight to the DOM
+
+`accessible={false}` reaches the DOM verbatim and React logs ``Received `false` for a
+non-boolean attribute `accessible` `` on **every render** — at error level, loud
+enough to bury real errors in the console you are debugging in.
+
+**Rule:** prefer the cross-platform ARIA spelling (`aria-hidden`) for decorative
+nodes, and the style spellings (`style.pointerEvents`, `boxShadow`) over their
+deprecated prop forms. Note `accessible={false}` on a plain `View` was a no-op on
+native to begin with — a `View` is not an accessibility element unless `accessible`
+is true — so deleting it changes nothing there.
+
+**Seen in:** `ui/Avatar.tsx` and `ui/BuilderBlock.tsx` (deleted) and `ui/Icon.tsx`
+(→ `aria-hidden`); `library/[id].tsx`'s `pointerEvents="none"` → `style.pointerEvents`.
+The `shadow*` → `boxShadow` deprecation in the theme's elevation tokens is still open.
+
+
 ---
 
 ## i18n
@@ -307,39 +480,116 @@ keeps every string greppable from the screen that uses it.
 
 ---
 
-## Open — unresolved
+### I3. A `{{name}}` interpolation needs a no-name variant
 
-### O1. `Maximum update depth exceeded` signing in as a client
+`ai.intro` ends "...before anything reaches {{name}}." Rendered with `name: ''`
+it produced "reaches ." Typecheck, lint and the key-parity test all accepted it,
+because the string and the call were each valid on their own.
 
-**Status:** unresolved, mechanism unproven. Reported 2026-09-13 on web.
+**Rule:** for every `t(key, { name })` where `name` can be empty, branch to a
+second key (`ai.introNoClient`) instead of passing `''`. When adding keys, insert
+them at the same position in `ar.json` as in `en.json`. The parity test checks
+order, so appending to one file and prepending to the other fails.
 
+## Project configuration
+
+### P1. Supabase project settings change the shape of what the SDK returns
+
+`supabase.auth.signUp()` returns a session when the project has email
+confirmation off, and `session: null` when it has it on. The sign-up screen used
+to push to `(auth)/verify-pending` unconditionally, which is right for exactly
+one of those two settings — with confirmation off it strands a signed-in user on
+a "check your inbox" screen waiting for mail nobody sent, and the root gate will
+not rescue them, because its signed-in branch renders any `(auth)` route as-is
+(see N5).
+
+**Rule:** branch on what the call returned (`if (data.session)`), never on what
+you believe the project is configured to do. Project config is not in the repo,
+is changed from a dashboard by a human, and differs between environments.
+
+### P2. A failed outbound email fails the entire signup
+
+With confirmation on, GoTrue treats "could not send the confirmation email" as
+fatal: `POST /auth/v1/signup` returns `500 unexpected_failure`, the `auth.users`
+row is rolled back, and nothing is left behind to show what happened. So a
+sender-domain problem in Resend — DNS, a key, an unverified domain — presents as
+*signup is completely broken*, with no failure visible on the auth side at all.
+
+That is what happened on 2026-09-15: the configured sender was
+`noreply@forge.app`, `forge.app` was never verified in Resend, and every send
+came back `403 The forge.app domain is not verified`.
+
+**Rule:** when signup fails with `unexpected_failure`, test the mail path
+directly before reading a line of app code. One curl settles it:
+
+```bash
+set -a && . ./.env && set +a
+curl -s -X POST https://api.resend.com/emails \
+  -H "Authorization: Bearer $RESEND_API_KEY" -H "Content-Type: application/json" \
+  -d '{"from":"Forge <noreply@forge.app>","to":["delivered@resend.dev"],"subject":"probe","text":"probe"}'
 ```
-[Error: Maximum update depth exceeded...]
-  TabsLayout ((app)/(tabs)/_layout.tsx:38)
-  AppLayout  ((app)/_layout.tsx:4)
-  Gate       (_layout.tsx:162)     <- the <Slot/> in the onboarding_completed === false branch
-```
 
-What is known: it needs a signed-in user with `onboarding_completed = false`; the
-stack frame is the `(auth)` carve-out inside that branch; the tabs tree was
-rendering while `segments[0]` was still `'(auth)'`. It may have been N5's stuck
-state surfacing as an N6 redirect loop rather than a separate defect — after N5
-was fixed the reproducing account was no longer in the triggering state.
+A send-only Resend key returns 401 on `/domains` and `/api-keys` by design —
+that is not the fault, keep going and test `/emails`.
 
-To reproduce, an account needs `role='client'` **and**
-`onboarding_completed=false`. Then check whether `segments` oscillates or
-freezes: those point at different fixes.
+**Corollary:** never let an infrastructure failure render as
+`auth.errors.generic`. "Something went wrong. Please try again." is advice that
+cannot work for a fault no retry fixes. `mapAuthError` now recognises the mail
+failure specifically.
 
-The instrumentation for that is already in the tree, marked `TEMP DEBUG`, in
-`_layout.tsx` (`[gate]`) and `(app)/(tabs)/_layout.tsx` (`[tabs]`). Both counters
-live in an effect with **no dependency array**, deliberately: counting in the
-render body trips `react-hooks/immutability` (which fails CI) and double-counts
-under StrictMode, which is the opposite of what a loop counter needs. Remove both
-once this section closes.
+---
 
-A network trace on 2026-09-14 showed roughly a dozen repeated
-`intake_forms?id=eq…` fetches in one session, which suggests something in this
-family is still live.
+## Security boundaries
+
+### S1. A row policy on a table with default grants is a mass-assignment hole
+
+Supabase grants `ALL` on every `public` table to `authenticated`. An RLS policy
+then decides *which rows* a caller may write — it says nothing about *which
+columns*. `clients_insert` checked `pt_user_id = auth.uid()` and let the caller
+pick `client_user_id` and `state` freely, so any account could fabricate a
+trainer relationship with any UUID, and every `is_pt_of_*` predicate believed it.
+
+**Rule:** a table whose rows carry authorization-bearing columns (`client_user_id`,
+`role`, `state`, anything a `SECURITY DEFINER` predicate reads) is written only
+through RPCs. `REVOKE INSERT, UPDATE, DELETE ... FROM authenticated` and drop the
+write policies, the way `0003` did for `users.role` and `0014` did for `clients`.
+If a column genuinely needs direct editing, re-grant that one column.
+
+**Seen in:** `clients` (`0003`/`0005`, closed by `0014`). The harness had tested
+the client-tamper direction only; the PT-forges-a-client direction had no case.
+
+### S2. `email_confirmed_at` is only proof of ownership while confirmations are on
+
+With `[auth.email] enable_confirmations = false`, GoTrue stamps
+`email_confirmed_at` at signup for whatever address was typed. A function that
+gates on it — `claim_client_invites()` — degrades to "anyone who knows the
+invitee's address".
+
+**Rule:** treat `email_confirmed_at` as necessary, not sufficient. Also require
+`confirmation_sent_at IS NOT NULL` (the flow ran), `invited_at IS NOT NULL`, or an
+`auth.identities` row from a verifying provider. Test accounts created by SQL
+need `confirmation_sent_at` set or they will claim nothing.
+
+### S3. An RPC granted to `authenticated` is a public API, whatever the comment says
+
+`refund_ai_credit()` was documented as "an operator tool for support cases" and
+never called from the app — but it was `GRANT EXECUTE ... TO authenticated` with
+an owner-passes guard, so a PT could refund every generation they paid for and
+still turn it into a program.
+
+**Rule:** if only an admin or the server should call it, the guard is
+`IF NOT public.is_admin() THEN RAISE`, and the server calls it with the service
+role. Grep `apps/` for the RPC name before trusting a "nothing calls this" note.
+
+### S4. `**` in a Supabase redirect allow-list crosses `/` and `.`
+
+`additional_redirect_urls = ["exp://**"]` allowed any host. Combined with the
+implicit OAuth flow (which GoTrue selects whenever the caller omits
+`code_challenge`, regardless of the app's `flowType`), that redirects a victim's
+tokens to an attacker's Expo project.
+
+**Rule:** exact URLs only. A dev-time wildcard goes in the dashboard for the
+session, never in `config.toml`, which is pushed to production.
 
 ---
 
@@ -374,8 +624,95 @@ caught: `psql -c "SELECT public.intake_answered_sections(…)"` against a handfu
 hand-written JSONB payloads, before any client ever saw the wrong number.
 
 After any migration that touches RLS policies, run the harness and expect every
-assertion to pass — 85 of them as of migration 0012:
+assertion to pass — 97 of them as of migration 0014:
 
 ```bash
 "/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -w -v ON_ERROR_STOP=1 -f db/rls_assertions.sql
 ```
+
+---
+
+## Verifying in the browser
+
+### V1. A static review is not a test
+
+Four parallel code reviewers, typecheck, lint and 238 unit tests passed the
+tree that had N13, N14 and N15 in it. All three were found in under ten minutes
+by signing in to the Expo web build in headless Chrome and tapping through.
+
+**Rule:** "tested" means the flow ran. Before claiming a screen or flow works,
+run the walk in `.claude/skills/forge-screen-walk/` (Expo web under Node 24,
+`playwright-core` + system Chrome, the `@forge.dev` test accounts) and read the
+screenshots. Load every auth/invite screen by direct URL as well as via its
+in-app entry point (N15).
+
+### V2. Metro on this machine serves stale route bundles after edits
+
+`expo start --web` kept serving the pre-edit lazy route bundle after a save, so
+a fix "did nothing" in the browser while the source was right. Kill the process
+on 8081 and restart with `--clear` after each batch of edits. Expo web also needs
+Node 22+ (`Node.js detected but native WebSocket not found`, thrown from
+`lib/supabase.ts`); put the nvm `v24.15.0` directory first on PATH as a POSIX
+path. A backslash `$APPDATA` path is silently ignored by bash.
+
+## Design
+
+### D1. The prototype is the spec wherever it is explicit
+
+`docs/Forge_Prototype.html` is not a mood board. Each of its 33 artboards sets
+literal type sizes, weights, tracking, spacing and element order, and the
+sidebar script carries the designer's own annotations explaining intent
+("Only one accent button per section", "step count is the honest signal of
+remaining work").
+
+Where it bit: the M3 design pass restyled sign-in from memory. The artboard
+makes `FORGE` the screen's heading — 900/34/letter-spacing-7 — with "Welcome
+back." as a 15px secondary subtitle under it. The rewrite put an invented
+logo-tile lockup there and left "Welcome back." at `h1`, so the subtitle became
+the heading and the brand became decoration. Sign-up gained a wordmark the
+artboard does not have. The code that was replaced had been closer to the design
+than its replacement.
+
+**Rule:** extract the artboard and diff the numbers before restyling a screen
+the prototype covers. Improvise only where it is silent — an empty state it
+never drew, a dashboard it never specified, a component the DS lacks. Where a
+shipped feature has no slot (Google sign-in postdates the prototype), keep the
+feature and say in the PR that the treatment is yours. Where the
+`docs/superpowers/plans/*.md` "Corrections" section disagrees with the
+prototype, the plan wins.
+
+### D2. Extracting an artboard
+
+The file looks like an opaque 690KB blob; it is a bundle. Line 380 is a JSON map
+of gzip+base64 assets, line 392 is the page HTML as a JSON string:
+
+```js
+const lines = fs.readFileSync('docs/Forge_Prototype.html', 'utf8').split('\n');
+fs.writeFileSync('proto.html', JSON.parse(lines[391]));
+```
+
+Screens are `<sc-if value="{{ is_<screen> }}">` blocks — `is_signin`,
+`is_clients`, `is_builder`, `is_ai` and so on. They nest, so slice on the
+matching `</sc-if>` by counting depth. The trailing `<script type="text/x-dc">`
+holds `GROUPS`, the annotated index of all 33.
+
+### D3. Green checks do not mean the screen renders
+
+Typecheck, lint and the full test suite all passed while every status chip,
+tinted banner and initials disc was invisible in dark mode: `successSurface`,
+`warnSurface` and `dangerSurface` were set to charcoal-700 — the same value as
+`surfaceRaised` — so each was a zero-contrast rectangle on any card. Nothing in
+the toolchain can see that.
+
+**Rule:** look at a design change before calling it done. `npx expo export
+--platform web` proves the bundle builds and produces something a headless
+browser can screenshot; the gate only renders signed-out routes, so to see a
+signed-in component put a throwaway screen under `src/app/(auth)/` with mock
+data and delete it after. Note that Chrome will not lay out narrower than ~500px
+on Windows, and `useColorScheme()` returns null on web so the theme falls
+through to dark — light mode is not reachable this way.
+
+`packages/shared/src/theme/tokens.test.ts` now asserts that a tint is visible as
+a shape (per-channel delta, not a contrast ratio — these fills are deliberately
+near-isoluminant and carry their signal in hue), so that specific class of bug
+is a failing test now rather than a screenshot away.

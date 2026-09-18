@@ -51,11 +51,12 @@ const STATE_TONE: Record<string, TagTone> = {
  * but resolve into something shaped nothing like them.
  */
 function SkeletonRow({ isLast }: { isLast?: boolean }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   return (
     <View
       accessible
-      accessibilityLabel="Loading content"
+      accessibilityLabel={t('common.loading')}
       style={{
         minHeight: 68,
         flexDirection: 'row',

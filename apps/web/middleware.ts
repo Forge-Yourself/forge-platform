@@ -36,6 +36,12 @@ export const config = {
      * Match all request paths except static assets and image optimization
      * files. Session refresh only needs to run on navigable pages.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // The two escapes below are DOUBLED on purpose. A JS string literal
+    // collapses a single backslash-dot to a bare dot, which matches ANY
+    // character — so with one backslash `/admin/users/abcpng` and
+    // `/join/xyzsvg` were excluded from middleware entirely, losing the
+    // unauthenticated-/admin redirect, the Supabase session-cookie refresh
+    // and the CORS headers. Doubled, the regex sees a literal dot.
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

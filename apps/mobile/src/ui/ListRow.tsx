@@ -21,6 +21,16 @@ export type ListRowProps = {
    * segmented pill) and the row does not navigate.
    */
   chevron?: boolean;
+  /**
+   * Blocks presses and dims the row, for a row whose onPress fires a request.
+   *
+   * ListRow started as a navigation/info row, so it had no such prop — and when
+   * the client-detail screen's Resend invite was converted from a
+   * `<Button disabled={submitting}>` to a ListRow, the in-flight guard was
+   * silently dropped along with it: two taps sent two resend_invite RPCs, which
+   * rotate the invite twice and write two audit rows.
+   */
+  disabled?: boolean;
 };
 
 /** One row of a SectionCard. Pressable when onPress is given, otherwise a static info row. */
@@ -33,6 +43,7 @@ export function ListRow({
   isLast,
   minHeight = 60,
   chevron,
+  disabled,
 }: ListRowProps) {
   const t = useTheme();
   const Container = onPress ? Pressable : View;
@@ -41,10 +52,20 @@ export function ListRow({
   return (
     <Container
       {...(onPress
-        ? { accessibilityRole: 'button' as const, accessibilityLabel: title, onPress }
+        ? {
+            accessibilityRole: 'button' as const,
+            // Title AND subtitle: the subtitle is where a row's actual state
+            // lives ("3 red flags", "Invite sent"), and a label of the title
+            // alone announced every such row as if it had none.
+            accessibilityLabel: subtitle ? `${title}. ${subtitle}` : title,
+            accessibilityState: { disabled: !!disabled },
+            disabled,
+            onPress,
+          }
         : {})}
       style={{
         minHeight,
+        opacity: disabled ? 0.5 : 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

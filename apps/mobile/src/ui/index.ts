@@ -66,6 +66,8 @@ export { TextField } from './TextField';
 export type { TextFieldProps } from './TextField';
 export { Toggle } from './Toggle';
 export type { ToggleProps } from './Toggle';
+export { WeekDayNav } from './WeekDayNav';
+export type { DayNavItem, WeekDayNavProps, WeekNavItem, WeekNavState } from './WeekDayNav';
 export { WeekStrip } from './WeekStrip';
 export type { WeekStripProps } from './WeekStrip';
 export { Wordmark } from './Wordmark';

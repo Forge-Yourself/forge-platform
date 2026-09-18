@@ -1,5 +1,4 @@
 import { Tabs } from 'expo-router';
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../lib/auth/AuthProvider';
 import { useTheme } from '../../../theme/ThemeProvider';
@@ -34,16 +33,6 @@ export default function TabsLayout() {
   const theme = useTheme();
   const auth = useAuth();
   const isClient = auth.user?.role === 'client';
-
-  // TEMP DEBUG — remove once the client sign-in update loop is diagnosed.
-  // In an effect with no dependency array, so it runs once per COMMIT: counting
-  // in the render body both trips react-hooks/immutability and double-counts
-  // under StrictMode, which is the opposite of what a loop counter needs.
-  useEffect(() => {
-    const g = globalThis as unknown as { __tabsN?: number };
-    g.__tabsN = (g.__tabsN ?? 0) + 1;
-    if (g.__tabsN <= 60) console.log('[tabs]', g.__tabsN, 'isClient=', isClient);
-  });
 
   return (
     <Tabs

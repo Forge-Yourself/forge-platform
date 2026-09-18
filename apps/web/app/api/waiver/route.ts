@@ -11,13 +11,18 @@ const bodySchema = z.object({
 });
 
 /**
- * POST /api/waiver — the client signs. Authorization runs under the
- * caller's OWN token against the anon-key client first (RLS is the real
- * gate: a zero-row result IS the 403), then the render/upload/stamp all use
- * the service-role client — the client's own session cannot write
- * `waiver_pdf_url`/`signed_at`/`state` themselves
- * (`intake_forms_client_update`'s WITH CHECK forbids it by design, see
- * 0005_m2_clients_intake.sql), and Storage has no policies for
+ * POST /api/waiver — the client signs.
+ *
+ * Authorization is TWO gates, not one. RLS under the caller's own token scopes
+ * the lookups (a zero-row result IS the 403), but it is deliberately wider than
+ * this route: `intake_forms_pt_select` lets the PT read the same rows, so RLS
+ * alone would let a PT sign on their client's behalf. The explicit
+ * `client_user_id === user.id` check below is the second gate and the real one.
+ *
+ * Only then do the render/upload/stamp run on the service-role client — the
+ * client's own session cannot write `waiver_pdf_url`/`signed_at`/`state`
+ * themselves (`intake_forms_client_update`'s WITH CHECK forbids it by design,
+ * see 0005_m2_clients_intake.sql), and Storage has no policies for
  * `authenticated` at all.
  */
 export async function POST(request: Request) {
@@ -65,6 +70,20 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (clientError || !client) {
     return Response.json({ error: 'client not found' }, { status: 403 });
+  }
+
+  // RLS is NOT the whole gate here, despite what the two lookups above imply.
+  // `intake_forms_pt_select` (0005) grants the PT SELECT on exactly the two
+  // states this route filters on — a strict superset — so a PT's own bearer
+  // token reaches their client's row and both queries succeed. Signing is the
+  // CLIENT's act: a waiver is a liability release only the person being
+  // released can give. So the caller must BE the linked client account.
+  //
+  // Without this check a PT could forge one, and it would be unrecoverable:
+  // the upload is upsert:false and the state is stamped in the same request, so
+  // the 409 above then locks the real client out of ever signing the real one.
+  if (!client.client_user_id || client.client_user_id !== user.id) {
+    return Response.json({ error: 'only the client can sign this waiver' }, { status: 403 });
   }
 
   const service = createServiceClient();

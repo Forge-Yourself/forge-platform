@@ -27,7 +27,9 @@
  * machine; a hostile page cannot forge an `Origin` header to match one.
  *
  * Set `ALLOWED_ORIGINS` (comma-separated) to REPLACE this list entirely — that
- * is the production knob for locking the API down to known web origins.
+ * is the production knob for locking the API down to known web origins. Under
+ * NODE_ENV=production this pattern is not a fallback at all: an unset
+ * ALLOWED_ORIGINS denies every cross-origin caller. See isOriginAllowed.
  */
 const DEV_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
@@ -48,6 +50,15 @@ function configuredOrigins(): string[] | null {
 export function isOriginAllowed(origin: string): boolean {
   const configured = configuredOrigins();
   if (configured) return configured.includes(origin);
+  // No ALLOWED_ORIGINS set. In dev that means "let the local Expo web server
+  // through". In production it must mean "allow nothing" rather than "allow
+  // anything served from localhost": a page running on the user's own machine
+  // — a dependency's dev server, an Electron app, an extension page — sends a
+  // genuine `http://localhost:PORT` origin, and would otherwise be handed
+  // every unauthenticated /api response from the DEPLOYED API (GET /api/health
+  // has no auth check at all). The variable is unset on Vercel today, so this
+  // fallback was live in production.
+  if (process.env.NODE_ENV === 'production') return false;
   return DEV_ORIGIN_PATTERN.test(origin);
 }
 

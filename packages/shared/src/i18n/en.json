@@ -3,6 +3,7 @@
     "retry": "Retry",
     "cancel": "Cancel",
     "back": "Back",
+    "loading": "Loading",
     "skip": "Skip",
     "continue": "Continue",
     "save": "Save",
@@ -16,6 +17,11 @@
       "previousMonth": "Previous month",
       "nextMonth": "Next month",
       "chooseYear": "Choose a year"
+    },
+    "dateValidation": {
+      "malformed": "That isn't a real date",
+      "beforeMin": "Choose a date on or after {{min}}",
+      "afterMax": "Choose a date on or before {{max}}"
     },
     "tabs": {
       "today": "Today",
@@ -150,6 +156,7 @@
       "rateLimited": "Too many attempts. Please wait a moment and try again.",
       "sessionExpired": "Your session expired. Please sign in again.",
       "network": "Couldn't reach the server. Check your connection and try again.",
+      "mailDelivery": "We couldn't send your confirmation email. Please try again shortly.",
       "generic": "Something went wrong. Please try again."
     }
   },
@@ -454,9 +461,7 @@
       "notANumber": "Enter a number",
       "belowMin": "Must be at least {{min}}",
       "aboveMax": "Must be {{max}} or less",
-      "dateMalformed": "That isn't a real date",
-      "dateBeforeMin": "Choose a date on or after {{min}}",
-      "dateAfterMax": "Choose a date on or before {{max}}"
+      "formIncomplete": "Check the highlighted answers before continuing"
     },
     "resume": {
       "title": "Welcome back",
@@ -754,6 +759,9 @@
     "draftAction": "Draft with AI",
     "creditCost": "Generate draft · 1 credit",
     "intro": "Answer three things. You review and edit every set before anything reaches {{name}}.",
+    "introNoClient": "Pick a client and answer three things. You review and edit every set before anything reaches them.",
+    "clientLabel": "Client",
+    "clientEmpty": "No active clients yet. Invite one from the Clients tab first.",
     "goalLabel": "Goal",
     "goalLabels": {
       "strength": "Strength",
@@ -793,6 +801,7 @@
     "errors": {
       "unauthorized": "Your session expired. Sign in and try again.",
       "forbidden": "You're not this client's trainer.",
+      "noClient": "Choose a client first.",
       "insufficientCredits": "You're out of AI credits. No credit was charged.",
       "model": "The draft failed to generate. No credit was charged.",
       "timeout": "That took too long. No credit was charged — try again.",

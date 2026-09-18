@@ -1,6 +1,6 @@
 import { parseCalendarDate, toCalendarDate, todayCalendarDate } from '@forge/shared';
 import { useState } from 'react';
-import { I18nManager, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
 import { Button } from './Button';
 import { Icon } from './Icon';
@@ -143,10 +143,17 @@ export function DateField({
   const dayCount = daysInMonth(viewYear, viewMonth);
   const today = todayCalendarDate();
 
-  // The glyph has to be swapped by hand under RTL: the row itself flips, but a
-  // chevron drawn pointing left keeps pointing left wherever it lands.
-  const prevIcon = I18nManager.isRTL ? 'chevron' : 'chevronBack';
-  const nextIcon = I18nManager.isRTL ? 'chevronBack' : 'chevron';
+  // No hand-swap. ui/Icon ALREADY mirrors 'chevron' and 'chevronBack' under RTL
+  // (its MIRRORED set applies transform: scaleX(-1)), and the row itself flips.
+  // Swapping the names on top of that cancelled the mirror out: both glyphs drew
+  // exactly as they do in LTR while occupying the opposite edges, so the
+  // right-hand "previous month" control pointed left and the left-hand "next
+  // month" control pointed right. The justifying comment here predated the SVG
+  // icon set — it was written for the old text glyphs, which had no auto-mirror.
+  // This was the only hand-swap in the repo; the other twelve chevron call sites
+  // all rely on Icon.
+  const prevIcon = 'chevronBack';
+  const nextIcon = 'chevron';
 
   return (
     <View style={styles.container}>

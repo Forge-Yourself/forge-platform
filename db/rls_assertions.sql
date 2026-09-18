@@ -142,12 +142,39 @@ RESET ROLE;
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'client_a');
-SELECT pg_temp.expect('Client A cannot update their own clients row directly', 0,
-  format('WITH u AS (
-            UPDATE public.clients SET state = ''deactivated'' WHERE id = %L
-            RETURNING 1
-          ) SELECT count(*) FROM u', :'client_row'));
+-- 0014 revoked INSERT/UPDATE/DELETE on clients from `authenticated` outright,
+-- so this is a table-privilege denial (insufficient_privilege), not the
+-- 0-affected-rows idiom it was before.
+SELECT pg_temp.expect_rls_block('Client A cannot update their own clients row directly',
+  format('UPDATE public.clients SET state = ''deactivated'' WHERE id = %L', :'client_row'));
 RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 0014 — clients is RPC-only for writes. Before this, any authenticated
+-- account could INSERT a row naming itself pt_user_id and a victim
+-- client_user_id, and every is_pt_of_* predicate would then trust it.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect_rls_block('a client-role account cannot INSERT a clients row naming a victim',
+  format('INSERT INTO public.clients (pt_user_id, client_user_id, state) VALUES (%L, %L, ''active'')',
+         :'client_a', :'pt_b'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_rls_block('a PT cannot INSERT a clients row directly (invite_client is the only door)',
+  format('INSERT INTO public.clients (pt_user_id, client_user_id, state) VALUES (%L, %L, ''active'')',
+         :'pt_a', :'client_b'));
+SELECT pg_temp.expect_rls_block('a PT cannot re-point client_user_id on their own clients row',
+  format('UPDATE public.clients SET client_user_id = %L WHERE id = %L', :'client_b', :'client_row'));
+SELECT pg_temp.expect_rls_block('a PT cannot DELETE a clients row directly',
+  format('DELETE FROM public.clients WHERE id = %L', :'client_row'));
+RESET ROLE;
+
+SELECT pg_temp.expect('client_row still points at Client A after the blocked writes', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id = %L AND pt_user_id = %L',
+         :'client_row', :'client_a', :'pt_a'));
 
 -- Restore the baseline every M0/M1 assertion below expects: a submitted form.
 UPDATE public.intake_forms SET state = 'completed' WHERE id = :'intake_row';
@@ -256,9 +283,12 @@ RESET ROLE;
 -- intake_row (still needed by M0/M1 assertions below) are never touched.
 -- ─────────────────────────────────────────────────────────────────────────────
 \set client_c '99999999-9999-4999-8999-999999999999'
-INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at)
+-- confirmation_sent_at is set too: since 0014, claim_client_invites() needs
+-- evidence the confirmation flow actually ran, not just email_confirmed_at,
+-- which GoTrue stamps unconditionally under enable_confirmations = false.
+INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at, confirmation_sent_at)
 VALUES (:'client_c', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-        'rls-client-c@forge-test.local', '{"role":"client","display_name":"Client C"}', NOW());
+        'rls-client-c@forge-test.local', '{"role":"client","display_name":"Client C"}', NOW(), NOW() - INTERVAL '1 minute');
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'pt_a');
@@ -302,6 +332,40 @@ SELECT public.claim_client_invites();
 RESET ROLE;
 SELECT pg_temp.expect('claim_client_invites ignores an expired invite', 0,
   format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id IS NOT NULL', :'expired_client_id'));
+
+-- claim_client_invites (0014) — an autoconfirmed password account is not proof
+-- of ownership. Client D looks exactly like a signup made while
+-- enable_confirmations = false: email_confirmed_at set, confirmation_sent_at
+-- NULL, no identity from a verifying provider. It must claim nothing — until a
+-- Google identity for the same account appears, at which point it may.
+\set client_d 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at)
+VALUES (:'client_d', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+        'rls-client-d@forge-test.local', '{"role":"client","display_name":"Client D"}', NOW());
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.invite_client('rls-client-d@forge-test.local', 'Client D', '{}') AS autoconfirm_client_id \gset
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_d');
+SELECT public.claim_client_invites();
+RESET ROLE;
+SELECT pg_temp.expect('claim_client_invites refuses an autoconfirmed account (email_confirmed_at alone is not ownership)', 0,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id IS NOT NULL', :'autoconfirm_client_id'));
+
+INSERT INTO auth.identities (user_id, provider, provider_id, identity_data, last_sign_in_at)
+VALUES (:'client_d', 'google', 'google-sub-client-d',
+        '{"sub":"google-sub-client-d","email":"rls-client-d@forge-test.local","email_verified":true}', NOW());
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_d');
+SELECT public.claim_client_invites();
+RESET ROLE;
+SELECT pg_temp.expect('claim_client_invites accepts the same account once a verifying provider identity exists', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id = %L AND state = ''accepted''',
+         :'autoconfirm_client_id', :'client_d'));
 
 -- set_client_state — authorization.
 SET LOCAL ROLE authenticated;
@@ -675,9 +739,27 @@ SELECT pg_temp.expect('consume_ai_credit drops PT A''s balance by exactly 1', 1,
 SELECT pg_temp.expect('consume_ai_credit logs exactly one un-refunded ai_generations row', 1,
   format('SELECT count(*) FROM public.ai_generations WHERE id = %L AND was_refunded = FALSE', :'gen1_id'));
 
+-- 0014: refund is an operator tool. The generation's owner is refused; an
+-- admin succeeds; and the refunded generation can no longer become a program.
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('refund_ai_credit refuses the generation''s own owner',
+  format('SELECT public.refund_ai_credit(%L::uuid, ''self-serve refund attempt'')', :'gen1_id'));
+RESET ROLE;
+
+SELECT pg_temp.expect('the owner''s refund attempt left the balance at 9', 1,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L AND balance = 9', :'pt_a'));
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
 SELECT public.refund_ai_credit(:'gen1_id'::uuid, 'llm timeout');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('create_program_from_draft refuses a refunded generation',
+  format('SELECT public.create_program_from_draft(%L::uuid, %L::uuid, ''{"weeks":[]}''::jsonb, ''free ride'')',
+         :'client_row', :'gen1_id'));
 RESET ROLE;
 
 SELECT pg_temp.expect('refund_ai_credit restores PT A''s balance to 10', 1,

@@ -47,21 +47,35 @@ export function usePtDashboard(ptUserId: string | undefined): PtDashboardData {
   const clients = useClientList(ptUserId, '', 'all');
   const programs = useProgramList('assigned');
 
-  const [flags, setFlags] = useState<{ rows: IntakeFlag[]; loading: boolean }>({
-    rows: [],
-    loading: true,
-  });
+  /**
+   * `settledKey` is the roster this state was fetched FOR, and loading is
+   * derived from it rather than stored.
+   *
+   * A stored flag could not express the gap: the first pass runs with an empty
+   * roster, settles {rows: [], loading: false}, and nothing re-armed it when the
+   * roster then arrived — so for the commit in between, a PT with red-flagged
+   * clients was shown a settled, empty "Needs attention" list. Comparing the
+   * settled key against the current one closes that window inside a single
+   * render, with no extra commit and nothing to remember to reset.
+   */
+  const [flags, setFlags] = useState<{
+    settledKey: string | null;
+    rows: IntakeFlag[];
+    error: string | null;
+  }>({ settledKey: null, rows: [], error: null });
 
   // Keyed on the id list rather than the array identity so this refires when the
   // roster actually changes, not on every re-render of the hook above it.
   const clientIdKey = clients.items.map((c) => c.id).sort().join(',');
+  const flagsLoading = flags.settledKey !== clientIdKey;
 
   useEffect(() => {
     let cancelled = false;
     const ids = clientIdKey === '' ? [] : clientIdKey.split(',');
+    const key = clientIdKey;
     if (ids.length === 0) {
       void Promise.resolve().then(() => {
-        if (!cancelled) setFlags({ rows: [], loading: false });
+        if (!cancelled) setFlags({ settledKey: key, rows: [], error: null });
       });
       return () => {
         cancelled = true;
@@ -73,15 +87,24 @@ export function usePtDashboard(ptUserId: string | undefined): PtDashboardData {
       .from('intake_forms')
       .select('client_id, state, red_flags')
       .in('client_id', ids)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         if (cancelled) return;
+        // The error was previously destructured away. A failure left rows empty
+        // and loading false, which reads downstream as "nobody needs attention"
+        // — so a client with three PAR-Q red flags silently vanished from the
+        // PT's safety list with no banner anywhere on the screen.
+        if (error) {
+          setFlags({ settledKey: key, rows: [], error: error.message });
+          return;
+        }
         setFlags({
+          settledKey: key,
           rows: (data ?? []).map((row) => ({
             clientId: row.client_id,
             state: row.state,
             flagCount: Array.isArray(row.red_flags) ? row.red_flags.length : 0,
           })),
-          loading: false,
+          error: null,
         });
       });
     return () => {
@@ -128,8 +151,8 @@ export function usePtDashboard(ptUserId: string | undefined): PtDashboardData {
   }, [activeClients, flags.rows, programs.items]);
 
   return {
-    loading: clients.loading || programs.loading || flags.loading,
-    error: clients.error ?? programs.error,
+    loading: clients.loading || programs.loading || flagsLoading,
+    error: clients.error ?? programs.error ?? flags.error,
     activeClients,
     runningProgramCount,
     attention,

@@ -286,7 +286,7 @@ function PtHome() {
               icon="sparkle"
               label={t('home.actions.aiDraft')}
               accent
-              onPress={() => router.push('/(app)/(tabs)/programs')}
+              onPress={() => router.push('/(app)/programs/ai')}
             />
             <ActionTile
               icon="dumbbell"
