@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { checkCalendarDate, parseCalendarDate, shiftCalendarYears, todayCalendarDate } from './dates';
+import { LB_PER_KG } from './units';
 
 /**
  * The seven fixed PAR-Q ids. Mirrored byte-for-byte by the ARRAY literal in
@@ -246,7 +247,6 @@ export type IntakeSummary = {
 };
 
 const CM_PER_INCH = 2.54;
-const LB_PER_KG = 2.20462;
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
