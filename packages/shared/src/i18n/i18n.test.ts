@@ -124,8 +124,8 @@ describe('translation parity', () => {
     expect(empties(ar)).toEqual([]);
   });
 
-  it('carries the M3 namespaces this milestone added', () => {
-    for (const ns of ['library', 'programs', 'builder', 'ai', 'credits']) {
+  it('carries the M3 and M4a namespaces', () => {
+    for (const ns of ['library', 'programs', 'builder', 'ai', 'credits', 'logging']) {
       expect(Object.keys(en)).toContain(ns);
       expect(Object.keys(ar)).toContain(ns);
     }

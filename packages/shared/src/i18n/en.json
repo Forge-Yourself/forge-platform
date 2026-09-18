@@ -70,7 +70,13 @@
       "more_one": "{{count}} more client",
       "more_other": "{{count}} more clients"
     },
-    "error": "Couldn't load your dashboard."
+    "error": "Couldn't load your dashboard.",
+    "resume": {
+      "title": "Session in progress",
+      "body": "{{name}} · started {{time}}",
+      "bodyNoName": "Started {{time}}",
+      "button": "Resume"
+    }
   },
   "auth": {
     "signIn": {
@@ -362,7 +368,9 @@
       "waiverSigned": "Waiver signed",
       "waiverUnsigned": "Waiver not signed yet",
       "startSession": "Start session",
-      "startSessionComingSoon": "Session logging arrives in a later update.",
+      "resumeSession": "Resume session",
+      "sessionsHeading": "Sessions",
+      "sessionsEmpty": "No sessions logged yet.",
       "startSessionBlocked": "Available once intake is submitted.",
       "pause": "Pause",
       "reactivate": "Reactivate",
@@ -522,6 +530,16 @@
       "none": "Your trainer hasn't assigned a program yet.",
       "weekOf": "Week {{week}} of {{total}}",
       "view": "View program"
+    },
+    "workout": {
+      "startTitle": "Ready to train?",
+      "startBody": "Log your sets as you go. Your coach sees them too.",
+      "startButton": "Start workout",
+      "startFreestyle": "Start a freestyle workout",
+      "resumeTitle": "Workout in progress",
+      "resumeButton": "Resume",
+      "recentHeading": "Recent workouts",
+      "recentEmpty": "Your logged workouts will show up here."
     }
   },
   "library": {
@@ -840,5 +858,105 @@
     "inch": "in",
     "kg": "kg",
     "lb": "lb"
+  },
+  "logging": {
+    "start": {
+      "title": "Start session",
+      "pickDay": "Pick today's workout",
+      "weekOf": "Week {{week}} of {{total}}",
+      "dayRow": "Day {{day}}",
+      "done": "DONE",
+      "freestyle": "Freestyle session",
+      "freestyleBody": "No plan — add exercises as you go.",
+      "noProgramPt": "No program assigned yet.",
+      "noProgramPtLink": "Assign one",
+      "noProgramClient": "Your coach hasn't assigned a program yet.",
+      "resuming": "Resuming your session in progress…",
+      "error": "Couldn't start the session. Please try again."
+    },
+    "session": {
+      "finish": "Finish",
+      "setOf": "Set {{n}} of {{total}}",
+      "setN": "Set {{n}}",
+      "last": "Last: {{summary}}",
+      "firstTime": "First time on this exercise",
+      "logSet": "Log this set",
+      "addExercise": "Add exercise",
+      "noExercises": "No exercises yet",
+      "noExercisesBody": "Add one from the library to start logging.",
+      "weight": "Weight",
+      "reps": "Reps",
+      "rpe": "RPE",
+      "rpeSkip": "—",
+      "note": "Note",
+      "notePlaceholder": "Anything worth remembering?",
+      "warmup": "Warm-up",
+      "coachTag": "COACH",
+      "previousSets": "Sets this session",
+      "editSet": "Edit set",
+      "deleteSet": "Delete set",
+      "setSummary": "{{weight}} × {{reps}}",
+      "setSummaryRpe": "{{weight}} × {{reps}} · RPE {{rpe}}",
+      "repsOnly": "{{reps}} reps",
+      "errorOffline": "You're offline. This set stays on screen — retry when you're back.",
+      "errorDenied": "Only your coach can change this set.",
+      "errorClosed": "This session is already finished.",
+      "errorGeneric": "Couldn't save the set. Please try again.",
+      "notFound": "Session not found",
+      "notFoundBody": "It may belong to another account, or the link is stale."
+    },
+    "timer": {
+      "rest": "REST · SET {{n}} OF {{total}}",
+      "restSimple": "REST",
+      "running": "RESTING",
+      "paused": "PAUSED",
+      "complete": "GO",
+      "hintRunning": "Next: {{summary}}",
+      "hintComplete": "Rest is over. Load the bar.",
+      "pause": "Pause",
+      "resume": "Resume",
+      "plus30": "+30s",
+      "skip": "Skip rest",
+      "back": "Back to set"
+    },
+    "pr": {
+      "weight": "New weight PR · {{value}}",
+      "reps": "New rep PR · {{value}} reps",
+      "volume": "New volume PR · {{value}}",
+      "heading_one": "1 personal record",
+      "heading_other": "{{count}} personal records"
+    },
+    "finish": {
+      "title": "Finish session?",
+      "body": "Rate it and add a note. Sets are already saved.",
+      "rating": "How did it go?",
+      "notes": "Session notes",
+      "notesPlaceholder": "Optional",
+      "confirm": "Finish session",
+      "cancel": "Keep logging",
+      "error": "Couldn't finish the session. Please try again."
+    },
+    "summary": {
+      "duration": "Duration",
+      "sets": "Sets",
+      "volume": "Volume",
+      "prs": "PRs",
+      "completedAt": "Completed {{date}}",
+      "noSets": "No sets were logged.",
+      "notes": "Notes"
+    },
+    "history": {
+      "title": "Sessions",
+      "myTitle": "My workouts",
+      "freestyle": "Freestyle",
+      "dayLabel": "Week {{week}} · Day {{day}}",
+      "dayLabelNamed": "{{label}} · Week {{week}}",
+      "sets_one": "1 set",
+      "sets_other": "{{count}} sets",
+      "inProgress": "IN PROGRESS",
+      "empty": "No sessions yet",
+      "emptyBody": "Completed sessions will be listed here.",
+      "error": "Couldn't load sessions."
+    }
   }
 }

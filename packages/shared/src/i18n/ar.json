@@ -78,7 +78,13 @@
       "more_many": "{{count}} عميلًا إضافيًا",
       "more_other": "{{count}} عميل إضافي"
     },
-    "error": "تعذّر تحميل لوحتك."
+    "error": "تعذّر تحميل لوحتك.",
+    "resume": {
+      "title": "جلسة جارية",
+      "body": "{{name}} · بدأت {{time}}",
+      "bodyNoName": "بدأت {{time}}",
+      "button": "استئناف"
+    }
   },
   "auth": {
     "signIn": {
@@ -374,7 +380,9 @@
       "waiverSigned": "تم توقيع الإخلاء",
       "waiverUnsigned": "لم يتم توقيع الإخلاء بعد",
       "startSession": "بدء الجلسة",
-      "startSessionComingSoon": "تسجيل الجلسات يصل في تحديث لاحق.",
+      "resumeSession": "استئناف الجلسة",
+      "sessionsHeading": "الجلسات",
+      "sessionsEmpty": "لم تُسجَّل أي جلسات بعد.",
       "startSessionBlocked": "متاح بعد تقديم الاستمارة التمهيدية.",
       "pause": "إيقاف مؤقت",
       "reactivate": "إعادة التفعيل",
@@ -538,6 +546,16 @@
       "none": "لم يُسند إليك مدربك برنامجًا بعد.",
       "weekOf": "الأسبوع {{week}} من {{total}}",
       "view": "عرض البرنامج"
+    },
+    "workout": {
+      "startTitle": "مستعد للتدريب؟",
+      "startBody": "سجّل مجموعاتك أثناء التمرين. مدربك يراها أيضاً.",
+      "startButton": "ابدأ التمرين",
+      "startFreestyle": "ابدأ تمريناً حراً",
+      "resumeTitle": "تمرين جارٍ",
+      "resumeButton": "استئناف",
+      "recentHeading": "التمارين الأخيرة",
+      "recentEmpty": "ستظهر تمارينك المسجّلة هنا."
     }
   },
   "library": {
@@ -864,5 +882,113 @@
     "inch": "بوصة",
     "kg": "كغ",
     "lb": "رطل"
+  },
+  "logging": {
+    "start": {
+      "title": "ابدأ الجلسة",
+      "pickDay": "اختر تمرين اليوم",
+      "weekOf": "الأسبوع {{week}} من {{total}}",
+      "dayRow": "اليوم {{day}}",
+      "done": "مكتمل",
+      "freestyle": "جلسة حرة",
+      "freestyleBody": "بدون خطة — أضف التمارين أثناء التدريب.",
+      "noProgramPt": "لا يوجد برنامج معيّن بعد.",
+      "noProgramPtLink": "عيّن برنامجاً",
+      "noProgramClient": "لم يعيّن مدربك برنامجاً بعد.",
+      "resuming": "جارٍ استئناف جلستك…",
+      "error": "تعذّر بدء الجلسة. حاول مرة أخرى."
+    },
+    "session": {
+      "finish": "إنهاء",
+      "setOf": "المجموعة {{n}} من {{total}}",
+      "setN": "المجموعة {{n}}",
+      "last": "آخر مرة: {{summary}}",
+      "firstTime": "أول مرة في هذا التمرين",
+      "logSet": "سجّل هذه المجموعة",
+      "addExercise": "أضف تمريناً",
+      "noExercises": "لا توجد تمارين بعد",
+      "noExercisesBody": "أضف تمريناً من المكتبة لبدء التسجيل.",
+      "weight": "الوزن",
+      "reps": "التكرارات",
+      "rpe": "RPE",
+      "rpeSkip": "—",
+      "note": "ملاحظة",
+      "notePlaceholder": "أي شيء يستحق التذكّر؟",
+      "warmup": "إحماء",
+      "coachTag": "المدرب",
+      "previousSets": "مجموعات هذه الجلسة",
+      "editSet": "تعديل المجموعة",
+      "deleteSet": "حذف المجموعة",
+      "setSummary": "{{weight}} × {{reps}}",
+      "setSummaryRpe": "{{weight}} × {{reps}} · RPE {{rpe}}",
+      "repsOnly": "{{reps}} تكرارات",
+      "errorOffline": "أنت غير متصل. تبقى هذه المجموعة على الشاشة — أعد المحاولة عند الاتصال.",
+      "errorDenied": "مدربك فقط يمكنه تغيير هذه المجموعة.",
+      "errorClosed": "انتهت هذه الجلسة بالفعل.",
+      "errorGeneric": "تعذّر حفظ المجموعة. حاول مرة أخرى.",
+      "notFound": "الجلسة غير موجودة",
+      "notFoundBody": "قد تكون لحساب آخر، أو أن الرابط قديم."
+    },
+    "timer": {
+      "rest": "راحة · المجموعة {{n}} من {{total}}",
+      "restSimple": "راحة",
+      "running": "استراحة",
+      "paused": "متوقف",
+      "complete": "انطلق",
+      "hintRunning": "التالي: {{summary}}",
+      "hintComplete": "انتهت الراحة. جهّز البار.",
+      "pause": "إيقاف",
+      "resume": "متابعة",
+      "plus30": "+30 ث",
+      "skip": "تخطّي الراحة",
+      "back": "عودة إلى المجموعة"
+    },
+    "pr": {
+      "weight": "رقم قياسي جديد في الوزن · {{value}}",
+      "reps": "رقم قياسي جديد في التكرارات · {{value}} تكرارات",
+      "volume": "رقم قياسي جديد في الحجم · {{value}}",
+      "heading_zero": "لا أرقام قياسية",
+      "heading_one": "رقم قياسي واحد",
+      "heading_two": "رقمان قياسيان",
+      "heading_few": "{{count}} أرقام قياسية",
+      "heading_many": "{{count}} رقماً قياسياً",
+      "heading_other": "{{count}} رقم قياسي"
+    },
+    "finish": {
+      "title": "إنهاء الجلسة؟",
+      "body": "قيّمها وأضف ملاحظة. المجموعات محفوظة بالفعل.",
+      "rating": "كيف كانت؟",
+      "notes": "ملاحظات الجلسة",
+      "notesPlaceholder": "اختياري",
+      "confirm": "إنهاء الجلسة",
+      "cancel": "متابعة التسجيل",
+      "error": "تعذّر إنهاء الجلسة. حاول مرة أخرى."
+    },
+    "summary": {
+      "duration": "المدة",
+      "sets": "المجموعات",
+      "volume": "الحجم",
+      "prs": "الأرقام القياسية",
+      "completedAt": "اكتملت {{date}}",
+      "noSets": "لم تُسجَّل أي مجموعات.",
+      "notes": "ملاحظات"
+    },
+    "history": {
+      "title": "الجلسات",
+      "myTitle": "تماريني",
+      "freestyle": "حر",
+      "dayLabel": "الأسبوع {{week}} · اليوم {{day}}",
+      "dayLabelNamed": "{{label}} · الأسبوع {{week}}",
+      "sets_zero": "لا مجموعات",
+      "sets_one": "مجموعة واحدة",
+      "sets_two": "مجموعتان",
+      "sets_few": "{{count}} مجموعات",
+      "sets_many": "{{count}} مجموعة",
+      "sets_other": "{{count}} مجموعة",
+      "inProgress": "جارية",
+      "empty": "لا جلسات بعد",
+      "emptyBody": "ستُعرض الجلسات المكتملة هنا.",
+      "error": "تعذّر تحميل الجلسات."
+    }
   }
 }
