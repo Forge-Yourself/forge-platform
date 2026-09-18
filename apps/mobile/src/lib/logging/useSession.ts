@@ -12,7 +12,11 @@ export type SessionData = {
   session: WorkoutSessionRow | null;
   sets: SetRow[];
   day: ProgramDay | null;
-  /** Display name for the client (PT view) — null when the viewer is the client. */
+  /**
+   * Display name of the session's client, resolved for every viewer; the
+   * screen decides whether to show it (PT header) or the program name
+   * (client header).
+   */
   clientName: string | null;
   names: Record<string, ExerciseName>;
   /** Most recent completed working set per exercise, from earlier sessions. */
@@ -51,6 +55,10 @@ async function fetchSession(sessionId: string): Promise<Loaded> {
 
   let day: ProgramDay | null = null;
   if (dayRow) {
+    // If the program is unreadable (archived by a reassignment, RLS), day
+    // stays null and the session renders like freestyle; the header must
+    // prefer the session row's own snapshot (day_label / week_number /
+    // day_number, 0015) over day.label for exactly this case.
     const { data: rawTree } = await supabase.rpc('program_tree', { p_program_id: dayRow.program_id });
     const parsed = programTreeSchema.safeParse(rawTree);
     if (parsed.success) {
@@ -132,6 +140,9 @@ export function useSession(sessionId: string | undefined): SessionData {
     };
   }, [sessionId]);
 
+  // Deliberately does not flip loading: the completed-state re-read after
+  // Finish (spec §5.3) must not flash a skeleton over a screen that is
+  // already showing the session.
   const refetch = useCallback(async () => {
     if (!sessionId) return;
     const result = await fetchSession(sessionId);

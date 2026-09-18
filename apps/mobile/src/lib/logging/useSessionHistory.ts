@@ -23,7 +23,12 @@ async function fetchHistory(
   clientId: string | undefined,
   limit: number,
 ): Promise<{ rows: SessionHistoryItem[]; error: string | null }> {
-  let q = supabase.from('workout_sessions').select('*').order('started_at', { ascending: false }).limit(limit);
+  let q = supabase
+    .from('workout_sessions')
+    .select('*')
+    .in('status', ['in_progress', 'completed'])
+    .order('started_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
   if (clientId) q = q.eq('client_id', clientId);
   const { data, error } = await q;
   if (error) return { rows: [], error: error.message };
@@ -31,8 +36,16 @@ async function fetchHistory(
   const ids = rows.map((r) => r.id);
   const counts: Record<string, number> = {};
   if (ids.length > 0) {
-    const { data: sets } = await supabase.from('sets').select('workout_session_id').in('workout_session_id', ids);
-    for (const s of sets ?? []) counts[s.workout_session_id] = (counts[s.workout_session_id] ?? 0) + 1;
+    // One HEAD count per session rather than one row per set: with max_rows
+    // 1000 the per-set query silently truncates past ~40 sessions.
+    const results = await Promise.all(
+      ids.map((id) =>
+        supabase.from('sets').select('id', { head: true, count: 'exact' }).eq('workout_session_id', id),
+      ),
+    );
+    ids.forEach((id, i) => {
+      counts[id] = results[i]?.count ?? 0;
+    });
   }
   return { rows: rows.map((r) => ({ ...r, setCount: counts[r.id] ?? 0 })), error: null };
 }

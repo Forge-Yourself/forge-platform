@@ -1,9 +1,9 @@
-import type { CompleteSessionInput, Database, LogSetInput } from '@forge/shared';
+import type { CompleteSessionInput, Database, LogSetInput, PrType } from '@forge/shared';
 import { supabase } from '../supabase';
 
 export type WorkoutSessionRow = Database['public']['Tables']['workout_sessions']['Row'];
 export type SetRow = Database['public']['Tables']['sets']['Row'];
-export type LogSetResult = { set: SetRow; newPrs: string[] };
+export type LogSetResult = { set: SetRow; newPrs: PrType[] };
 
 /**
  * Thin typed wrappers over the four 0015 RPCs. Every write in M4a goes through
@@ -47,7 +47,9 @@ export async function logSet(
   if (error) return { result: null, error };
   const row = data?.[0];
   if (!row) return { result: null, error: new Error('log_set returned no row') };
-  return { result: { set: row.set_row, newPrs: row.new_prs ?? [] }, error: null };
+  // The RPC's own CHECK constraint on new_prs guarantees these values are
+  // PrType members; the generated return type widens them to string[].
+  return { result: { set: row.set_row, newPrs: (row.new_prs ?? []) as PrType[] }, error: null };
 }
 
 export async function deleteSet(id: string): Promise<{ error: Error | null }> {

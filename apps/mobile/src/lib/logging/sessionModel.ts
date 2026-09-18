@@ -22,7 +22,9 @@ export const DEFAULT_REST_SEC = 90;
 
 /**
  * Program day exercises in block order, then anything logged ad hoc (a set
- * whose exercise is not in the day). `names` resolves ad-hoc exercise ids.
+ * whose exercise is not in the day). `names` resolves ad-hoc exercise ids; an
+ * unresolved id gets an empty name until ensureNames resolves it — the screen
+ * renders the placeholder, models stay copy-free.
  */
 export function buildExerciseList(
   day: ProgramDay | null,
@@ -56,7 +58,7 @@ export function buildExerciseList(
     seen.add(id);
     out.push({
       exerciseId: id,
-      name: names[id]?.name ?? '…',
+      name: names[id]?.name ?? '',
       nameAr: names[id]?.name_ar ?? null,
       targetSets: null,
       targetRepsMin: null,
@@ -76,10 +78,14 @@ export function setsFor(sets: readonly SetRow[], exerciseId: string): SetRow[] {
     .sort((a, b) => a.set_number - b.set_number || a.created_at.localeCompare(b.created_at));
 }
 
-/** Working sets are numbered from 1; warm-ups are set 0 and do not advance the count. */
+/**
+ * Working sets are numbered from 1; warm-ups are set 0 and do not advance the
+ * count. Max + 1, not length + 1, so a deleted middle set does not produce a
+ * duplicate number.
+ */
 export function nextSetNumber(sets: readonly SetRow[], exerciseId: string): number {
   const working = setsFor(sets, exerciseId).filter((s) => !s.is_warmup);
-  return working.length + 1;
+  return working.reduce((max, s) => Math.max(max, s.set_number), 0) + 1;
 }
 
 /**
