@@ -78,6 +78,7 @@ RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET timezone = 'UTC'
 AS $$
 DECLARE
   v_table  TEXT;
@@ -113,9 +114,7 @@ BEGIN
        AND tablename ~ '^(sets|food_logs|notifications|audit_logs)_\d{4}_\d{2}$'
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', tbl);
-    IF tbl LIKE 'sets_%' THEN
-      EXECUTE format('REVOKE INSERT, UPDATE, DELETE ON public.%I FROM anon, authenticated', tbl);
-    END IF;
+    EXECUTE format('REVOKE INSERT, UPDATE, DELETE ON public.%I FROM anon, authenticated', tbl);
   END LOOP;
 END;
 $$;
@@ -160,6 +159,10 @@ BEGIN
     RAISE EXCEPTION 'not authorized for this client';
   END IF;
 
+  -- Serialise starts per client: PT and client opening the app together must
+  -- not both insert. The clients row exists (the predicate above proved it).
+  PERFORM 1 FROM public.clients WHERE id = p_client_id FOR UPDATE;
+
   SELECT * INTO v_row FROM public.workout_sessions
    WHERE client_id = p_client_id AND status = 'in_progress'
    ORDER BY started_at DESC
@@ -175,7 +178,8 @@ BEGIN
       FROM public.program_days d
       JOIN public.program_weeks w ON w.id = d.week_id
       JOIN public.programs p ON p.id = d.program_id
-     WHERE d.id = p_program_day_id AND p.client_id = p_client_id;
+     WHERE d.id = p_program_day_id AND p.client_id = p_client_id
+       AND p.state IN ('active', 'completed');
     IF NOT FOUND THEN
       RAISE EXCEPTION 'program day does not belong to this client';
     END IF;
@@ -314,17 +318,17 @@ BEGIN
        AND s.id <> p_id;
 
     IF p_weight_kg IS NOT NULL AND p_weight_kg > COALESCE(v_best_weight, 0) THEN
-      v_prs := v_prs || 'weight';
+      v_prs := array_append(v_prs, 'weight');
       INSERT INTO public.exercise_prs (client_id, exercise_id, pr_type, value, set_id)
       VALUES (v_session.client_id, p_exercise_id, 'weight', p_weight_kg, p_id);
     END IF;
     IF p_reps IS NOT NULL AND p_reps > COALESCE(v_best_reps, 0) THEN
-      v_prs := v_prs || 'reps';
+      v_prs := array_append(v_prs, 'reps');
       INSERT INTO public.exercise_prs (client_id, exercise_id, pr_type, value, set_id)
       VALUES (v_session.client_id, p_exercise_id, 'reps', p_reps, p_id);
     END IF;
     IF p_weight_kg IS NOT NULL AND p_reps IS NOT NULL AND p_weight_kg * p_reps > COALESCE(v_best_volume, 0) THEN
-      v_prs := v_prs || 'volume';
+      v_prs := array_append(v_prs, 'volume');
       INSERT INTO public.exercise_prs (client_id, exercise_id, pr_type, value, set_id)
       VALUES (v_session.client_id, p_exercise_id, 'volume', p_weight_kg * p_reps, p_id);
     END IF;
@@ -408,7 +412,8 @@ BEGIN
   UPDATE public.workout_sessions
      SET status = 'completed',
          completed_at = NOW(),
-         duration_min = GREATEST(1, ROUND(EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) / 60))::SMALLINT,
+         -- Clamped: a session left open three weeks must still be closable (spec §4.2 has no abandon action).
+         duration_min = LEAST(32767, GREATEST(1, ROUND(EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) / 60)))::SMALLINT,
          rating = p_rating::SMALLINT,
          pt_notes = CASE WHEN v_is_pt THEN p_notes ELSE pt_notes END,
          session_notes = CASE WHEN v_is_pt THEN session_notes ELSE p_notes END,

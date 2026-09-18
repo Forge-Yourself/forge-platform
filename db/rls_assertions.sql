@@ -940,9 +940,11 @@ SELECT pg_temp.expect('PT A''s session is in_progress, pt-led, snapshotted week 
   format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND status = ''in_progress'' AND is_pt_led AND week_number = 1 AND day_number = 1', :'session_id'));
 SELECT pg_temp.expect('a second start returns the same in-progress session', 1,
   format('SELECT CASE WHEN (public.start_workout_session(%L::uuid, NULL)).id = %L::uuid THEN 1 ELSE 0 END::bigint', :'client_row', :'session_id'));
+RESET ROLE;
+-- audit_logs has RLS on and no policies: read it as the table owner, as the
+-- M2 block does at its own audit checks.
 SELECT pg_temp.expect('workout_start was audited once', 1,
   format('SELECT count(*) FROM public.audit_logs WHERE action = ''workout_start'' AND entity_id = %L', :'session_id'));
-RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- log_set — PT logs, replay is one row, PR detection, warm-up excluded.
@@ -1016,8 +1018,11 @@ SELECT pg_temp.expect('PT A completes the session with a rating', 1,
   format('SELECT CASE WHEN (public.complete_workout_session(%L::uuid, 4, ''solid'')).status = ''completed'' THEN 1 ELSE 0 END::bigint', :'session_id'));
 SELECT pg_temp.expect('completing again is a no-op that keeps the first rating', 1,
   format('SELECT CASE WHEN (public.complete_workout_session(%L::uuid, 1, ''ignored'')).rating = 4 THEN 1 ELSE 0 END::bigint', :'session_id'));
+RESET ROLE;
 SELECT pg_temp.expect('workout_complete was audited once', 1,
   format('SELECT count(*) FROM public.audit_logs WHERE action = ''workout_complete'' AND entity_id = %L', :'session_id'));
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
 SELECT pg_temp.expect_raises('log_set refuses a completed session',
   format('SELECT public.log_set(''01J8RZ0000000000000000DDDD'', %L::uuid, %L::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
 RESET ROLE;
