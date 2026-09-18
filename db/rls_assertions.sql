@@ -876,4 +876,172 @@ SELECT pg_temp.expect('Client A (via client_row) sees the fresh active assigned 
   format('SELECT count(*) FROM public.programs WHERE id = %L', :'fresh_program_id'));
 RESET ROLE;
 
+-- ═════════════════════════════════════════════════════════════════════════════
+-- M4a — logging: RLS on workout_sessions / sets / exercise_prs, the four RPCs,
+-- per-set attribution, PR detection, partition automation. Reuses pt_a / pt_b /
+-- client_a / client_row / exercise_global / fresh_program_id from above.
+-- fresh_program_id is active on client_row with one week-1/day-1 (save_program
+-- in the M3 block) — that day is the session's program_day.
+-- ═════════════════════════════════════════════════════════════════════════════
+SELECT id AS fresh_day_id FROM public.program_days WHERE program_id = :'fresh_program_id' LIMIT 1 \gset
+
+\set ulid_1 '01J8RZ0000000000000000AAAA'
+\set ulid_2 '01J8RZ0000000000000000AAAB'
+\set ulid_3 '01J8RZ0000000000000000AAAC'
+\set ulid_c '01J8RZ0000000000000000CCCC'
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Partition automation is idempotent and covers all four partitioned tables.
+-- ─────────────────────────────────────────────────────────────────────────────
+SELECT public.ensure_month_partitions(14);
+SELECT public.ensure_month_partitions(14);
+SELECT pg_temp.expect('ensure_month_partitions created 14 months ahead for every partitioned table', 4,
+  $q$SELECT count(*) FROM pg_tables
+      WHERE schemaname = 'public'
+        AND tablename = ANY (ARRAY[
+          'sets_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM'),
+          'food_logs_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM'),
+          'notifications_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM'),
+          'audit_logs_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM')
+        ])$q$);
+SELECT pg_temp.expect('a new sets partition has RLS enabled', 1,
+  $q$SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relname = 'sets_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM')
+        AND c.relrowsecurity$q$);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Table-level writes are revoked: every mutation goes through an RPC.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_rls_block('PT A cannot INSERT workout_sessions directly',
+  format('INSERT INTO public.workout_sessions (client_id, logged_by_user_id) VALUES (%L, %L)', :'client_row', :'pt_a'));
+SELECT pg_temp.expect_rls_block('PT A cannot INSERT sets directly',
+  format('INSERT INTO public.sets (id, workout_session_id, exercise_id, set_number, logged_by_user_id) VALUES (%L, %L, %L, 1, %L)',
+         :'ulid_1', :'client_row', :'exercise_global', :'pt_a'));
+SELECT pg_temp.expect_rls_block('PT A cannot INSERT exercise_prs directly',
+  format('INSERT INTO public.exercise_prs (client_id, exercise_id, pr_type, value) VALUES (%L, %L, ''weight'', 1)', :'client_row', :'exercise_global'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- start_workout_session — PT starts, second call resumes, PT B denied.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect_raises('PT B cannot start a session for PT A''s client',
+  format('SELECT public.start_workout_session(%L::uuid, %L::uuid)', :'client_row', :'fresh_day_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT (public.start_workout_session(:'client_row'::uuid, :'fresh_day_id'::uuid)).id AS session_id \gset
+SELECT pg_temp.expect('PT A''s session is in_progress, pt-led, snapshotted week 1 day 1', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND status = ''in_progress'' AND is_pt_led AND week_number = 1 AND day_number = 1', :'session_id'));
+SELECT pg_temp.expect('a second start returns the same in-progress session', 1,
+  format('SELECT CASE WHEN (public.start_workout_session(%L::uuid, NULL)).id = %L::uuid THEN 1 ELSE 0 END::bigint', :'client_row', :'session_id'));
+SELECT pg_temp.expect('workout_start was audited once', 1,
+  format('SELECT count(*) FROM public.audit_logs WHERE action = ''workout_start'' AND entity_id = %L', :'session_id'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- log_set — PT logs, replay is one row, PR detection, warm-up excluded.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('first working set at 100x8 sets weight, reps and volume PRs', 3,
+  format('SELECT cardinality((public.log_set(%L, %L::uuid, %L::uuid, 1, 100, 8, 8.0, NULL, FALSE, ''harness'')).new_prs)::bigint',
+         :'ulid_1', :'session_id', :'exercise_global'));
+SELECT public.log_set(:'ulid_1', :'session_id'::uuid, :'exercise_global'::uuid, 1, 100, 8, 8.0, NULL, FALSE, 'harness');
+SELECT pg_temp.expect('replaying the same ULID yields one row', 1,
+  format('SELECT count(*) FROM public.sets WHERE id = %L', :'ulid_1'));
+SELECT pg_temp.expect('a heavier set with fewer reps is a weight PR only', 1,
+  format('SELECT cardinality((public.log_set(%L, %L::uuid, %L::uuid, 2, 102.5, 5, NULL, NULL, FALSE, ''harness'')).new_prs)::bigint',
+         :'ulid_2', :'session_id', :'exercise_global'));
+SELECT pg_temp.expect('the weight PR row points at the set', 1,
+  format('SELECT count(*) FROM public.exercise_prs WHERE client_id = %L AND exercise_id = %L AND pr_type = ''weight'' AND value = 102.5 AND set_id = %L',
+         :'client_row', :'exercise_global', :'ulid_2'));
+SELECT pg_temp.expect('a warm-up set never sets a PR', 0,
+  format('SELECT cardinality((public.log_set(%L, %L::uuid, %L::uuid, 0, 200, 20, NULL, NULL, TRUE, ''harness'')).new_prs)::bigint',
+         :'ulid_3', :'session_id', :'exercise_global'));
+SELECT pg_temp.expect('logged sets carry the logger and are marked synced', 3,
+  format('SELECT count(*) FROM public.sets WHERE workout_session_id = %L AND logged_by_user_id = %L AND is_synced', :'session_id', :'pt_a'));
+SELECT pg_temp.expect_raises('log_set rejects a malformed ULID',
+  format('SELECT public.log_set(''not-a-ulid'', %L::uuid, %L::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+SELECT pg_temp.expect_raises('log_set rejects a set with neither weight nor reps',
+  format('SELECT public.log_set(''01J8RZ0000000000000000ZZZZ'', %L::uuid, %L::uuid, 9, NULL, NULL, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Client rights — logs into the PT-led session, edits own set, never a PT set.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('Client A sees the session and its three sets', 3,
+  format('SELECT count(*) FROM public.sets WHERE workout_session_id = %L', :'session_id'));
+SELECT public.log_set(:'ulid_c', :'session_id'::uuid, :'exercise_global'::uuid, 3, 60, 10, NULL, 'felt easy', FALSE, 'harness');
+SELECT pg_temp.expect('Client A can log a set into the PT-led session', 1,
+  format('SELECT count(*) FROM public.sets WHERE id = %L AND logged_by_user_id = %L', :'ulid_c', :'client_a'));
+SELECT public.log_set(:'ulid_c', :'session_id'::uuid, :'exercise_global'::uuid, 3, 62.5, 10, NULL, 'felt easy', FALSE, 'harness');
+SELECT pg_temp.expect('Client A can edit their own set', 1,
+  format('SELECT count(*) FROM public.sets WHERE id = %L AND weight_kg = 62.5', :'ulid_c'));
+SELECT pg_temp.expect_raises('Client A cannot overwrite the PT''s set',
+  format('SELECT public.log_set(%L, %L::uuid, %L::uuid, 1, 1, 1, NULL, NULL, FALSE, NULL)', :'ulid_1', :'session_id', :'exercise_global'));
+SELECT pg_temp.expect_raises('Client A cannot delete the PT''s set',
+  format('SELECT public.delete_set(%L)', :'ulid_1'));
+SELECT pg_temp.expect_raises('Client A cannot complete a PT-led session',
+  format('SELECT public.complete_workout_session(%L::uuid, 5, NULL)', :'session_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('PT B cannot see PT A''s client session', 0,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L', :'session_id'));
+SELECT pg_temp.expect('PT B cannot see its sets', 0,
+  format('SELECT count(*) FROM public.sets WHERE workout_session_id = %L', :'session_id'));
+SELECT pg_temp.expect_raises('PT B cannot log into it',
+  format('SELECT public.log_set(''01J8RZ0000000000000000BBBB'', %L::uuid, %L::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- PT deletes the client's set, completes; completing twice is a no-op; the
+-- day snapshot survives the program day disappearing.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.delete_set(:'ulid_c');
+SELECT pg_temp.expect('PT A can delete the client''s set', 0,
+  format('SELECT count(*) FROM public.sets WHERE id = %L', :'ulid_c'));
+SELECT pg_temp.expect('PT A completes the session with a rating', 1,
+  format('SELECT CASE WHEN (public.complete_workout_session(%L::uuid, 4, ''solid'')).status = ''completed'' THEN 1 ELSE 0 END::bigint', :'session_id'));
+SELECT pg_temp.expect('completing again is a no-op that keeps the first rating', 1,
+  format('SELECT CASE WHEN (public.complete_workout_session(%L::uuid, 1, ''ignored'')).rating = 4 THEN 1 ELSE 0 END::bigint', :'session_id'));
+SELECT pg_temp.expect('workout_complete was audited once', 1,
+  format('SELECT count(*) FROM public.audit_logs WHERE action = ''workout_complete'' AND entity_id = %L', :'session_id'));
+SELECT pg_temp.expect_raises('log_set refuses a completed session',
+  format('SELECT public.log_set(''01J8RZ0000000000000000DDDD'', %L::uuid, %L::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+RESET ROLE;
+
+DELETE FROM public.program_days WHERE id = :'fresh_day_id';
+SELECT pg_temp.expect('deleting the program day nulls the FK but keeps the snapshot', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND program_day_id IS NULL AND week_number = 1 AND day_number = 1', :'session_id'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Client self-started session: not pt-led, client may complete it.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT (public.start_workout_session(:'client_row'::uuid, NULL)).id AS self_session_id \gset
+SELECT pg_temp.expect('a client-started session is not pt-led', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND is_pt_led = FALSE AND status = ''in_progress''', :'self_session_id'));
+SELECT pg_temp.expect('the client can complete their own session', 1,
+  format('SELECT CASE WHEN (public.complete_workout_session(%L::uuid, NULL, NULL)).status = ''completed'' THEN 1 ELSE 0 END::bigint', :'self_session_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('admin reads every session', 2,
+  format('SELECT count(*) FROM public.workout_sessions WHERE client_id = %L', :'client_row'));
+RESET ROLE;
+
 ROLLBACK;
