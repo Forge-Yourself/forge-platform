@@ -7,6 +7,9 @@ import { useAuth } from '../../../../lib/auth/AuthProvider';
 import { resendInvite, revokeInvite, setClientState } from '../../../../lib/clients/clientActions';
 import { useClientDetail } from '../../../../lib/clients/useClientDetail';
 import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
+import { SessionList } from '../../../../lib/logging/SessionList';
+import { StartSessionSheet } from '../../../../lib/logging/StartSessionSheet';
+import { useSessionHistory } from '../../../../lib/logging/useSessionHistory';
 import { useClientActiveProgram } from '../../../../lib/programs/useClientActiveProgram';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import {
@@ -22,6 +25,7 @@ import {
   Screen,
   SectionCard,
   SectionLabel,
+  Skeleton,
   Spinner,
   StatTile,
   Tag,
@@ -130,6 +134,13 @@ export default function ClientDetail() {
   const program = useClientActiveProgram(params.id);
   const { submitting, error: actionError, setError: setActionError, run } = useAsyncSubmit();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [startOpen, setStartOpen] = useState(false);
+  // Last 3 for the preview; the "See all" route reads the full 50.
+  const sessions = useSessionHistory(params.id, 3);
+  // The footer becomes Resume rather than Start when one of them is still
+  // running — starting again would only hand back the same row anyway
+  // (start_workout_session resumes), and this says so before the tap.
+  const inProgress = sessions.items.find((s) => s.status === 'in_progress') ?? null;
 
   const back = (
     <Button
@@ -372,6 +383,33 @@ export default function ClientDetail() {
         </View>
 
         <View style={{ gap: theme.space[2] }}>
+          <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <SectionLabel>{t('clients.detail.sessionsHeading')}</SectionLabel>
+            {sessions.items.length > 0 ? (
+              <Button
+                label={t('common.seeAll')}
+                variant="link"
+                onPress={() =>
+                  router.push({ pathname: '/(app)/clients/[id]/sessions', params: { id: client.id } })
+                }
+              />
+            ) : null}
+          </Row>
+          {sessions.items.length > 0 ? (
+            <SessionList items={sessions.items} limit={3} />
+          ) : sessions.loading ? (
+            // Not `isEmpty ? empty : list`: while the first fetch is in flight
+            // items is [] and isEmpty is false, which rendered an empty bordered
+            // card — a SectionCard with no rows in it.
+            <Skeleton height={64} radius={14} />
+          ) : (
+            <Card>
+              <Text tone="secondary">{t('clients.detail.sessionsEmpty')}</Text>
+            </Card>
+          )}
+        </View>
+
+        <View style={{ gap: theme.space[2] }}>
           <SectionLabel>{t('clients.detail.manageHeading')}</SectionLabel>
           <SectionCard>
             {client.state === 'invited' ? (
@@ -452,21 +490,32 @@ export default function ClientDetail() {
 
       <FooterBar>
         <Button
-          label={t('clients.detail.startSession')}
+          label={inProgress ? t('clients.detail.resumeSession') : t('clients.detail.startSession')}
           size="lg"
           disabled={!startSessionEnabled}
           onPress={() => {
-            // Session logging is M4 — this button exists now and is correctly gated
-            // on submitted intake (EP-03's own acceptance criterion), but there is
-            // nowhere to route it to yet.
+            if (inProgress) {
+              router.push({ pathname: '/(app)/sessions/[id]', params: { id: inProgress.id } });
+            } else {
+              setStartOpen(true);
+            }
           }}
         />
-        <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
-          {startSessionEnabled
-            ? t('clients.detail.startSessionComingSoon')
-            : t('clients.detail.startSessionBlocked')}
-        </Text>
+        {/* Only the blocked caption is left. The enabled one used to read "coming
+            in M4" — it has arrived, and a caption under a live CTA is noise. */}
+        {!startSessionEnabled ? (
+          <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
+            {t('clients.detail.startSessionBlocked')}
+          </Text>
+        ) : null}
       </FooterBar>
+
+      <StartSessionSheet
+        visible={startOpen}
+        clientId={client.id}
+        viewerIsPt
+        onDismiss={() => setStartOpen(false)}
+      />
     </Screen>
   );
 }
