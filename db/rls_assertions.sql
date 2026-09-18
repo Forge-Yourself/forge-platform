@@ -142,12 +142,39 @@ RESET ROLE;
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'client_a');
-SELECT pg_temp.expect('Client A cannot update their own clients row directly', 0,
-  format('WITH u AS (
-            UPDATE public.clients SET state = ''deactivated'' WHERE id = %L
-            RETURNING 1
-          ) SELECT count(*) FROM u', :'client_row'));
+-- 0014 revoked INSERT/UPDATE/DELETE on clients from `authenticated` outright,
+-- so this is a table-privilege denial (insufficient_privilege), not the
+-- 0-affected-rows idiom it was before.
+SELECT pg_temp.expect_rls_block('Client A cannot update their own clients row directly',
+  format('UPDATE public.clients SET state = ''deactivated'' WHERE id = %L', :'client_row'));
 RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 0014 — clients is RPC-only for writes. Before this, any authenticated
+-- account could INSERT a row naming itself pt_user_id and a victim
+-- client_user_id, and every is_pt_of_* predicate would then trust it.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect_rls_block('a client-role account cannot INSERT a clients row naming a victim',
+  format('INSERT INTO public.clients (pt_user_id, client_user_id, state) VALUES (%L, %L, ''active'')',
+         :'client_a', :'pt_b'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_rls_block('a PT cannot INSERT a clients row directly (invite_client is the only door)',
+  format('INSERT INTO public.clients (pt_user_id, client_user_id, state) VALUES (%L, %L, ''active'')',
+         :'pt_a', :'client_b'));
+SELECT pg_temp.expect_rls_block('a PT cannot re-point client_user_id on their own clients row',
+  format('UPDATE public.clients SET client_user_id = %L WHERE id = %L', :'client_b', :'client_row'));
+SELECT pg_temp.expect_rls_block('a PT cannot DELETE a clients row directly',
+  format('DELETE FROM public.clients WHERE id = %L', :'client_row'));
+RESET ROLE;
+
+SELECT pg_temp.expect('client_row still points at Client A after the blocked writes', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id = %L AND pt_user_id = %L',
+         :'client_row', :'client_a', :'pt_a'));
 
 -- Restore the baseline every M0/M1 assertion below expects: a submitted form.
 UPDATE public.intake_forms SET state = 'completed' WHERE id = :'intake_row';
@@ -256,9 +283,12 @@ RESET ROLE;
 -- intake_row (still needed by M0/M1 assertions below) are never touched.
 -- ─────────────────────────────────────────────────────────────────────────────
 \set client_c '99999999-9999-4999-8999-999999999999'
-INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at)
+-- confirmation_sent_at is set too: since 0014, claim_client_invites() needs
+-- evidence the confirmation flow actually ran, not just email_confirmed_at,
+-- which GoTrue stamps unconditionally under enable_confirmations = false.
+INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at, confirmation_sent_at)
 VALUES (:'client_c', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-        'rls-client-c@forge-test.local', '{"role":"client","display_name":"Client C"}', NOW());
+        'rls-client-c@forge-test.local', '{"role":"client","display_name":"Client C"}', NOW(), NOW() - INTERVAL '1 minute');
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'pt_a');
@@ -302,6 +332,40 @@ SELECT public.claim_client_invites();
 RESET ROLE;
 SELECT pg_temp.expect('claim_client_invites ignores an expired invite', 0,
   format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id IS NOT NULL', :'expired_client_id'));
+
+-- claim_client_invites (0014) — an autoconfirmed password account is not proof
+-- of ownership. Client D looks exactly like a signup made while
+-- enable_confirmations = false: email_confirmed_at set, confirmation_sent_at
+-- NULL, no identity from a verifying provider. It must claim nothing — until a
+-- Google identity for the same account appears, at which point it may.
+\set client_d 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+INSERT INTO auth.users (id, instance_id, aud, role, email, raw_user_meta_data, email_confirmed_at)
+VALUES (:'client_d', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+        'rls-client-d@forge-test.local', '{"role":"client","display_name":"Client D"}', NOW());
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.invite_client('rls-client-d@forge-test.local', 'Client D', '{}') AS autoconfirm_client_id \gset
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_d');
+SELECT public.claim_client_invites();
+RESET ROLE;
+SELECT pg_temp.expect('claim_client_invites refuses an autoconfirmed account (email_confirmed_at alone is not ownership)', 0,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id IS NOT NULL', :'autoconfirm_client_id'));
+
+INSERT INTO auth.identities (user_id, provider, provider_id, identity_data, last_sign_in_at)
+VALUES (:'client_d', 'google', 'google-sub-client-d',
+        '{"sub":"google-sub-client-d","email":"rls-client-d@forge-test.local","email_verified":true}', NOW());
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_d');
+SELECT public.claim_client_invites();
+RESET ROLE;
+SELECT pg_temp.expect('claim_client_invites accepts the same account once a verifying provider identity exists', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND client_user_id = %L AND state = ''accepted''',
+         :'autoconfirm_client_id', :'client_d'));
 
 -- set_client_state — authorization.
 SET LOCAL ROLE authenticated;
@@ -675,9 +739,27 @@ SELECT pg_temp.expect('consume_ai_credit drops PT A''s balance by exactly 1', 1,
 SELECT pg_temp.expect('consume_ai_credit logs exactly one un-refunded ai_generations row', 1,
   format('SELECT count(*) FROM public.ai_generations WHERE id = %L AND was_refunded = FALSE', :'gen1_id'));
 
+-- 0014: refund is an operator tool. The generation's owner is refused; an
+-- admin succeeds; and the refunded generation can no longer become a program.
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('refund_ai_credit refuses the generation''s own owner',
+  format('SELECT public.refund_ai_credit(%L::uuid, ''self-serve refund attempt'')', :'gen1_id'));
+RESET ROLE;
+
+SELECT pg_temp.expect('the owner''s refund attempt left the balance at 9', 1,
+  format('SELECT count(*) FROM public.ai_credit_wallets WHERE user_id = %L AND balance = 9', :'pt_a'));
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
 SELECT public.refund_ai_credit(:'gen1_id'::uuid, 'llm timeout');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('create_program_from_draft refuses a refunded generation',
+  format('SELECT public.create_program_from_draft(%L::uuid, %L::uuid, ''{"weeks":[]}''::jsonb, ''free ride'')',
+         :'client_row', :'gen1_id'));
 RESET ROLE;
 
 SELECT pg_temp.expect('refund_ai_credit restores PT A''s balance to 10', 1,
@@ -792,6 +874,179 @@ SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'client_a');
 SELECT pg_temp.expect('Client A (via client_row) sees the fresh active assigned program', 1,
   format('SELECT count(*) FROM public.programs WHERE id = %L', :'fresh_program_id'));
+RESET ROLE;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- M4a — logging: RLS on workout_sessions / sets / exercise_prs, the four RPCs,
+-- per-set attribution, PR detection, partition automation. Reuses pt_a / pt_b /
+-- client_a / client_row / exercise_global / fresh_program_id from above.
+-- fresh_program_id is active on client_row with one week-1/day-1 (save_program
+-- in the M3 block) — that day is the session's program_day.
+-- ═════════════════════════════════════════════════════════════════════════════
+SELECT id AS fresh_day_id FROM public.program_days WHERE program_id = :'fresh_program_id' LIMIT 1 \gset
+
+\set ulid_1 '01J8RZ0000000000000000AAAA'
+\set ulid_2 '01J8RZ0000000000000000AAAB'
+\set ulid_3 '01J8RZ0000000000000000AAAC'
+\set ulid_c '01J8RZ0000000000000000CCCC'
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Partition automation is idempotent and covers all four partitioned tables.
+-- ─────────────────────────────────────────────────────────────────────────────
+SELECT public.ensure_month_partitions(14);
+SELECT public.ensure_month_partitions(14);
+SELECT pg_temp.expect('ensure_month_partitions created 14 months ahead for every partitioned table', 4,
+  $q$SELECT count(*) FROM pg_tables
+      WHERE schemaname = 'public'
+        AND tablename = ANY (ARRAY[
+          'sets_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM'),
+          'food_logs_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM'),
+          'notifications_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM'),
+          'audit_logs_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM')
+        ])$q$);
+SELECT pg_temp.expect('a new sets partition has RLS enabled', 1,
+  $q$SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relname = 'sets_' || to_char(date_trunc('month', CURRENT_DATE) + interval '13 months', 'YYYY_MM')
+        AND c.relrowsecurity$q$);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Table-level writes are revoked: every mutation goes through an RPC.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_rls_block('PT A cannot INSERT workout_sessions directly',
+  format('INSERT INTO public.workout_sessions (client_id, logged_by_user_id) VALUES (%L, %L)', :'client_row', :'pt_a'));
+SELECT pg_temp.expect_rls_block('PT A cannot INSERT sets directly',
+  format('INSERT INTO public.sets (id, workout_session_id, exercise_id, set_number, logged_by_user_id) VALUES (%L, %L, %L, 1, %L)',
+         :'ulid_1', :'client_row', :'exercise_global', :'pt_a'));
+SELECT pg_temp.expect_rls_block('PT A cannot INSERT exercise_prs directly',
+  format('INSERT INTO public.exercise_prs (client_id, exercise_id, pr_type, value) VALUES (%L, %L, ''weight'', 1)', :'client_row', :'exercise_global'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- start_workout_session — PT starts, second call resumes, PT B denied.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect_raises('PT B cannot start a session for PT A''s client',
+  format('SELECT public.start_workout_session(%L::uuid, %L::uuid)', :'client_row', :'fresh_day_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT (public.start_workout_session(:'client_row'::uuid, :'fresh_day_id'::uuid)).id AS session_id \gset
+SELECT pg_temp.expect('PT A''s session is in_progress, pt-led, snapshotted week 1 day 1', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND status = ''in_progress'' AND is_pt_led AND week_number = 1 AND day_number = 1', :'session_id'));
+SELECT pg_temp.expect('a second start returns the same in-progress session', 1,
+  format('SELECT CASE WHEN (public.start_workout_session(%L::uuid, NULL)).id = %L::uuid THEN 1 ELSE 0 END::bigint', :'client_row', :'session_id'));
+RESET ROLE;
+-- audit_logs has RLS on and no policies: read it as the table owner, as the
+-- M2 block does at its own audit checks.
+SELECT pg_temp.expect('workout_start was audited once', 1,
+  format('SELECT count(*) FROM public.audit_logs WHERE action = ''workout_start'' AND entity_id = %L', :'session_id'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- log_set — PT logs, replay is one row, PR detection, warm-up excluded.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('first working set at 100x8 sets weight, reps and volume PRs', 3,
+  format('SELECT cardinality((public.log_set(%L, %L::uuid, %L::uuid, 1, 100, 8, 8.0, NULL, FALSE, ''harness'')).new_prs)::bigint',
+         :'ulid_1', :'session_id', :'exercise_global'));
+SELECT public.log_set(:'ulid_1', :'session_id'::uuid, :'exercise_global'::uuid, 1, 100, 8, 8.0, NULL, FALSE, 'harness');
+SELECT pg_temp.expect('replaying the same ULID yields one row', 1,
+  format('SELECT count(*) FROM public.sets WHERE id = %L', :'ulid_1'));
+SELECT pg_temp.expect('a heavier set with fewer reps is a weight PR only', 1,
+  format('SELECT cardinality((public.log_set(%L, %L::uuid, %L::uuid, 2, 102.5, 5, NULL, NULL, FALSE, ''harness'')).new_prs)::bigint',
+         :'ulid_2', :'session_id', :'exercise_global'));
+SELECT pg_temp.expect('the weight PR row points at the set', 1,
+  format('SELECT count(*) FROM public.exercise_prs WHERE client_id = %L AND exercise_id = %L AND pr_type = ''weight'' AND value = 102.5 AND set_id = %L',
+         :'client_row', :'exercise_global', :'ulid_2'));
+SELECT pg_temp.expect('a warm-up set never sets a PR', 0,
+  format('SELECT cardinality((public.log_set(%L, %L::uuid, %L::uuid, 0, 200, 20, NULL, NULL, TRUE, ''harness'')).new_prs)::bigint',
+         :'ulid_3', :'session_id', :'exercise_global'));
+SELECT pg_temp.expect('logged sets carry the logger and are marked synced', 3,
+  format('SELECT count(*) FROM public.sets WHERE workout_session_id = %L AND logged_by_user_id = %L AND is_synced', :'session_id', :'pt_a'));
+SELECT pg_temp.expect_raises('log_set rejects a malformed ULID',
+  format('SELECT public.log_set(''not-a-ulid'', %L::uuid, %L::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+SELECT pg_temp.expect_raises('log_set rejects a set with neither weight nor reps',
+  format('SELECT public.log_set(''01J8RZ0000000000000000ZZZZ'', %L::uuid, %L::uuid, 9, NULL, NULL, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Client rights — logs into the PT-led session, edits own set, never a PT set.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('Client A sees the session and its three sets', 3,
+  format('SELECT count(*) FROM public.sets WHERE workout_session_id = %L', :'session_id'));
+SELECT public.log_set(:'ulid_c', :'session_id'::uuid, :'exercise_global'::uuid, 3, 60, 10, NULL, 'felt easy', FALSE, 'harness');
+SELECT pg_temp.expect('Client A can log a set into the PT-led session', 1,
+  format('SELECT count(*) FROM public.sets WHERE id = %L AND logged_by_user_id = %L', :'ulid_c', :'client_a'));
+SELECT public.log_set(:'ulid_c', :'session_id'::uuid, :'exercise_global'::uuid, 3, 62.5, 10, NULL, 'felt easy', FALSE, 'harness');
+SELECT pg_temp.expect('Client A can edit their own set', 1,
+  format('SELECT count(*) FROM public.sets WHERE id = %L AND weight_kg = 62.5', :'ulid_c'));
+SELECT pg_temp.expect_raises('Client A cannot overwrite the PT''s set',
+  format('SELECT public.log_set(%L, %L::uuid, %L::uuid, 1, 1, 1, NULL, NULL, FALSE, NULL)', :'ulid_1', :'session_id', :'exercise_global'));
+SELECT pg_temp.expect_raises('Client A cannot delete the PT''s set',
+  format('SELECT public.delete_set(%L)', :'ulid_1'));
+SELECT pg_temp.expect_raises('Client A cannot complete a PT-led session',
+  format('SELECT public.complete_workout_session(%L::uuid, 5, NULL)', :'session_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('PT B cannot see PT A''s client session', 0,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L', :'session_id'));
+SELECT pg_temp.expect('PT B cannot see its sets', 0,
+  format('SELECT count(*) FROM public.sets WHERE workout_session_id = %L', :'session_id'));
+SELECT pg_temp.expect_raises('PT B cannot log into it',
+  format('SELECT public.log_set(''01J8RZ0000000000000000BBBB'', %L::uuid, %L::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- PT deletes the client's set, completes; completing twice is a no-op; the
+-- day snapshot survives the program day disappearing.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.delete_set(:'ulid_c');
+SELECT pg_temp.expect('PT A can delete the client''s set', 0,
+  format('SELECT count(*) FROM public.sets WHERE id = %L', :'ulid_c'));
+SELECT pg_temp.expect('PT A completes the session with a rating', 1,
+  format('SELECT CASE WHEN (public.complete_workout_session(%L::uuid, 4, ''solid'')).status = ''completed'' THEN 1 ELSE 0 END::bigint', :'session_id'));
+SELECT pg_temp.expect('completing again is a no-op that keeps the first rating', 1,
+  format('SELECT CASE WHEN (public.complete_workout_session(%L::uuid, 1, ''ignored'')).rating = 4 THEN 1 ELSE 0 END::bigint', :'session_id'));
+RESET ROLE;
+SELECT pg_temp.expect('workout_complete was audited once', 1,
+  format('SELECT count(*) FROM public.audit_logs WHERE action = ''workout_complete'' AND entity_id = %L', :'session_id'));
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('log_set refuses a completed session',
+  format('SELECT public.log_set(''01J8RZ0000000000000000DDDD'', %L::uuid, %L::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+RESET ROLE;
+
+DELETE FROM public.program_days WHERE id = :'fresh_day_id';
+SELECT pg_temp.expect('deleting the program day nulls the FK but keeps the snapshot', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND program_day_id IS NULL AND week_number = 1 AND day_number = 1', :'session_id'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Client self-started session: not pt-led, client may complete it.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT (public.start_workout_session(:'client_row'::uuid, NULL)).id AS self_session_id \gset
+SELECT pg_temp.expect('a client-started session is not pt-led', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND is_pt_led = FALSE AND status = ''in_progress''', :'self_session_id'));
+SELECT pg_temp.expect('the client can complete their own session', 1,
+  format('SELECT CASE WHEN (public.complete_workout_session(%L::uuid, NULL, NULL)).status = ''completed'' THEN 1 ELSE 0 END::bigint', :'self_session_id'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('admin reads every session', 2,
+  format('SELECT count(*) FROM public.workout_sessions WHERE client_id = %L', :'client_row'));
 RESET ROLE;
 
 ROLLBACK;

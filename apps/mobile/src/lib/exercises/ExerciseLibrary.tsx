@@ -7,10 +7,10 @@ import {
   type MuscleGroup,
 } from '@forge/shared';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
-import { takeCustomExerciseCreated } from './customExerciseSignal';
+import { customExerciseGeneration } from './customExerciseSignal';
 import { useExerciseSearch } from './useExerciseSearch';
 import { useTheme } from '../../theme/ThemeProvider';
 import {
@@ -50,7 +50,8 @@ function FilterRow({ chips }: { chips: FilterChip[] }) {
       horizontal
       showsHorizontalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ gap: 7, paddingVertical: 2, paddingHorizontal: 1 }}
+      style={{ flexGrow: 0 }}
+      contentContainerStyle={{ gap: 7, paddingVertical: 2, paddingHorizontal: 1, alignItems: 'center' }}
     >
       {chips.map((chip) => (
         <Pressable
@@ -60,7 +61,8 @@ function FilterRow({ chips }: { chips: FilterChip[] }) {
           accessibilityState={{ selected: chip.selected }}
           onPress={chip.onPress}
           style={{
-            minHeight: 38,
+            height: 38,
+            flexGrow: 0,
             paddingHorizontal: 13,
             flexDirection: 'row',
             alignItems: 'center',
@@ -154,12 +156,25 @@ export function ExerciseLibrary({ renderHeader, onSelect, onCreateCustom }: Exer
   const { loading, error, items, total, isEmpty, isNoMatch, hasMore, loadMore, refetch } =
     useExerciseSearch(search, muscle, equipment, pattern);
 
-  // Refetch only when library/custom.tsx says it inserted something. The library
-  // tab stays mounted behind every screen pushed over it, so a plain
-  // refetch-on-focus would fire constantly and reset pagination each time.
+  /**
+   * Refetch only when library/custom.tsx says it inserted something. The library
+   * stays mounted behind every screen pushed over it, so a plain
+   * refetch-on-focus would fire constantly and reset pagination each time.
+   *
+   * The generation this mount has already acted on, tracked per-instance rather
+   * than read out of a flag that clears itself: there are two mount points (the
+   * Library tab and the builder's pick-exercise), both alive at once, and a
+   * consumed flag meant whichever regained focus first ate the signal while the
+   * other went stale. See customExerciseSignal.ts.
+   */
+  const seenGeneration = useRef(customExerciseGeneration());
   useFocusEffect(
     useCallback(() => {
-      if (takeCustomExerciseCreated()) void refetch();
+      const current = customExerciseGeneration();
+      if (current !== seenGeneration.current) {
+        seenGeneration.current = current;
+        void refetch();
+      }
     }, [refetch]),
   );
 

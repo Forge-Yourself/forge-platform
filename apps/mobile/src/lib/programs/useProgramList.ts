@@ -1,5 +1,6 @@
 import type { Database } from '@forge/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 
 export type ProgramSummary = Database['public']['Functions']['program_summaries']['Returns'][number];
@@ -90,17 +91,24 @@ export function useProgramList(tab: ProgramListTab): ProgramListData {
     error: string | null;
   }>({ rows: [], loading: true, error: null });
 
-  // Inlined rather than calling refetch below, so every setState stays inside
-  // a .then() the linter can see in this effect's own body — see useClientList.
-  useEffect(() => {
-    let cancelled = false;
-    void fetchPrograms().then((result) => {
-      if (!cancelled) setState({ rows: result.rows, loading: false, error: result.error });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Refetch on every focus, not just on mount: the Programs and Today tabs stay
+  // mounted underneath builder/assign/ai, so a plain mount effect never re-ran
+  // and a renamed program, a new assignment or an instantiated template were
+  // missing from the list until the tab was pulled to refresh. The list has no
+  // pagination to lose, so refetch-on-focus is safe here (unlike the exercise
+  // library — see customExerciseSignal.ts). Inlined rather than calling refetch,
+  // so every setState stays inside a .then() the linter can see — see useClientList.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void fetchPrograms().then((result) => {
+        if (!cancelled) setState({ rows: result.rows, loading: false, error: result.error });
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   const refetch = useCallback(async (): Promise<void> => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
@@ -108,8 +116,15 @@ export function useProgramList(tab: ProgramListTab): ProgramListData {
     setState({ rows: result.rows, loading: false, error: result.error });
   }, []);
 
-  const items = state.rows.filter((p) =>
-    tab === 'templates' ? p.is_template : !p.is_template && p.state !== 'archived',
+  // Memoized because `items` is this hook's public identity: usePtDashboard
+  // keys two useMemos on it, and a fresh array every render made both of them
+  // recompute every render, which is the one thing a useMemo exists to stop.
+  const items = useMemo(
+    () =>
+      state.rows.filter((p) =>
+        tab === 'templates' ? p.is_template : !p.is_template && p.state !== 'archived',
+      ),
+    [state.rows, tab],
   );
 
   return {

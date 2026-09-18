@@ -3,6 +3,7 @@
     "retry": "إعادة المحاولة",
     "cancel": "إلغاء",
     "back": "رجوع",
+    "loading": "جارٍ التحميل",
     "skip": "تخطٍ",
     "continue": "متابعة",
     "save": "حفظ",
@@ -16,6 +17,11 @@
       "previousMonth": "الشهر السابق",
       "nextMonth": "الشهر التالي",
       "chooseYear": "اختر السنة"
+    },
+    "dateValidation": {
+      "malformed": "هذا ليس تاريخًا صحيحًا",
+      "beforeMin": "اختر تاريخًا في {{min}} أو بعده",
+      "afterMax": "اختر تاريخًا في {{max}} أو قبله"
     },
     "tabs": {
       "today": "اليوم",
@@ -42,8 +48,12 @@
       "allClearTitle": "لا شيء ينتظرك",
       "allClearBody": "كل عميل مرتبط ومُراجَع ولديه برنامج.",
       "invited": "لم تُقبل الدعوة بعد",
+      "redFlags_zero": "لا إجابات في الاستبيان تحتاج مراجعة",
       "redFlags_one": "إجابة واحدة في الاستبيان تحتاج مراجعة",
-      "redFlags_other": "{{count}} إجابات في الاستبيان تحتاج مراجعة",
+      "redFlags_two": "إجابتان في الاستبيان تحتاجان مراجعة",
+      "redFlags_few": "{{count}} إجابات في الاستبيان تحتاج مراجعة",
+      "redFlags_many": "{{count}} إجابة في الاستبيان تحتاج مراجعة",
+      "redFlags_other": "{{count}} إجابة في الاستبيان تحتاج مراجعة",
       "waiver": "لم يُوقَّع الإقرار بعد",
       "noProgram": "لا يوجد برنامج مُسنَد",
       "tagInvited": "مدعو",
@@ -61,10 +71,20 @@
     "roster": {
       "heading": "قائمة عملائك",
       "seeAll": "عرض الكل",
+      "more_zero": "لا عملاء إضافيين",
       "more_one": "عميل واحد إضافي",
-      "more_other": "{{count}} عملاء إضافيون"
+      "more_two": "عميلان إضافيان",
+      "more_few": "{{count}} عملاء إضافيون",
+      "more_many": "{{count}} عميلًا إضافيًا",
+      "more_other": "{{count}} عميل إضافي"
     },
-    "error": "تعذّر تحميل لوحتك."
+    "error": "تعذّر تحميل لوحتك.",
+    "resume": {
+      "title": "جلسة جارية",
+      "body": "{{name}} · بدأت {{time}}",
+      "bodyNoName": "بدأت {{time}}",
+      "button": "استئناف"
+    }
   },
   "auth": {
     "signIn": {
@@ -150,6 +170,7 @@
       "rateLimited": "محاولات كثيرة جدًا. يرجى الانتظار قليلاً والمحاولة مرة أخرى.",
       "sessionExpired": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى.",
       "network": "تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.",
+      "mailDelivery": "تعذّر إرسال بريد التأكيد. يرجى المحاولة مرة أخرى بعد قليل.",
       "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
     }
   },
@@ -346,8 +367,12 @@
       "heightLabel": "الطول",
       "weightLabel": "الوزن",
       "goalLabel": "الهدف الرئيسي",
+      "redFlagBanner_zero": "لا إجابات تحتاج إلى انتباهك قبل جلستهم الأولى.",
       "redFlagBanner_one": "إجابة واحدة تحتاج إلى انتباهك قبل جلستهم الأولى.",
-      "redFlagBanner_other": "{{count}} إجابات تحتاج إلى انتباهك قبل جلستهم الأولى.",
+      "redFlagBanner_two": "إجابتان تحتاجان إلى انتباهك قبل جلستهم الأولى.",
+      "redFlagBanner_few": "{{count}} إجابات تحتاج إلى انتباهك قبل جلستهم الأولى.",
+      "redFlagBanner_many": "{{count}} إجابة تحتاج إلى انتباهك قبل جلستهم الأولى.",
+      "redFlagBanner_other": "{{count}} إجابة تحتاج إلى انتباهك قبل جلستهم الأولى.",
       "intakeTitle": "الاستمارة التمهيدية",
       "intakeNotStarted": "لم تبدأ بعد",
       "intakeProgress": "تم حفظ {{answered}} من {{total}} أقسام",
@@ -355,7 +380,9 @@
       "waiverSigned": "تم توقيع الإخلاء",
       "waiverUnsigned": "لم يتم توقيع الإخلاء بعد",
       "startSession": "بدء الجلسة",
-      "startSessionComingSoon": "تسجيل الجلسات يصل في تحديث لاحق.",
+      "resumeSession": "استئناف الجلسة",
+      "sessionsHeading": "الجلسات",
+      "sessionsEmpty": "لم تُسجَّل أي جلسات بعد.",
       "startSessionBlocked": "متاح بعد تقديم الاستمارة التمهيدية.",
       "pause": "إيقاف مؤقت",
       "reactivate": "إعادة التفعيل",
@@ -379,8 +406,12 @@
         "intakeDone": "مكتمل",
         "none": "—"
       },
+      "redFlagTitle_zero": "لا إشارات حمراء في الاستبيان",
       "redFlagTitle_one": "إشارة حمراء واحدة في الاستبيان",
-      "redFlagTitle_other": "{{count}} إشارات حمراء في الاستبيان",
+      "redFlagTitle_two": "إشارتان حمراوان في الاستبيان",
+      "redFlagTitle_few": "{{count}} إشارات حمراء في الاستبيان",
+      "redFlagTitle_many": "{{count}} إشارة حمراء في الاستبيان",
+      "redFlagTitle_other": "{{count}} إشارة حمراء في الاستبيان",
       "redFlagBody": "اقرأها قبل الجلسة الأولى.",
       "redFlagAction": "مراجعة",
       "waiverHeading": "الإقرار",
@@ -454,9 +485,7 @@
       "notANumber": "أدخل رقمًا",
       "belowMin": "يجب ألا يقل عن {{min}}",
       "aboveMax": "يجب ألا يزيد عن {{max}}",
-      "dateMalformed": "هذا ليس تاريخًا صحيحًا",
-      "dateBeforeMin": "اختر تاريخًا في {{min}} أو بعده",
-      "dateAfterMax": "اختر تاريخًا في {{max}} أو قبله"
+      "formIncomplete": "راجع الإجابات المحددة قبل المتابعة"
     },
     "resume": {
       "title": "مرحبًا بعودتك",
@@ -517,6 +546,16 @@
       "none": "لم يُسند إليك مدربك برنامجًا بعد.",
       "weekOf": "الأسبوع {{week}} من {{total}}",
       "view": "عرض البرنامج"
+    },
+    "workout": {
+      "startTitle": "مستعد للتدريب؟",
+      "startBody": "سجّل مجموعاتك أثناء التمرين. مدربك يراها أيضاً.",
+      "startButton": "ابدأ التمرين",
+      "startFreestyle": "ابدأ تمريناً حراً",
+      "resumeTitle": "تمرين جارٍ",
+      "resumeButton": "استئناف",
+      "recentHeading": "التمارين الأخيرة",
+      "recentEmpty": "ستظهر تمارينك المسجّلة هنا."
     }
   },
   "library": {
@@ -667,8 +706,12 @@
       "nameLabel": "اسم البرنامج",
       "namePlaceholder": "مرحلة القوة",
       "weeksLabel": "المدة",
+      "weeksValue_zero": "{{count}} أسبوع",
       "weeksValue_one": "أسبوع واحد",
-      "weeksValue_other": "{{count}} أسابيع",
+      "weeksValue_two": "أسبوعان",
+      "weeksValue_few": "{{count}} أسابيع",
+      "weeksValue_many": "{{count}} أسبوعًا",
+      "weeksValue_other": "{{count}} أسبوع",
       "clientLabel": "لـ (اختياري)",
       "templateLabel": "احفظه كقالب",
       "create": "إنشاء البرنامج",
@@ -754,6 +797,9 @@
     "draftAction": "مسودة بالذكاء الاصطناعي",
     "creditCost": "إنشاء المسودة · رصيد واحد",
     "intro": "أجب عن ثلاثة أسئلة. أنت تراجع وتعدّل كل مجموعة قبل أن يصل أي شيء إلى {{name}}.",
+    "introNoClient": "اختر عميلًا وأجب عن ثلاثة أسئلة. أنت تراجع وتعدّل كل مجموعة قبل أن يصل أي شيء إليه.",
+    "clientLabel": "العميل",
+    "clientEmpty": "لا يوجد عملاء نشطون بعد. ادعُ عميلًا من تبويب العملاء أولًا.",
     "goalLabel": "الهدف",
     "goalLabels": {
       "strength": "القوة",
@@ -793,6 +839,7 @@
     "errors": {
       "unauthorized": "انتهت جلستك. سجّل الدخول وحاول مجددًا.",
       "forbidden": "أنت لست مدرب هذا العميل.",
+      "noClient": "اختر عميلًا أولًا.",
       "insufficientCredits": "نفد رصيدك من الذكاء الاصطناعي. لم يُخصم أي رصيد.",
       "model": "تعذّر إنشاء المسودة. لم يُخصم أي رصيد.",
       "timeout": "استغرق الأمر وقتًا طويلًا. لم يُخصم أي رصيد — حاول مجددًا.",
@@ -803,8 +850,12 @@
   },
   "credits": {
     "balanceLabel": "أرصدة الذكاء الاصطناعي",
+    "remaining_zero": "لم يتبقَّ أي رصيد",
     "remaining_one": "بقي رصيد واحد",
-    "remaining_other": "بقي {{count}} أرصدة",
+    "remaining_two": "بقي رصيدان",
+    "remaining_few": "بقي {{count}} أرصدة",
+    "remaining_many": "بقي {{count}} رصيدًا",
+    "remaining_other": "بقي {{count}} رصيد",
     "enoughForOne": "يكفي لمسودة واحدة أخرى",
     "empty": "نفد رصيدك من الذكاء الاصطناعي",
     "body": "الأرصدة تغطي مسودات الذكاء الاصطناعي فقط. بناء البرامج يدويًا مجاني دائمًا وبلا حدود.",
@@ -831,5 +882,113 @@
     "inch": "بوصة",
     "kg": "كغ",
     "lb": "رطل"
+  },
+  "logging": {
+    "start": {
+      "title": "ابدأ الجلسة",
+      "pickDay": "اختر تمرين اليوم",
+      "weekOf": "الأسبوع {{week}} من {{total}}",
+      "dayRow": "اليوم {{day}}",
+      "done": "مكتمل",
+      "freestyle": "جلسة حرة",
+      "freestyleBody": "بدون خطة — أضف التمارين أثناء التدريب.",
+      "noProgramPt": "لا يوجد برنامج معيّن بعد.",
+      "noProgramPtLink": "عيّن برنامجاً",
+      "noProgramClient": "لم يعيّن مدربك برنامجاً بعد.",
+      "resuming": "جارٍ استئناف جلستك…",
+      "error": "تعذّر بدء الجلسة. حاول مرة أخرى."
+    },
+    "session": {
+      "finish": "إنهاء",
+      "setOf": "المجموعة {{n}} من {{total}}",
+      "setN": "المجموعة {{n}}",
+      "last": "آخر مرة: {{summary}}",
+      "firstTime": "أول مرة في هذا التمرين",
+      "logSet": "سجّل هذه المجموعة",
+      "addExercise": "أضف تمريناً",
+      "noExercises": "لا توجد تمارين بعد",
+      "noExercisesBody": "أضف تمريناً من المكتبة لبدء التسجيل.",
+      "weight": "الوزن",
+      "reps": "التكرارات",
+      "rpe": "RPE",
+      "rpeSkip": "—",
+      "note": "ملاحظة",
+      "notePlaceholder": "أي شيء يستحق التذكّر؟",
+      "warmup": "إحماء",
+      "coachTag": "المدرب",
+      "previousSets": "مجموعات هذه الجلسة",
+      "editSet": "تعديل المجموعة",
+      "deleteSet": "حذف المجموعة",
+      "setSummary": "{{weight}} × {{reps}}",
+      "setSummaryRpe": "{{weight}} × {{reps}} · RPE {{rpe}}",
+      "repsOnly": "{{reps}} تكرارات",
+      "errorOffline": "أنت غير متصل. تبقى هذه المجموعة على الشاشة — أعد المحاولة عند الاتصال.",
+      "errorDenied": "مدربك فقط يمكنه تغيير هذه المجموعة.",
+      "errorClosed": "انتهت هذه الجلسة بالفعل.",
+      "errorGeneric": "تعذّر حفظ المجموعة. حاول مرة أخرى.",
+      "notFound": "الجلسة غير موجودة",
+      "notFoundBody": "قد تكون لحساب آخر، أو أن الرابط قديم."
+    },
+    "timer": {
+      "rest": "راحة · المجموعة {{n}} من {{total}}",
+      "restSimple": "راحة",
+      "running": "استراحة",
+      "paused": "متوقف",
+      "complete": "انطلق",
+      "hintRunning": "التالي: {{summary}}",
+      "hintComplete": "انتهت الراحة. جهّز البار.",
+      "pause": "إيقاف",
+      "resume": "متابعة",
+      "plus30": "+30 ث",
+      "skip": "تخطّي الراحة",
+      "back": "عودة إلى المجموعة"
+    },
+    "pr": {
+      "weight": "رقم قياسي جديد في الوزن · {{value}}",
+      "reps": "رقم قياسي جديد في التكرارات · {{value}} تكرارات",
+      "volume": "رقم قياسي جديد في الحجم · {{value}}",
+      "heading_zero": "لا أرقام قياسية",
+      "heading_one": "رقم قياسي واحد",
+      "heading_two": "رقمان قياسيان",
+      "heading_few": "{{count}} أرقام قياسية",
+      "heading_many": "{{count}} رقماً قياسياً",
+      "heading_other": "{{count}} رقم قياسي"
+    },
+    "finish": {
+      "title": "إنهاء الجلسة؟",
+      "body": "قيّمها وأضف ملاحظة. المجموعات محفوظة بالفعل.",
+      "rating": "كيف كانت؟",
+      "notes": "ملاحظات الجلسة",
+      "notesPlaceholder": "اختياري",
+      "confirm": "إنهاء الجلسة",
+      "cancel": "متابعة التسجيل",
+      "error": "تعذّر إنهاء الجلسة. حاول مرة أخرى."
+    },
+    "summary": {
+      "duration": "المدة",
+      "sets": "المجموعات",
+      "volume": "الحجم",
+      "prs": "الأرقام القياسية",
+      "completedAt": "اكتملت {{date}}",
+      "noSets": "لم تُسجَّل أي مجموعات.",
+      "notes": "ملاحظات"
+    },
+    "history": {
+      "title": "الجلسات",
+      "myTitle": "تماريني",
+      "freestyle": "حر",
+      "dayLabel": "الأسبوع {{week}} · اليوم {{day}}",
+      "dayLabelNamed": "{{label}} · الأسبوع {{week}}",
+      "sets_zero": "لا مجموعات",
+      "sets_one": "مجموعة واحدة",
+      "sets_two": "مجموعتان",
+      "sets_few": "{{count}} مجموعات",
+      "sets_many": "{{count}} مجموعة",
+      "sets_other": "{{count}} مجموعة",
+      "inProgress": "جارية",
+      "empty": "لا جلسات بعد",
+      "emptyBody": "ستُعرض الجلسات المكتملة هنا.",
+      "error": "تعذّر تحميل الجلسات."
+    }
   }
 }

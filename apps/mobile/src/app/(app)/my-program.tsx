@@ -2,7 +2,7 @@ import { programStats, weekCompletion } from '@forge/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { blockTag, formatRepsCell, formatRest, slotFor } from '../../lib/programs/draftModel';
 import { useProgramTree } from '../../lib/programs/useProgramTree';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -16,7 +16,7 @@ import {
   Skeleton,
   Tag,
   Text,
-  WeekStrip,
+  WeekDayNav,
 } from '../../ui';
 
 /**
@@ -92,97 +92,39 @@ export default function MyProgram() {
         }
       />
 
-      <View style={{ paddingHorizontal: theme.space[4], paddingTop: theme.space[3], gap: theme.space[2] }}>
-        <WeekStrip
-          weeks={weekProgress}
-          label={t('clientHome.program.weekOf', {
-            week: currentWeek ?? 1,
-            total: tree.duration_weeks,
-          })}
-        />
-        <Text numeric tone="muted" style={{ fontSize: 11.5 }}>
-          {t('programs.meta', {
-            weeks: stats.weeks,
-            days: stats.daysPerWeek,
-            exercises: stats.exerciseCount,
-          })}
-        </Text>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: theme.space[2], paddingVertical: theme.space[3], paddingHorizontal: theme.space[4] }}
-      >
-        {tree.weeks.map((w, wi) => {
-          const selected = wi === weekIndex;
-          const isCurrent = w.week_number === currentWeek;
-          return (
-            <Pressable
-              key={w.id}
-              accessibilityRole="button"
-              accessibilityLabel={t('builder.weekLabel', { week: w.week_number })}
-              accessibilityState={{ selected }}
-              onPress={() => {
-                setWeekIndex(wi);
-                setDayIndex(0);
-              }}
-              style={{
-                minWidth: 44,
-                minHeight: 38,
-                paddingHorizontal: theme.space[3],
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: theme.radius.pill,
-                borderWidth: isCurrent ? 1.5 : 1,
-                borderColor: selected || isCurrent ? theme.colors.accent : theme.colors.border,
-                backgroundColor: selected ? theme.colors.accentSurfaceSoft : theme.colors.surfaceRaised,
-              }}
-            >
-              <Text numeric variant="caption" style={{ fontWeight: '700' }}>
-                {w.week_number}
-              </Text>
-            </Pressable>
-          );
+      {/* The week chips carry the elapsed/live progress the WeekStrip used to draw
+          above them, so this screen no longer states the same thing twice. */}
+      <WeekDayNav
+        weeks={tree.weeks.map((w) => ({
+          key: w.id,
+          number: w.week_number,
+          state: weekProgress.find((p) => p.weekNumber === w.week_number)?.state ?? 'upcoming',
+          a11yLabel: t('builder.weekLabel', { week: w.week_number }),
+        }))}
+        weekIndex={weekIndex}
+        onSelectWeek={(wi) => {
+          setWeekIndex(wi);
+          setDayIndex(0);
+        }}
+        days={(week?.days ?? []).map((d) => ({
+          key: d.id,
+          label: d.label ?? t('builder.dayLabel', { day: d.day_number }),
+          a11yLabel: t('builder.dayLabel', { day: d.day_number }),
+        }))}
+        dayIndex={dayIndex}
+        onSelectDay={setDayIndex}
+        meta={t('programs.meta', {
+          weeks: stats.weeks,
+          days: stats.daysPerWeek,
+          exercises: stats.exerciseCount,
         })}
-      </ScrollView>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: theme.space[2], paddingBottom: theme.space[3], paddingHorizontal: theme.space[4] }}
-      >
-        {(week?.days ?? []).map((d, di) => {
-          const selected = di === dayIndex;
-          return (
-            <Pressable
-              key={d.id}
-              accessibilityRole="button"
-              accessibilityLabel={t('builder.dayLabel', { day: d.day_number })}
-              accessibilityState={{ selected }}
-              onPress={() => setDayIndex(di)}
-              style={{
-                minHeight: 38,
-                paddingHorizontal: theme.space[3],
-                justifyContent: 'center',
-                borderRadius: theme.radius.pill,
-                borderWidth: 1,
-                borderColor: selected ? theme.colors.accent : theme.colors.border,
-                backgroundColor: selected ? theme.colors.accentSurfaceSoft : theme.colors.surfaceRaised,
-              }}
-            >
-              <Text variant="caption" style={{ fontWeight: '600' }}>
-                {d.label ?? t('builder.dayLabel', { day: d.day_number })}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      />
 
       <ScrollView
         contentContainerStyle={{
           gap: theme.space[3],
           paddingHorizontal: theme.space[4],
+          paddingTop: theme.space[3],
           paddingBottom: theme.space[8],
         }}
       >

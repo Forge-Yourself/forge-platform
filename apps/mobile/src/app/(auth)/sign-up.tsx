@@ -108,7 +108,7 @@ export default function SignUp() {
     if (!validate()) return;
 
     await run(async () => {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -121,6 +121,25 @@ export default function SignUp() {
 
       if (error) {
         setFormError(mapAuthError(error, t));
+        return;
+      }
+
+      // Which screen comes next depends on whether email confirmation is enabled on
+      // the project, so branch on what signUp() actually returned rather than
+      // assuming. Confirmation ON -> no session; the user has to come back through
+      // the emailed deep link, and verify-pending is the screen that waits for it.
+      // Confirmation OFF (supabase/config.toml, while Resend has no verified sender
+      // domain) -> the session lands right here, and pushing to verify-pending would
+      // strand the user on a "check your inbox" screen for mail that is never sent.
+      //
+      // The root gate can't rescue that: its signed-in branch renders any (auth)
+      // route as-is (app/_layout.tsx, the onboarding_completed === false carve-out),
+      // so a screen that changes gate state has to navigate itself. replace, not
+      // push — signup is a state-changing submit and must not sit on the back stack.
+      // '/' is where verify-success's "Skip for now" goes too; the gate takes it from
+      // there to (onboarding)/role.
+      if (data.session) {
+        router.replace('/');
         return;
       }
 

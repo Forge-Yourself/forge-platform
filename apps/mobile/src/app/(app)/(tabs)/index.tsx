@@ -9,6 +9,10 @@ import { useAuth } from '../../../lib/auth/AuthProvider';
 import { usePtDashboard, type AttentionItem } from '../../../lib/home/usePtDashboard';
 import { claimClientInvites } from '../../../lib/intake/claimInvites';
 import { openWaiverDocument } from '../../../lib/intake/openWaiver';
+import { SessionList } from '../../../lib/logging/SessionList';
+import { StartSessionSheet } from '../../../lib/logging/StartSessionSheet';
+import { useInProgressSession } from '../../../lib/logging/useInProgressSession';
+import { useSessionHistory } from '../../../lib/logging/useSessionHistory';
 import { useProgramList } from '../../../lib/programs/useProgramList';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../../theme/ThemeProvider';
@@ -57,6 +61,11 @@ function SettingsButton() {
       onPress={() => router.push('/(app)/settings')}
     />
   );
+}
+
+/** "09:14" — the wall-clock start of a running session, for the Resume banner. */
+function sessionStartTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 /** "Good morning / afternoon / evening" — the device clock, no locale calendar needed. */
@@ -200,7 +209,11 @@ function PtHome() {
   const auth = useAuth();
   const dashboard = usePtDashboard(auth.user?.id);
   const credits = useCreditBalance(auth.user?.id);
+  const live = useInProgressSession();
 
+  // Bound once so the press handler closes over a non-null row rather than a
+  // `!` assertion on something the render already narrowed.
+  const liveSession = live.session;
   const rosterPreview = dashboard.activeClients.slice(0, 4);
   const remaining = dashboard.activeClients.length - rosterPreview.length;
 
@@ -214,6 +227,40 @@ function PtHome() {
         }}
       >
         <HomeHeader name={auth.user?.display_name ?? ''} />
+
+        {/* Spec §5.1 — one banner, naming the client, for the most recently
+            started session the PT can still see. It sits above everything else
+            on Today because it is the only card that is time-critical. */}
+        {liveSession ? (
+          <Card
+            style={{
+              gap: theme.space[2],
+              borderColor: theme.colors.accent,
+              backgroundColor: theme.colors.accentSurfaceSoft,
+            }}
+          >
+            <Text variant="h3" style={{ color: theme.colors.onAccentSurfaceSoft }}>
+              {t('home.resume.title')}
+            </Text>
+            <Text style={{ color: theme.colors.onAccentSurfaceSoft }}>
+              {liveSession.clientName
+                ? t('home.resume.body', {
+                    name: liveSession.clientName,
+                    time: sessionStartTime(liveSession.started_at ?? liveSession.created_at),
+                  })
+                : t('home.resume.bodyNoName', {
+                    time: sessionStartTime(liveSession.started_at ?? liveSession.created_at),
+                  })}
+            </Text>
+            <Button
+              label={t('home.resume.button')}
+              size="lg"
+              onPress={() =>
+                router.push({ pathname: '/(app)/sessions/[id]', params: { id: liveSession.id } })
+              }
+            />
+          </Card>
+        ) : null}
 
         {dashboard.error ? <Banner variant="danger" message={t('home.error')} /> : null}
 
@@ -286,7 +333,7 @@ function PtHome() {
               icon="sparkle"
               label={t('home.actions.aiDraft')}
               accent
-              onPress={() => router.push('/(app)/(tabs)/programs')}
+              onPress={() => router.push('/(app)/programs/ai')}
             />
             <ActionTile
               icon="dumbbell"
@@ -364,6 +411,11 @@ function ClientHome() {
   });
   const [emailCopied, setEmailCopied] = useState(false);
   const [waiverError, setWaiverError] = useState<string | null>(null);
+  const [startOpen, setStartOpen] = useState(false);
+  const live = useInProgressSession();
+  const liveSession = live.session;
+  // No client id: RLS already scopes this to the signed-in client's own rows.
+  const recent = useSessionHistory(undefined, 3);
 
   // RLS already returns only 'active'/'completed' programs to a client
   // (is_program_visible), so there is no state filter here and there must not
@@ -537,6 +589,34 @@ function ClientHome() {
           </Card>
         ) : null}
 
+        {/* Resume wins over Start. The start card is gated on a signed waiver so
+            a client cannot train before the paperwork their PT is already being
+            nudged about on their own Today screen. */}
+        {liveSession ? (
+          <Card style={{ gap: theme.space[3], borderColor: theme.colors.accent }}>
+            <Text variant="h3">{t('clientHome.workout.resumeTitle')}</Text>
+            <Button
+              label={t('clientHome.workout.resumeButton')}
+              size="lg"
+              onPress={() =>
+                router.push({ pathname: '/(app)/sessions/[id]', params: { id: liveSession.id } })
+              }
+            />
+          </Card>
+        ) : waiverSigned ? (
+          <Card style={{ gap: theme.space[3] }}>
+            <Text variant="h3">{t('clientHome.workout.startTitle')}</Text>
+            <Text tone="secondary">{t('clientHome.workout.startBody')}</Text>
+            <Button
+              label={
+                myProgram ? t('clientHome.workout.startButton') : t('clientHome.workout.startFreestyle')
+              }
+              size="lg"
+              onPress={() => setStartOpen(true)}
+            />
+          </Card>
+        ) : null}
+
         <View style={{ gap: theme.space[2] }}>
           <SectionLabel>{t('clientHome.trainerLabel')}</SectionLabel>
           <SectionCard>
@@ -617,7 +697,36 @@ function ClientHome() {
             </SectionCard>
           </View>
         ) : null}
+
+        <View style={{ gap: theme.space[2] }}>
+          <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <SectionLabel>{t('clientHome.workout.recentHeading')}</SectionLabel>
+            {recent.items.length > 0 ? (
+              <Button
+                label={t('common.seeAll')}
+                variant="link"
+                onPress={() => router.push('/(app)/my-sessions')}
+              />
+            ) : null}
+          </Row>
+          {recent.items.length > 0 ? (
+            <SessionList items={recent.items} limit={3} />
+          ) : recent.loading ? (
+            <Skeleton height={64} radius={14} />
+          ) : (
+            <Card>
+              <Text tone="secondary">{t('clientHome.workout.recentEmpty')}</Text>
+            </Card>
+          )}
+        </View>
       </ScrollView>
+
+      <StartSessionSheet
+        visible={startOpen}
+        clientId={state.client.id}
+        viewerIsPt={false}
+        onDismiss={() => setStartOpen(false)}
+      />
     </Screen>
   );
 }

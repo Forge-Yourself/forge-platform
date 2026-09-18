@@ -7,7 +7,7 @@ import { mapAuthError, OTP_EXPIRY_MINUTES } from '../../lib/auth/authErrors';
 import { useAsyncSubmit } from '../../lib/forms/useAsyncSubmit';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../theme/ThemeProvider';
-import { Banner, Button, FormScreen, Text, TextField } from '../../ui';
+import { Banner, Button, FormScreen, NavHeader, Text, TextField } from '../../ui';
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -47,19 +47,28 @@ export default function ForgotPassword() {
   }
 
   return (
-    <FormScreen>
-      {/* ui/Icon mirrors directional glyphs under RTL itself, so this screen no
-          longer has to swap '‹' for '›' by hand. */}
-      <Button
-        label={t('common.back')}
-        icon="chevronBack"
-        variant="link"
-        onPress={() => router.back()}
-        style={{ alignSelf: 'flex-start' }}
-      />
-
+    <FormScreen
+      header={
+        // Escape affordance lives in the non-scrolling header, never in the
+        // form body (PITFALLS N2). ui/Icon mirrors the chevron under RTL.
+        <NavHeader
+          divider={false}
+          leading={
+            <Button
+              label={t('common.back')}
+              icon="chevronBack"
+              variant="link"
+              // dismissTo pops back to sign-in when it is on the stack and replaces
+              // when it is not (cold deep link) — router.back() on web reported
+              // canGoBack() true and then dropped GO_BACK unhandled.
+              onPress={() => router.dismissTo('/(auth)/sign-in')}
+            />
+          }
+        />
+      }
+    >
       {submitted ? (
-        <View style={{ marginTop: theme.space[6] }}>
+        <View style={{ marginTop: theme.space[2] }}>
           <Text variant="h2" style={{ marginBottom: theme.space[3] }}>
             {t('auth.forgotPassword.title')}
           </Text>
@@ -69,7 +78,7 @@ export default function ForgotPassword() {
           />
         </View>
       ) : (
-        <View style={{ marginTop: theme.space[6] }}>
+        <View style={{ marginTop: theme.space[2] }}>
           <Text variant="h2" style={{ marginBottom: theme.space[2] }}>
             {t('auth.forgotPassword.title')}
           </Text>

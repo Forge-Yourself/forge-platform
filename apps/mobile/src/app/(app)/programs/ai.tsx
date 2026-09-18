@@ -49,6 +49,7 @@ const STEP_KEYS = ['ai.generating.step1', 'ai.generating.step2', 'ai.generating.
  * 56pt ring reads as work in progress.
  */
 function LoadingRing() {
+  const { t } = useTranslation();
   const theme = useTheme();
   const [spin] = useState(() => new Animated.Value(0));
 
@@ -68,7 +69,7 @@ function LoadingRing() {
   return (
     <Animated.View
       accessible
-      accessibilityLabel="Loading"
+      accessibilityLabel={t('common.loading')}
       style={{
         width: 56,
         height: 56,
@@ -193,7 +194,13 @@ export default function AiDraft() {
   const theme = useTheme();
   const auth = useAuth();
   const params = useLocalSearchParams<{ clientId?: string }>();
-  const clientId = params.clientId && params.clientId !== '' ? params.clientId : undefined;
+  // Seeded from the route when the builder opens this screen for one client;
+  // chosen on-screen when Today's "Draft with AI" tile opens it with none.
+  // Without this, Generate could only ever fail with "not this client's trainer".
+  const [clientId, setClientId] = useState<string | undefined>(
+    params.clientId && params.clientId !== '' ? params.clientId : undefined,
+  );
+  const pickClient = params.clientId === undefined || params.clientId === '';
 
   const credits = useCreditBalance(auth.user?.id);
   // The copy addresses the client by name ("before anything reaches Maya"),
@@ -201,6 +208,7 @@ export default function AiDraft() {
   // program_tree() to carry a name it otherwise has no use for.
   const clients = useClientList(auth.user?.id, '', 'all');
   const clientName = clients.items.find((c) => c.id === clientId)?.displayName ?? '';
+  const activeClients = clients.items.filter((c) => c.state === 'active');
 
   const [phase, setPhase] = useState<Phase>('prompt');
   const [goal, setGoal] = useState<AiGoal>('strength');
@@ -228,7 +236,7 @@ export default function AiDraft() {
   async function handleGenerate() {
     setError(null);
     if (!clientId) {
-      setError(t('ai.errors.forbidden'));
+      setError(t('ai.errors.noClient'));
       return;
     }
     // credits.state, not creditState(balance ?? 0): the hook reports 'loading'
@@ -319,8 +327,33 @@ export default function AiDraft() {
             {error ? <Banner variant="danger" message={error} /> : null}
 
             <Text tone="secondary" style={{ fontSize: 13.5, lineHeight: 21 }}>
-              {t('ai.intro', { name: clientName })}
+              {clientName === '' ? t('ai.introNoClient') : t('ai.intro', { name: clientName })}
             </Text>
+
+            {pickClient ? (
+              <View style={{ gap: theme.space[2] }}>
+                <SectionLabel>{t('ai.clientLabel')}</SectionLabel>
+                {activeClients.length === 0 && !clients.loading ? (
+                  <Text tone="muted" style={{ fontSize: 13 }}>
+                    {t('ai.clientEmpty')}
+                  </Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                    {activeClients.map((c) => (
+                      <Chip
+                        key={c.id}
+                        label={c.displayName}
+                        selected={clientId === c.id}
+                        onPress={() => {
+                          setError(null);
+                          setClientId(c.id);
+                        }}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+            ) : null}
 
             <View style={{ gap: theme.space[2] }}>
               <SectionLabel>{t('ai.goalLabel')}</SectionLabel>
@@ -516,12 +549,28 @@ export default function AiDraft() {
         transparent
         onRequestClose={() => setDiscardOpen(false)}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('ai.result.discardCancel')}
-          onPress={() => setDiscardOpen(false)}
-          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}
-        >
+        {/* The dismiss target is a SIBLING behind the sheet, not its ancestor.
+            Nested, React Native's responder negotiation walked every press that
+            no child claimed — the sheet's padding, its title, its body copy —
+            up to this Pressable and silently cancelled the confirmation. And
+            because Pressable sets `accessible` and groups its children,
+            VoiceOver announced the entire sheet as one "Cancel" button, leaving
+            the destructive Discard control unreachable. This is the only
+            transparent Modal in the app; the four pageSheet ones are unaffected. */}
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('ai.result.discardCancel')}
+            onPress={() => setDiscardOpen(false)}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.45)',
+            }}
+          />
           <View
             style={{
               padding: theme.space[5],
@@ -549,7 +598,7 @@ export default function AiDraft() {
               onPress={() => setDiscardOpen(false)}
             />
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </Screen>
   );

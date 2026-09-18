@@ -5,6 +5,7 @@ import {
   evaluateParq,
   intakeCompletion,
   intakeDateBounds,
+  intakeResponsesSchema,
   INTAKE_LIMITS,
   PARQ_QUESTIONS,
 } from '@forge/shared';
@@ -199,10 +200,27 @@ export default function Intake() {
     if (!row) return;
     const intakeId = row.id;
     setSubmitError(null);
+
+    /**
+     * The safeParse-before-write every other form in this app already does —
+     * invite.tsx, library/custom.tsx, profile-edit.tsx, settings, sign-in,
+     * sign-up, forgot-password, reset-password, the builder and
+     * CertificationsEditor. This screen was the one exception: the seven zod
+     * schemas in packages/shared/src/schemas/intake.ts had exactly one consumer
+     * repo-wide, and it was intake.test.ts. The server gate added in migration
+     * 0013 is the real one; this is what turns its 23514 into a message about
+     * the form rather than a generic failure.
+     */
+    const parsed = intakeResponsesSchema.safeParse(responses);
+    if (!parsed.success) {
+      setSubmitError(t('intake.validation.formIncomplete'));
+      return;
+    }
+
     await run(async () => {
       try {
         await saveProgress(currentSectionPartial());
-        await submit({ ...responses, dietary: responses.dietary });
+        await submit(parsed.data);
         // replace, not push: the form is submitted now, so it must not sit behind
         // the waiver as a back target that would re-open an already-submitted form.
         router.replace({ pathname: '/(app)/intake/[id]/waiver', params: { id: intakeId } });
@@ -215,6 +233,36 @@ export default function Intake() {
   const parqComplete = PARQ_QUESTIONS.every((q) => responses.parq[q] !== undefined);
 
   const dateBounds = intakeDateBounds();
+
+  /**
+   * Every unresolved inline problem on the step currently shown.
+   *
+   * Before this, dateError()/numericError() fed the fields' `error` prop and
+   * NOTHING else: Continue stayed enabled, and parseNumeric returned undefined
+   * for anything checkNumericField disliked, so a client typed 1750 cm, saw the
+   * red line, tapped Continue, and saveProgress wrote a `responses` object with
+   * height_cm simply absent — the value visible on screen, gone from the record,
+   * with no way to tell it had been dropped. Blocking is what makes the message
+   * mean something; clearing the field is always available, since empty is a
+   * valid "not answered" for every field here except PAR-Q.
+   */
+  function stepProblems(current: number): string[] {
+    const problems =
+      current === 2
+        ? [dateError(responses.goals?.target_date, dateBounds.target_date)]
+        : current === 3
+          ? [numericError('years_training')]
+          : current === 4
+            ? [
+                dateError(responses.anthropometrics?.date_of_birth, dateBounds.date_of_birth),
+                numericError('height_cm'),
+                numericError('weight_kg'),
+              ]
+            : [];
+    return problems.filter((message): message is string => message !== undefined);
+  }
+
+  const stepBlocked = stepProblems(step).length > 0;
 
   const pickerLabels = {
     open: t('common.datePicker.open'),
@@ -248,10 +296,10 @@ export default function Intake() {
   ): string | undefined {
     const problem = checkCalendarDate(value, bounds);
     if (problem === null) return undefined;
-    if (problem === 'malformed') return t('intake.validation.dateMalformed');
+    if (problem === 'malformed') return t('common.dateValidation.malformed');
     return problem === 'before_min'
-      ? t('intake.validation.dateBeforeMin', { min: bounds.min })
-      : t('intake.validation.dateAfterMax', { max: bounds.max });
+      ? t('common.dateValidation.beforeMin', { min: bounds.min })
+      : t('common.dateValidation.afterMax', { max: bounds.max });
   }
 
   if (mode === 'resume') {
@@ -324,7 +372,7 @@ export default function Intake() {
                     : t('intake.continue')
               }
               onPress={() => void (step === TOTAL_STEPS ? handleSubmit() : handleContinue())}
-              disabled={submitting || (step === 1 && !parqComplete)}
+              disabled={submitting || (step === 1 && !parqComplete) || stepBlocked}
               style={{ flex: 2 }}
             />
           </Row>
@@ -332,7 +380,11 @@ export default function Intake() {
             label={t('intake.saveAndExit')}
             variant="link"
             onPress={() => void handleSaveAndExit()}
-            disabled={submitting}
+            // Blocked too, and for the same reason: Save & exit runs the same
+            // saveProgress() and would drop the rejected value just as silently.
+            // Clearing the field is one tap and always valid, so this traps
+            // nobody.
+            disabled={submitting || stepBlocked}
             style={{ alignSelf: 'center' }}
           />
         </View>

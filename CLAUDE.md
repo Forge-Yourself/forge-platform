@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Forge** is a PT-first (personal trainer) SaaS platform for trainers, studios, and the people they coach. Lebanon-first market, expanding to UAE.
 
-- **Phase:** In development. M0 (foundation), M1 (auth & identity), M2 (clients & intake), and M3 (programming) are complete on `develop`. M4 (logging) is next.
+- **Phase:** In development. M0 (foundation), M1 (auth & identity), M2 (clients & intake), M3 (programming) and M4a (log core) are complete. M4b (offline store and live mirror) is next. M4 was split into four sub-milestones on 2026-09-18 — see the M4a spec for why.
 - **Repository:** pnpm + Turborepo monorepo — `apps/mobile` (Expo), `apps/web` (Next.js admin + API), `packages/shared` (tokens, i18n, zod schemas, generated DB types), `supabase/migrations`, `db/` (schema source + RLS harness).
-- **Status:** Application code exists and is deployed. Expo app boots themed/RTL-capable with working Supabase Auth (email/password + Google), TOTP MFA, password reset, onboarding, profile, settings, a client roster with invite/claim/pause/deactivate, a resumable 5-step intake with PAR-Q red-flag detection, and waiver e-signature. Next.js admin is live on Vercel with staff login, user search, a PT's client roster, and a client's intake status; it also serves the waiver PDF API and the public `/join` invite-link page. Expo also has a PT tab bar (Today/Clients/Programs/Library), a 205-exercise library with search and custom exercises, a program builder with copy-week and assign, an AI draft flow metered by a credit ledger, and a client's read-only view of their assigned program; Next.js admin also has a read-only program and AI-generation inspector, and serves the AI broker at `/api/ai/program-draft`. Supabase Postgres project is live in Frankfurt with 9 migrations applied (baseline, Supabase Auth wiring, RLS, M1 identity, M2 clients/intake/waiver, a client-reads-own-PT RLS fix, M3 programming RLS + RPCs, the exercise library import, program_summaries) and RLS enabled on all tables. CI runs typecheck/lint/test on GitHub Actions.
+- **Status:** Application code exists and is deployed. Expo app boots themed/RTL-capable with working Supabase Auth (email/password + Google), TOTP MFA, password reset, onboarding, profile, settings, a client roster with invite/claim/pause/deactivate, a resumable 5-step intake with PAR-Q red-flag detection, and waiver e-signature. Next.js admin is live on Vercel with staff login, user search, a PT's client roster, and a client's intake status; it also serves the waiver PDF API and the public `/join` invite-link page. Expo also has a PT tab bar (Today/Clients/Programs/Library), a 205-exercise library with search and custom exercises, a program builder with copy-week and assign, an AI draft flow metered by a credit ledger, and a client's read-only view of their assigned program. Expo also logs workouts: a PT or a client starts a session from client detail or the client's Today screen, logs weight x reps with RPE and notes against the programmed day or freestyle, gets a rest timer and a personal-record moment, and both personas see their session history. Next.js admin also has a read-only program and AI-generation inspector plus a session inspector, and serves the AI broker at `/api/ai/program-draft`. Supabase Postgres project is live in Frankfurt with 15 migrations, all applied (baseline, Supabase Auth wiring, RLS, M1 identity, M2 clients/intake/waiver, a client-reads-own-PT RLS fix, M3 programming RLS + RPCs, the exercise library import, program_summaries, client activation + wallet backfill, intake progress counting answers not keys, the PAR-Q `bool_and` NULL fix, `0013`'s server-side PAR-Q gate, `0014`'s security hardening (admin-only AI credit refunds, RPC-only writes to `clients`, and an invite claim that no longer trusts autoconfirm), and `0015`'s M4a logging: per-set attribution, SELECT-only RLS on `workout_sessions` / `sets` / `exercise_prs` with every write behind `start_workout_session` / `log_set` / `delete_set` / `complete_workout_session`, and `ensure_month_partitions()` on a monthly `pg_cron` job so a new month's partition is no longer a hand-written migration) and RLS enabled on all tables. CI runs typecheck/lint/test on GitHub Actions.
 
 ## Documentation
 
@@ -25,6 +25,9 @@ All product documentation lives in `docs/`. Start at `docs/index.html` for the h
 | `docs/Forge_DesignBrief_M1-M4.md` | Screen-by-screen design brief for the first four build milestones |
 | `docs/Forge_Prototype.html` | Claude Design clickable prototype (M1–M4 screens + designer annotations) |
 | `docs/DESIGN_SYSTEM_GAPS.md` | Components the prototype needs that the design system doesn't have yet — built vs. outstanding |
+| `docs/PITFALLS.md` | **Read before adding a screen, an input, or an `/api/*` caller.** Traps this codebase already fell into, each with the rule that prevents a repeat: screens own their own back control (every stack sets `headerShown: false`), escape affordances never live in the scroll body, `replace` not `push` after a state-changing submit, dates go through `DateField` not a bare `TextField`, key presence is not an answer, a rule written in both TS and SQL needs tests on both sides, every `/api/*` route the mobile app calls needs CORS (web target only — native `fetch` has no same-origin policy), the root auth gate is passive so a screen that changes gate state must navigate itself, a gate `<Redirect>` re-fires every render unless guarded by `isCurrentRoute`, and `href: null` hides a tab button without unregistering the route; a tab list stays mounted under a pushed screen so lists refetch on focus (N12), a screen with two entry points must work from both (N13), copy that says "do X first" needs X tappable on that screen (N14), Back uses `dismissTo` not `router.back()` on cold deep links (N15), every `{{name}}` interpolation needs a no-name variant (I3), and a static review is not a test: run the `forge-screen-walk` skill before claiming a flow works (V1) |
+| `docs/superpowers/specs/2026-09-18-m4a-log-core-design.md` | M4a's spec, and the record of why M4 is four sub-milestones. Decisions that outlive M4a: every logging write is an idempotent RPC keyed on a client-generated ULID (so M4b's outbox replays the same four calls), per-set `logged_by_user_id` is what lets a PT and a client share one session safely, and partitions are repo-owned via `ensure_month_partitions()` + `pg_cron` |
+| `docs/superpowers/plans/2026-09-18-m4a-log-core.md` | M4a's plan, 16 tasks, harness-first. Its "Corrections this plan makes to the spec" section is authoritative over the spec where they differ |
 | `docs/superpowers/plans/2026-09-12-m3-programming.md` | M3's plan. Where it and `Forge_Prototype.html` disagree, the plan's "Corrections" section wins: the library search count and credit balance are read live rather than hardcoded, and the AI generating state says "Usually under 12 seconds. Keep this screen open." rather than promising a notification (M9 builds notifications; the call is synchronous by design) |
 
 ## Tech Stack (Actual — see `docs/superpowers/specs/2026-09-09-forge-v1-implementation-design.md`)
@@ -34,7 +37,7 @@ This supersedes the stack described in `docs/Forge_Architecture.html` Section 05
 | Layer | Technology |
 |---|---|
 | Mobile | React Native (Expo), all four personas, iOS/Android/iPad |
-| Web dashboard | Next.js 14+ (App Router) on Vercel — internal admin UI plus `/api/*` routes |
+| Web dashboard | Next.js 16 (App Router) on Vercel — internal admin UI plus `/api/*` routes. `16.3.4` is what `apps/web/package.json` actually pins |
 | Backend | Supabase (hybrid: Supabase owns auth/storage/realtime/RLS; Next.js API routes own logic needing secrets or rules too complex for SQL) |
 | Database | Supabase Postgres 15+ (project `qkmgmzhrwduvigccwgcz`, Frankfurt) with pgcrypto, citext, pg_trgm, postgis, btree_gist. Managed via `supabase/migrations/`, not raw `psql -f db/schema.sql` |
 | Auth | Supabase Auth — email/password + Google (Apple written provider-agnostic, pending a developer account), TOTP MFA, custom SMTP via Resend |
@@ -99,6 +102,22 @@ After any migration touching RLS policies, run the security harness and expect e
 "/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -v ON_ERROR_STOP=1 -f db/rls_assertions.sql
 ```
 
+`$PGURL` is not stored anywhere — build it from `SUPABASE_DB_PASSWORD` in the repo-root
+`.env` plus the project ref and region above:
+
+```bash
+set -a && . ./.env && set +a
+export PGURL="postgresql://postgres.qkmgmzhrwduvigccwgcz@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require"
+export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+# The URL deliberately carries no password. Always pass -w as well: without it psql
+# hangs silently at a password prompt instead of failing.
+"/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -w -c "select email, role, onboarding_completed from public.users;"
+```
+
+A read-only query against the live project is usually the fastest way to settle "did that
+write actually land?" — see `docs/PITFALLS.md` N5 for a bug where reasoning about RLS from
+the migrations would have pointed at the wrong layer entirely.
+
 ## Build Order (M0–M10)
 
 v1 (below) is reached through ordered milestones, each independently usable —
@@ -113,7 +132,10 @@ the full definition of each; plans for completed/in-flight milestones live in
 | M1 | Auth & identity — EP-01, EP-02 Solo profile | ✅ done |
 | M2 | Clients & intake — EP-03 | ✅ done |
 | M3 | Programming — EP-04, EP-15 (AI draft) | ✅ done |
-| M4 | Logging — EP-05, EP-06 (offline sync, Storage) | next |
+| M4a | Log core — EP-05 online: RLS + RPCs, session screen, rest timer, PR detection, history | ✅ done |
+| M4b | Offline + live mirror — `expo-sqlite` outbox replaying the M4a RPCs, Realtime | next |
+| M4c | Body — EP-06 metrics, progress photos, encryption decision | |
+| M4d | Floor ergonomics — iPad console, voice logging, Live Activity rest timer | |
 | M5 | Scheduling — EP-09, EP-10 (Realtime) | |
 | M6 | Money — EP-11 (RevenueCat) | |
 | M7 | Hierarchy & gyms — EP-02 remainder | |

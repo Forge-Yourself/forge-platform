@@ -1,6 +1,6 @@
 import { saveProgramPayloadSchema } from '@forge/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BackHandler, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { CreditSheet } from '../../../../lib/ai/CreditSheet';
@@ -38,6 +38,7 @@ import {
   Skeleton,
   Text,
   TextField,
+  WeekDayNav,
   type BuilderCellKey,
 } from '../../../../ui';
 
@@ -66,6 +67,19 @@ export default function ProgramBuilder() {
 
   const [draft, setDraft] = useState<ProgramDraft>({ weeks: [] });
   const [seededId, setSeededId] = useState<string | null>(null);
+  // Set when this screen pushes the assign screen; read (and cleared) when focus
+  // returns so the tree is refetched and the footer flips from Assign to Draft
+  // with AI. A ref, not state: state would re-run the focus effect immediately
+  // on press and consume the flag before assign was ever shown (PITFALLS N10).
+  // Refetching is safe for unsaved edits — seeding is guarded by tree.id above.
+  const assignPending = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!assignPending.current) return;
+      assignPending.current = false;
+      void refetch();
+    }, [refetch]),
+  );
   const [dirty, setDirty] = useState(false);
   const [weekIndex, setWeekIndex] = useState(0);
   const [dayIndex, setDayIndex] = useState(0);
@@ -375,128 +389,56 @@ export default function ProgramBuilder() {
         </View>
       ) : null}
 
-      <Row
-        style={{
-          gap: theme.space[2],
-          alignItems: 'center',
-          paddingHorizontal: theme.space[4],
-          marginTop: theme.space[3],
+      <WeekDayNav
+        weeks={draft.weeks.map((w) => ({
+          key: String(w.week_number),
+          number: w.week_number,
+          a11yLabel: t('builder.weekLabel', { week: w.week_number }),
+        }))}
+        weekIndex={weekIndex}
+        onSelectWeek={(wi) => {
+          setWeekIndex(wi);
+          setDayIndex(0);
+          setEditing(null);
         }}
-      >
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.space[2] }}>
-          {draft.weeks.map((w, wi) => {
-            const selected = wi === weekIndex;
-            return (
-              <Pressable
-                key={w.week_number}
-                accessibilityRole="button"
-                accessibilityLabel={t('builder.weekLabel', { week: w.week_number })}
-                accessibilityState={{ selected }}
-                onPress={() => {
-                  setWeekIndex(wi);
-                  setDayIndex(0);
-                  setEditing(null);
-                }}
-                style={{
-                  minWidth: 44,
-                  minHeight: 38,
-                  paddingHorizontal: theme.space[3],
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: theme.radius.pill,
-                  borderWidth: 1,
-                  borderColor: selected ? theme.colors.accent : theme.colors.border,
-                  backgroundColor: selected ? theme.colors.accentSurfaceSoft : theme.colors.surfaceRaised,
-                }}
-              >
-                <Text numeric variant="caption" style={{ fontWeight: '700' }}>
-                  {w.week_number}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('builder.copyWeek.action')}
-          onPress={() => setCopyWeekOpen(true)}
-          style={{
-            width: 40,
-            height: 40,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: theme.radius.md,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.surfaceRaised,
-          }}
-        >
-          <Icon name="copy" size={18} color={theme.colors.textSecondary} />
-        </Pressable>
-      </Row>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          gap: theme.space[2],
-          paddingVertical: theme.space[3],
-          paddingHorizontal: theme.space[4],
+        days={(week?.days ?? []).map((d) => ({
+          key: String(d.day_number),
+          label: d.label ?? t('builder.dayLabel', { day: d.day_number }),
+          a11yLabel: t('builder.dayLabel', { day: d.day_number }),
+        }))}
+        dayIndex={dayIndex}
+        onSelectDay={(di) => {
+          setDayIndex(di);
+          setEditing(null);
         }}
-      >
-        {(week?.days ?? []).map((d, di) => {
-          const selected = di === dayIndex;
-          return (
-            <Pressable
-              key={d.day_number}
-              accessibilityRole="button"
-              accessibilityLabel={t('builder.dayLabel', { day: d.day_number })}
-              accessibilityState={{ selected }}
-              onPress={() => {
-                setDayIndex(di);
-                setEditing(null);
-              }}
-              style={{
-                minHeight: 38,
-                paddingHorizontal: theme.space[3],
-                justifyContent: 'center',
-                borderRadius: theme.radius.pill,
-                borderWidth: 1,
-                borderColor: selected ? theme.colors.accent : theme.colors.border,
-                backgroundColor: selected ? theme.colors.accentSurfaceSoft : theme.colors.surfaceRaised,
-              }}
-            >
-              <Text variant="caption" style={{ fontWeight: '600' }}>
-                {d.label ?? t('builder.dayLabel', { day: d.day_number })}
-              </Text>
-            </Pressable>
-          );
-        })}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('builder.addDay')}
-          onPress={addDay}
-          style={{
-            minHeight: 38,
-            paddingHorizontal: theme.space[3],
-            justifyContent: 'center',
-            borderRadius: theme.radius.pill,
-            borderWidth: 1,
-            borderStyle: 'dashed',
-            borderColor: theme.colors.border,
-          }}
-        >
-          <Text variant="caption" tone="muted">
-            + {t('builder.addDay')}
-          </Text>
-        </Pressable>
-      </ScrollView>
+        addDayLabel={t('builder.addDay')}
+        onAddDay={addDay}
+        trailing={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('builder.copyWeek.action')}
+            onPress={() => setCopyWeekOpen(true)}
+            style={{
+              width: 34,
+              height: 34,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: theme.radius.md,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.surfaceRaised,
+            }}
+          >
+            <Icon name="copy" size={16} color={theme.colors.textSecondary} />
+          </Pressable>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={{
           gap: theme.space[3],
           paddingHorizontal: theme.space[4],
+          paddingTop: theme.space[3],
           paddingBottom: theme.space[10],
         }}
       >
@@ -624,13 +566,29 @@ export default function ProgramBuilder() {
             </Text>
           ) : null}
         </View>
+        {!tree.client_id ? (
+          // The only other Assign lives on the Programs tab's template cards, so
+          // an unassigned program had no route to a client at all — and the hint
+          // beside this footer told the PT to do exactly that. Offer it here.
+          <Button
+            label={t('programs.assignAction')}
+            icon="users"
+            onPress={() => {
+              assignPending.current = true;
+              router.push({
+                pathname: '/(app)/programs/[id]/assign',
+                params: tree.is_template ? { id: programId, template: '1' } : { id: programId },
+              });
+            }}
+          />
+        ) : (
         <Button
           label={t('ai.draftAction')}
           icon="sparkle"
           // 'loading' is not 'empty' — see useCreditBalance. Disabling for the
           // moment before the wallet lands is what stops a PT with credits from
           // being shown the out-of-credits sheet.
-          disabled={!tree.client_id || credits.state === 'loading'}
+          disabled={credits.state === 'loading'}
           onPress={() => {
             // The cost is decided here, next to the balance — so an empty
             // wallet opens the sheet rather than sending the PT to a prompt
@@ -646,6 +604,7 @@ export default function ProgramBuilder() {
             });
           }}
         />
+        )}
         </Row>
       </FooterBar>
 

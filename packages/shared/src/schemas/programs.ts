@@ -1,5 +1,32 @@
 import { z } from 'zod';
-import { parseCalendarDate } from './dates';
+import { parseCalendarDate, shiftCalendarYears, todayCalendarDate } from './dates';
+
+/**
+ * How far either side of today a program may be scheduled to start.
+ *
+ * Back a year because a PT legitimately records a block that began weeks ago;
+ * forward two because planning a season ahead is real and planning a decade is
+ * a typo. The window exists mainly so a typo cannot land silently: the assign
+ * screen's custom start date was a bare TextField with a "YYYY-MM-DD"
+ * placeholder and no validation at all. Garbage reached Postgres as a DATE and
+ * came back an unexplained 22007 behind the generic "Couldn't assign the
+ * program" copy, with nothing pointing at the date; and a WELL-FORMED typo was
+ * accepted outright — under DateStyle ISO,MDY '09/14/2026' parses as
+ * 2026-09-14, and '0226-09-14' as the year 226 — so the client got a program
+ * starting centuries away, and weekCompletion() computed a nonsense current
+ * week with no error raised anywhere.
+ */
+export const PROGRAM_START_MAX_YEARS_BACK = 1;
+export const PROGRAM_START_MAX_YEARS_AHEAD = 2;
+
+/** The selectable window for `programs.start_date`, as of today. */
+export function programStartDateBounds(): { min: string; max: string } {
+  const today = todayCalendarDate();
+  return {
+    min: shiftCalendarYears(today, -PROGRAM_START_MAX_YEARS_BACK),
+    max: shiftCalendarYears(today, PROGRAM_START_MAX_YEARS_AHEAD),
+  };
+}
 
 /** Mirrors db/schema.sql's chk_programs_state CHECK constraint exactly. */
 export const PROGRAM_STATES = ['draft', 'active', 'completed', 'archived'] as const;

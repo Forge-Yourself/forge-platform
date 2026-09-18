@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { checkCalendarDate, shiftCalendarYears, todayCalendarDate } from './dates';
 import {
   BLOCK_TYPES,
   blockTypeSchema,
@@ -6,6 +7,7 @@ import {
   PERIODIZATIONS,
   periodizationSchema,
   PROGRAM_STATES,
+  programStartDateBounds,
   programStateSchema,
   programStats,
   saveProgramPayloadSchema,
@@ -254,5 +256,26 @@ describe('formatSetSpec', () => {
 
   it('returns an em dash for an empty row', () => {
     expect(formatSetSpec({})).toBe('—');
+  });
+});
+
+describe('programStartDateBounds', () => {
+  it('spans one year back and two years forward from today', () => {
+    const { min, max } = programStartDateBounds();
+    const today = todayCalendarDate();
+    expect(min).toBe(shiftCalendarYears(today, -1));
+    expect(max).toBe(shiftCalendarYears(today, 2));
+    expect(min < today).toBe(true);
+    expect(max > today).toBe(true);
+  });
+
+  it('accepts today and rejects the two shapes the bare TextField let through', () => {
+    const bounds = programStartDateBounds();
+    expect(checkCalendarDate(todayCalendarDate(), bounds)).toBeNull();
+    // A US-ordered date Postgres would have silently reparsed under ISO,MDY.
+    expect(checkCalendarDate('09/14/2026', bounds)).toBe('malformed');
+    // A dropped leading digit: year 226, centuries outside the window.
+    expect(checkCalendarDate('0226-09-14', bounds)).toBe('before_min');
+    expect(checkCalendarDate('2026-13-40', bounds)).toBe('malformed');
   });
 });

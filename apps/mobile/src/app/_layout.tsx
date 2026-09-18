@@ -94,28 +94,6 @@ function Gate() {
   // gate evaluates the new user's MFA requirement against the old user's AAL.
   const [aal, setAal] = useState<Aal | 'loading'>('loading');
 
-  // TEMP DEBUG — remove once the client sign-in update loop is diagnosed.
-  // In an effect with no dependency array, so it runs once per COMMIT: counting
-  // in the render body both trips react-hooks/immutability and double-counts
-  // under StrictMode, which is the opposite of what a loop counter needs.
-  useEffect(() => {
-    const g = globalThis as unknown as { __gateN?: number };
-    g.__gateN = (g.__gateN ?? 0) + 1;
-    if (g.__gateN <= 60) {
-      console.log(
-        '[gate]',
-        g.__gateN,
-        JSON.stringify({
-          status: auth.status,
-          role: auth.user?.role,
-          onboarding: auth.user?.onboarding_completed,
-          aal: aal === 'loading' ? 'loading' : [aal?.currentLevel, aal?.nextLevel].join('/'),
-          segments,
-        }),
-      );
-    }
-  });
-
   useEffect(() => {
     // Nothing to check until signed in — the gate short-circuits on status before ever
     // reading `aal` in that case, so leaving the previous value in place is harmless.
@@ -162,14 +140,15 @@ function Gate() {
   }
 
   if (auth.user?.onboarding_completed === false) {
-    // Same reasoning as the signedOut branch above: tapping the signup-confirmation
-    // email link establishes a session immediately, and a brand-new user always has
-    // onboarding_completed=false — so without this check, (auth)/verify-success would
-    // be forced straight to (onboarding)/role the instant it mounted, and the design's
-    // "offer MFA before onboarding" screen would never actually be reachable. Letting
-    // (auth) render as-is here means verify-success's own two exits (MFA setup, or
-    // "Skip for now" -> router.replace('/')) are what eventually leave this state, not
-    // the gate racing them.
+    // Tapping the signup-confirmation email link establishes a session immediately, and
+    // a brand-new user always has onboarding_completed=false — so without a carve-out,
+    // (auth)/verify-success would be forced straight to (onboarding)/role the instant it
+    // mounted, and the design's "offer MFA before onboarding" screen would never be
+    // reachable. verify-success's own two exits (MFA setup, or "Skip for now" ->
+    // router.replace('/')) are what leave this state, not the gate racing them.
+    // reset-password is carved out for the same reason: a user who signed up, never
+    // finished onboarding and then used a password-recovery link arrives here with a
+    // live session, and lib/deepLinks.ts has already put them on that screen.
     //
     // (Task 9) (onboarding)/mfa-enroll is a DIFFERENT segment ((onboarding), not (auth))
     // from verify-success's "Set up two-factor" button, so it needs its own carve-out
@@ -177,8 +156,23 @@ function Gate() {
     // before mfa-enroll ever rendered. Scoped to that one route specifically (not all of
     // (onboarding)) so role.tsx/pt-profile.tsx still redirect normally for a user who
     // lands there some other way pre-onboarding.
+    //
+    // THESE ARE EXACT ROUTES, NOT `segments[0] === '(auth)'`. The group-wide form hung
+    // the app. Sign-in deliberately does not navigate on success (see (auth)/sign-in.tsx)
+    // — it lets this gate route onward — so a user who signs in with onboarding still to
+    // do is signedIn while parked on (auth)/sign-in. A group-wide carve-out yielded
+    // <Slot/> for that, which mounted the root navigator; the navigator comes up on its
+    // default route, (app)/(tabs), which flipped this branch to <Redirect> on the very
+    // next commit; returning <Redirect> INSTEAD of <Slot/> unmounted the navigator
+    // before the redirect's own effect could run, so the replace never happened and
+    // useSegments() fell back to (auth)/sign-in, which re-entered the carve-out. Mount,
+    // redirect, unmount, repeat — "Maximum update depth exceeded" inside
+    // <BottomTabNavigator>, with the URL still sitting on /sign-in. Naming the routes
+    // exactly means /sign-in is not carved out, the redirect stops alternating, and it
+    // gets to land. See docs/PITFALLS.md.
     if (
-      segments[0] === '(auth)' ||
+      isCurrentRoute(currentSegments, '(auth)', 'verify-success') ||
+      isCurrentRoute(currentSegments, '(auth)', 'reset-password') ||
       isCurrentRoute(currentSegments, '(onboarding)', 'mfa-enroll')
     ) {
       return <Slot />;

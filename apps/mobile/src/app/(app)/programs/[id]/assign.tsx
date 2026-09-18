@@ -1,4 +1,9 @@
-import { toCalendarDate, weekCompletion } from '@forge/shared';
+import {
+  checkCalendarDate,
+  programStartDateBounds,
+  toCalendarDate,
+  weekCompletion,
+} from '@forge/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +18,7 @@ import {
   Avatar,
   Banner,
   Button,
+  DateField,
   FooterBar,
   ListRow,
   NavHeader,
@@ -22,7 +28,6 @@ import {
   Skeleton,
   Tag,
   Text,
-  TextField,
 } from '../../../../ui';
 
 type StartChoice = 'nextMonday' | 'today' | 'custom';
@@ -45,7 +50,7 @@ function nextMonday(from: Date): Date {
  * the PT needs to know that while they can still change their mind.
  */
 export default function AssignProgram() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const auth = useAuth();
   const params = useLocalSearchParams<{ id: string; template?: string }>();
@@ -68,12 +73,35 @@ export default function AssignProgram() {
   const [customDate, setCustomDate] = useState(toCalendarDate(new Date()));
   const { submitting, error, setError, run } = useAsyncSubmit();
 
+  const dateBounds = programStartDateBounds();
+
   const startDate =
     startChoice === 'custom'
       ? customDate
       : startChoice === 'today'
         ? toCalendarDate(new Date())
         : toCalendarDate(nextMonday(new Date()));
+
+  /**
+   * The inline message under the custom date, or undefined while it is usable.
+   *
+   * An empty value is a problem HERE even though checkCalendarDate treats it as
+   * "not answered" — every other date in the app is optional, and a program's
+   * start is not.
+   */
+  const customDateError =
+    startChoice !== 'custom'
+      ? undefined
+      : customDate.trim() === ''
+        ? t('common.dateValidation.malformed')
+        : (() => {
+            const problem = checkCalendarDate(customDate, dateBounds);
+            if (problem === null) return undefined;
+            if (problem === 'malformed') return t('common.dateValidation.malformed');
+            return problem === 'before_min'
+              ? t('common.dateValidation.beforeMin', { min: dateBounds.min })
+              : t('common.dateValidation.afterMax', { max: dateBounds.max });
+          })();
 
   const activeByClient = new Map(
     programs.items
@@ -100,7 +128,7 @@ export default function AssignProgram() {
 
   async function handleAssign() {
     setError(null);
-    if (selected.length === 0) return;
+    if (selected.length === 0 || customDateError !== undefined) return;
 
     await run(async () => {
       try {
@@ -233,20 +261,39 @@ export default function AssignProgram() {
             })}
           </View>
           {startChoice === 'custom' ? (
-            <TextField
+            /* A DateField, not a TextField with a "YYYY-MM-DD" placeholder.
+               The picker cannot emit a malformed or out-of-range day at all,
+               which is the whole point: this value goes straight into
+               assign_program/instantiate_template's DATE parameter, where
+               garbage surfaced as an unexplained PostgREST 22007 behind the
+               generic "Couldn't assign" copy, and a well-formed typo did not
+               surface at all. */
+            <DateField
               label={t('builder.assign.startDateLabel')}
+              placeholder={t('common.datePicker.open')}
               value={customDate}
-              onChangeText={setCustomDate}
-              autoCapitalize="none"
-              placeholder="2026-09-14"
+              onChange={setCustomDate}
+              minDate={dateBounds.min}
+              maxDate={dateBounds.max}
+              error={customDateError}
+              locale={i18n.language}
+              labels={{
+                open: t('common.datePicker.open'),
+                title: t('common.datePicker.title'),
+                clear: t('common.datePicker.clear'),
+                done: t('common.datePicker.done'),
+                previousMonth: t('common.datePicker.previousMonth'),
+                nextMonth: t('common.datePicker.nextMonth'),
+                chooseYear: t('common.datePicker.chooseYear'),
+              }}
             />
           ) : (
             <Tag numeric label={startDate} />
           )}
         </View>
 
-        {replaceWarnings.map((message) => (
-          <Banner key={message} variant="warn" message={message} />
+        {replaceWarnings.map((message, index) => (
+          <Banner key={`${index}-${message}`} variant="warn" message={message} />
         ))}
       </ScrollView>
 
@@ -255,7 +302,7 @@ export default function AssignProgram() {
           label={t('builder.assign.confirm')}
           size="lg"
           loading={submitting}
-          disabled={selected.length === 0}
+          disabled={selected.length === 0 || customDateError !== undefined}
           onPress={() => void handleAssign()}
         />
       </FooterBar>
