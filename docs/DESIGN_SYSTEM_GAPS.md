@@ -125,6 +125,12 @@ backdrop and that the fill is visible as a shape at all.
 - **`FormScreen` gained** a `header` slot rendered outside the ScrollView, so
   a screen's back control cannot scroll out of reach.
 
+## Built (M4a)
+
+- **Set stepper** — the −5 / −1 / +1 / +5 row under the logging focus card, 56pt keys, unit-agnostic labels. `apps/mobile/src/ui/SetStepper.tsx`. (M4a)
+- **Rest timer** — full-screen dark surface, 52px mono countdown from a target timestamp, running / paused / complete, +30s and Skip. `apps/mobile/src/ui/RestTimer.tsx`. Lock-screen variant outstanding (M4d). (M4a)
+- **PR banner** — 2.5s ember slide-in over the focus card, one line per record. `apps/mobile/src/ui/PrBanner.tsx`. (M4a)
+
 ## Outstanding
 
 No prototype-flagged gaps remain. Add new ones here as later milestones
