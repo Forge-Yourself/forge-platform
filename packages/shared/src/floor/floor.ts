@@ -20,8 +20,6 @@ export type FloorInput = {
 
 export type WeekRow = { clientId: string; clientName: string | null; week: number; openDays: number };
 
-const MS_PER_DAY = 86_400_000;
-
 /**
  * The rail's This week section (M4d spec D9): active clients whose current
  * program week still has an undone day and who have not trained today. A
@@ -36,7 +34,9 @@ export function thisWeek(input: FloorInput, today: Date): WeekRow[] {
     if (trained.has(p.clientId)) continue;
     const start = parseCalendarDate(p.startDate);
     if (start === null) continue;
-    if (today.getTime() >= start.getTime() + p.durationWeeks * 7 * MS_PER_DAY) continue;
+    // Calendar math, not ms: a DST change inside the program would shift a ms end by an hour.
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + p.durationWeeks * 7);
+    if (today.getTime() >= end.getTime()) continue;
     const { currentWeek } = weekCompletion({ duration_weeks: p.durationWeeks, start_date: p.startDate }, today);
     if (currentWeek === null) continue;
     const week = p.weeks.find((w) => w.weekNumber === currentWeek);
