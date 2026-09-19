@@ -1021,10 +1021,12 @@ SELECT pg_temp.expect('completing again is a no-op that keeps the first rating',
 RESET ROLE;
 SELECT pg_temp.expect('workout_complete was audited once', 1,
   format('SELECT count(*) FROM public.audit_logs WHERE action = ''workout_complete'' AND entity_id = %L', :'session_id'));
+-- M4b D6 reversed this: a late set appends to a completed session.
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'pt_a');
-SELECT pg_temp.expect_raises('log_set refuses a completed session',
-  format('SELECT public.log_set(''01J8RZ0000000000000000DDDD'', %L::uuid, %L::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL)', :'session_id', :'exercise_global'));
+SELECT public.log_set('01J8RZ0000000000000000DDDD', :'session_id'::uuid, :'exercise_global'::uuid, 9, 1, 1, NULL, NULL, FALSE, NULL);
+SELECT pg_temp.expect('log_set appends a late set to a completed session', 1,
+  format('SELECT count(*) FROM public.sets s JOIN public.workout_sessions ws ON ws.id = s.workout_session_id WHERE s.id = ''01J8RZ0000000000000000DDDD'' AND ws.id = %L AND ws.status = ''completed''', :'session_id'));
 RESET ROLE;
 
 DELETE FROM public.program_days WHERE id = :'fresh_day_id';
@@ -1048,5 +1050,139 @@ SELECT pg_temp.act_as(:'admin_a');
 SELECT pg_temp.expect('admin reads every session', 2,
   format('SELECT count(*) FROM public.workout_sessions WHERE client_id = %L', :'client_row'));
 RESET ROLE;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- M4b: offline start by client-generated id, device timestamps clamped to
+-- 24 h, late sets on completed sessions, the broadcast mirror and its topic
+-- authorization, and the offline-logging switch. Every client_row session from
+-- the M4a block is completed by now, so the first start below creates a fresh one.
+-- ═════════════════════════════════════════════════════════════════════════════
+\set m4b_s1       '0192f000-0000-7000-8000-00000000b001'
+\set m4b_s2       '0192f000-0000-7000-8000-00000000b002'
+\set m4b_s3       '0192f000-0000-7000-8000-00000000b003'
+\set client_row_2 '0192f000-0000-7000-8000-00000000c002'
+\set ulid_e1      '01J8RZ0000000000000000EEE1'
+\set ulid_e2      '01J8RZ0000000000000000EEE2'
+
+-- A second client of PT A, to prove a p_id cannot be borrowed across clients.
+INSERT INTO public.clients (id, pt_user_id, state, invite_email, invite_name)
+VALUES (:'client_row_2', :'pt_a', 'invited', 'm4b-second@forge-test.local', 'Second');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- start_workout_session(p_id, p_started_at)
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT (public.start_workout_session(:'client_row'::uuid, NULL, :'m4b_s1'::uuid, NOW() - interval '2 hours')).id AS m4b_first \gset
+SELECT pg_temp.expect('an offline start keeps the client-generated id', 1,
+  format('SELECT CASE WHEN %L::uuid = %L::uuid THEN 1 ELSE 0 END::bigint', :'m4b_first', :'m4b_s1'));
+SELECT pg_temp.expect('started_at honours a device time inside 24 h', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND started_at < NOW() - interval ''110 minutes''', :'m4b_s1'));
+SELECT public.start_workout_session(:'client_row'::uuid, NULL, :'m4b_s1'::uuid, NULL);
+SELECT pg_temp.expect('replaying the same p_id yields one session', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L', :'m4b_s1'));
+SELECT pg_temp.expect('a different p_id while one is in progress returns the existing session', 1,
+  format('SELECT CASE WHEN (public.start_workout_session(%L::uuid, NULL, %L::uuid, NULL)).id = %L::uuid THEN 1 ELSE 0 END::bigint',
+         :'client_row', :'m4b_s2', :'m4b_s1'));
+SELECT pg_temp.expect('the losing p_id created no row', 0,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L', :'m4b_s2'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('a p_id owned by another client is refused',
+  format('SELECT public.start_workout_session(%L::uuid, NULL, %L::uuid, NULL)', :'client_row_2', :'m4b_s1'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Late sets (D6) and complete(p_completed_at)
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT public.log_set(:'ulid_e1', :'m4b_s1'::uuid, :'exercise_global'::uuid, 1, 50, 5, NULL, NULL, FALSE, 'harness');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.complete_workout_session(:'m4b_s1'::uuid, NULL, NULL, NOW() - interval '30 minutes');
+SELECT pg_temp.expect('duration uses the device completion time (2 h start, 30 min ago finish)', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND duration_min BETWEEN 85 AND 95', :'m4b_s1'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('a late 50-rep set is a reps PR', 1,
+  format('SELECT cardinality((public.log_set(%L, %L::uuid, %L::uuid, 2, 1, 50, NULL, NULL, FALSE, ''harness'')).new_prs)::bigint',
+         :'ulid_e2', :'m4b_s1', :'exercise_global'));
+SELECT pg_temp.expect('the session is still completed after a late set', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND status = ''completed''', :'m4b_s1'));
+SELECT public.delete_set(:'ulid_e2');
+SELECT pg_temp.expect('the client can delete their own late set on a completed session', 0,
+  format('SELECT count(*) FROM public.sets WHERE id = %L', :'ulid_e2'));
+
+SELECT public.start_workout_session(:'client_row'::uuid, NULL, :'m4b_s3'::uuid, NOW() - interval '3 days');
+SELECT pg_temp.expect('a device start time older than 24 h is clamped', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND started_at >= NOW() - interval ''24 hours 1 minute''', :'m4b_s3'));
+SELECT public.complete_workout_session(:'m4b_s3'::uuid, NULL, NULL, NOW() - interval '5 days');
+SELECT pg_temp.expect('completed_at is never before started_at', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND completed_at >= started_at', :'m4b_s3'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Broadcast mirror. realtime.topic() reads the realtime.topic setting, which
+-- is how Realtime itself authorizes a private channel join.
+-- ─────────────────────────────────────────────────────────────────────────────
+SELECT pg_temp.expect('a set insert broadcast on the session topic', 1,
+  format('SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END::bigint FROM realtime.messages WHERE topic = %L AND extension = ''broadcast''',
+         'session:' || :'m4b_s1'));
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('realtime.topic', 'session:' || :'m4b_s1', TRUE);
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('PT B cannot read the session topic', 0,
+  format('SELECT count(*) FROM realtime.messages WHERE topic = %L', 'session:' || :'m4b_s1'));
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('the client reads the session topic', 1,
+  format('SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END::bigint FROM realtime.messages WHERE topic = %L', 'session:' || :'m4b_s1'));
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT reads the session topic', 1,
+  format('SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END::bigint FROM realtime.messages WHERE topic = %L', 'session:' || :'m4b_s1'));
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('an admin reads the session topic', 1,
+  format('SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END::bigint FROM realtime.messages WHERE topic = %L', 'session:' || :'m4b_s1'));
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect_rls_block('nobody can broadcast on a session topic',
+  format('INSERT INTO realtime.messages (topic, extension, payload, event, private) VALUES (%L, ''broadcast'', ''{}'', ''x'', TRUE)',
+         'session:' || :'m4b_s1'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Offline-logging switch
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('authenticated reads the offline_logging mode, default off', 1,
+  $q$SELECT count(*) FROM public.app_config WHERE key = 'offline_logging' AND value = '"off"'::jsonb$q$);
+SELECT pg_temp.expect_rls_block('authenticated cannot write app_config',
+  $q$UPDATE public.app_config SET value = '"all"'::jsonb WHERE key = 'offline_logging'$q$);
+SELECT pg_temp.expect_rls_block('a user cannot grant themselves the offline beta',
+  format('UPDATE public.users SET offline_logging_beta = TRUE WHERE id = %L', :'pt_a'));
+SELECT pg_temp.expect_raises('a PT cannot change the offline mode',
+  $q$SELECT public.admin_set_offline_logging('all')$q$);
+SELECT pg_temp.expect_raises('a PT cannot grant the offline beta',
+  format('SELECT public.admin_set_offline_beta(%L::uuid, TRUE)', :'pt_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT public.admin_set_offline_logging('beta');
+SELECT public.admin_set_offline_beta(:'pt_a'::uuid, TRUE);
+SELECT pg_temp.expect_raises('an unknown offline mode is refused',
+  $q$SELECT public.admin_set_offline_logging('sometimes')$q$);
+RESET ROLE;
+SELECT pg_temp.expect('the admin set the mode to beta', 1,
+  $q$SELECT count(*) FROM public.app_config WHERE key = 'offline_logging' AND value = '"beta"'::jsonb$q$);
+SELECT pg_temp.expect('the admin granted PT A the offline beta', 1,
+  format('SELECT count(*) FROM public.users WHERE id = %L AND offline_logging_beta', :'pt_a'));
 
 ROLLBACK;
