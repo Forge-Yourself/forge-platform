@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { useAuth } from '../../../lib/auth/AuthProvider';
 import { type ClientListFilter, type ClientListItem, useClientList } from '../../../lib/clients/useClientList';
+import { OfflineStatusChip } from '../../../lib/offline/OfflineStatusChip';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
   Avatar,
@@ -150,6 +151,7 @@ export default function ClientsIndex() {
         }}
         keyboardShouldPersistTaps="handled"
       >
+        <OfflineStatusChip />
         {loading ? (
           <SectionCard>
             <SkeletonRow />

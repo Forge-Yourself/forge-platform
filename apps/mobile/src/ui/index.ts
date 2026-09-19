@@ -38,6 +38,8 @@ export { PasswordStrength } from './PasswordStrength';
 export type { PasswordStrengthProps } from './PasswordStrength';
 export { LiveBadge } from './LiveBadge';
 export type { LiveBadgeProps } from './LiveBadge';
+export { OfflineChip } from './OfflineChip';
+export type { OfflineChipProps } from './OfflineChip';
 export { PrMoment } from './PrMoment';
 export type { PrMomentProps } from './PrMoment';
 export { ProgressRing } from './ProgressRing';

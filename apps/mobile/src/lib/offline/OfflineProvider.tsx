@@ -20,6 +20,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<QueueStatus>({ pending: 0, failed: 0 });
   const [authPaused, setAuthPaused] = useState(false);
   const [warmedAt, setWarmedAt] = useState<string | null>(null);
+  const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [retryTick, setRetryTick] = useState(0);
   const lastWarm = useRef(0);
@@ -33,12 +34,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   // Last-known mode and the device choice, before any network (cold offline boot).
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([getStoredValue(OFFLINE_MODE_KEY), getStoredValue(OFFLINE_CHOICE_KEY), engine.getCache<string>('warmedAt')]).then(
-      ([m, c, w]) => {
+    void Promise.all([getStoredValue(OFFLINE_MODE_KEY), getStoredValue(OFFLINE_CHOICE_KEY), engine.getCache<string>('warmedAt'), engine.getCache<string>('syncedAt')]).then(
+      ([m, c, w, sy]) => {
         if (cancelled) return;
         setMode(parseOfflineMode(m));
         setChoice(c === '1');
         setWarmedAt(w?.value ?? null);
+        setSyncedAt(sy?.value ?? null);
       },
     );
     return () => {
@@ -91,7 +93,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       if (outcome.kind === 'transient') {
         retryTimer.current = setTimeout(() => setRetryTick((n) => n + 1), outcome.retryInMs);
       }
-      if (outcome.kind === 'drained') void engine.prune();
+      if (outcome.kind === 'drained') {
+        const at = new Date().toISOString();
+        setSyncedAt(at);
+        void engine.putCache('syncedAt', at);
+        void engine.prune();
+      }
     });
   }, [online, signedIn]);
 
@@ -146,8 +153,19 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<OfflineContextValue>(
-    () => ({ available, effective, online, status, authPaused, warmedAt, setDeviceChoice, discardAllAndDisable, drainNow }),
-    [available, effective, online, status, authPaused, warmedAt, setDeviceChoice, discardAllAndDisable, drainNow],
+    () => ({
+      available,
+      effective,
+      online,
+      status,
+      authPaused,
+      warmedAt,
+      syncedAt,
+      setDeviceChoice,
+      discardAllAndDisable,
+      drainNow,
+    }),
+    [available, effective, online, status, authPaused, warmedAt, syncedAt, setDeviceChoice, discardAllAndDisable, drainNow],
   );
 
   return <OfflineContext value={value}>{children}</OfflineContext>;

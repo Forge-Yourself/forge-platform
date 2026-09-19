@@ -15,6 +15,7 @@ import { StartSessionSheet } from '../../../lib/logging/StartSessionSheet';
 import { useInProgressSession } from '../../../lib/logging/useInProgressSession';
 import { useSessionHistory } from '../../../lib/logging/useSessionHistory';
 import { cachedFetch } from '../../../lib/offline/cachedFetch';
+import { OfflineStatusChip } from '../../../lib/offline/OfflineStatusChip';
 import { useOffline } from '../../../lib/offline/offlineContext';
 import { useProgramList } from '../../../lib/programs/useProgramList';
 import { useTheme } from '../../../theme/ThemeProvider';
@@ -247,6 +248,8 @@ function PtHome() {
   const theme = useTheme();
   const auth = useAuth();
   const dashboard = usePtDashboard(auth.user?.id);
+  const offline = useOffline();
+  const unsynced = offline.status.pending + offline.status.failed;
   const live = useInProgressSession();
   const history = useSessionHistory(undefined, 50);
   const [startFor, setStartFor] = useState<string | null>(null);
@@ -299,6 +302,7 @@ function PtHome() {
           paddingBottom: theme.space[9],
         }}
       >
+        <OfflineStatusChip style={{ marginBottom: 12 }} />
         <View style={{ marginBottom: 18 }}>
           <HomeHeader name={auth.user?.display_name ?? ''} />
         </View>
@@ -404,6 +408,15 @@ function PtHome() {
               <Kicker>{t('home.needsYou.heading')}</Kicker>
             </View>
             <View style={{ gap: 8 }}>
+              {/* Prototype `home`: Needs you collects an unsynced session alongside intake blockers. */}
+              {unsynced > 0 ? (
+                <NeedsRow
+                  title={t('logging.offline.needsSyncTitle')}
+                  subtitle={t('logging.offline.needsSyncBody', { count: unsynced })}
+                  dot={offline.status.failed > 0 ? theme.colors.dangerAccent : theme.colors.accent}
+                  onPress={() => router.push('/(app)/sync-queue')}
+                />
+              ) : null}
               {dashboard.activeClients.length === 0 ? (
                 <NeedsRow
                   title={t('home.needsYou.emptyTitle')}
@@ -618,6 +631,7 @@ function ClientHome() {
           gap: theme.space[5],
         }}
       >
+        <OfflineStatusChip />
         <HomeHeader name={auth.user?.display_name ?? ''} />
 
         {waiverError ? <Banner variant="danger" message={waiverError} /> : null}

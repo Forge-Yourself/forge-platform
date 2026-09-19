@@ -3,8 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { SessionList } from '../../../../lib/logging/SessionList';
 import { useSessionHistory } from '../../../../lib/logging/useSessionHistory';
+import { NeedsConnection } from '../../../../lib/offline/NeedsConnection';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import { Banner, Button, EmptyState, NavHeader, Screen, Skeleton } from '../../../../ui';
+
+export default function ClientSessions() {
+  return (
+    <NeedsConnection pushed>
+      <ClientSessionsInner />
+    </NeedsConnection>
+  );
+}
 
 /**
  * Every session for one client — the "See all" behind the last-3 preview on
@@ -14,7 +23,7 @@ import { Banner, Button, EmptyState, NavHeader, Screen, Skeleton } from '../../.
  * notification or a cold deep link with nothing beneath it, and `back()` there
  * pops to nowhere (PITFALLS N15).
  */
-export default function ClientSessions() {
+function ClientSessionsInner() {
   const { t } = useTranslation();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id: string }>();

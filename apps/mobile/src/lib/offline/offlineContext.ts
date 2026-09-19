@@ -10,6 +10,8 @@ export type OfflineContextValue = {
   status: QueueStatus;
   authPaused: boolean;
   warmedAt: string | null;
+  /** When a drain last delivered something from this device. */
+  syncedAt: string | null;
   setDeviceChoice: (next: boolean) => Promise<'ok' | 'queue_not_empty'>;
   discardAllAndDisable: () => Promise<void>;
   drainNow: () => void;
@@ -22,6 +24,7 @@ export const OfflineContext = createContext<OfflineContextValue>({
   status: { pending: 0, failed: 0 },
   authPaused: false,
   warmedAt: null,
+  syncedAt: null,
   setDeviceChoice: async () => 'ok',
   discardAllAndDisable: async () => {},
   drainNow: () => {},

@@ -1,8 +1,17 @@
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ExerciseLibrary } from '../../../lib/exercises/ExerciseLibrary';
+import { NeedsConnection } from '../../../lib/offline/NeedsConnection';
 import { useTheme } from '../../../theme/ThemeProvider';
 import { Button, Screen, ScreenHeader } from '../../../ui';
+
+export default function LibraryIndex() {
+  return (
+    <NeedsConnection>
+      <LibraryIndexInner />
+    </NeedsConnection>
+  );
+}
 
 /**
  * The Library tab: browsing, not picking.
@@ -15,7 +24,7 @@ import { Button, Screen, ScreenHeader } from '../../../ui';
  * tab root has no back control, so the PT landed on this list with no way back to
  * the program they were writing.
  */
-export default function LibraryIndex() {
+function LibraryIndexInner() {
   const { t } = useTranslation();
   const theme = useTheme();
 

@@ -47,6 +47,7 @@ import { useSession, type BestSet } from '../../../../lib/logging/useSession';
 import { engine } from '../../../../lib/offline/engine';
 import { queueComplete, queueDeleteSet, queueLogSet } from '../../../../lib/offline/loggingRepo';
 import { useOffline } from '../../../../lib/offline/offlineContext';
+import { OfflineStatusChip } from '../../../../lib/offline/OfflineStatusChip';
 import { useSessionChannel } from '../../../../lib/offline/useSessionChannel';
 import { takePickedExercise } from '../../../../lib/programs/exercisePicker';
 import { useTheme } from '../../../../theme/ThemeProvider';
@@ -934,6 +935,7 @@ export default function SessionScreen() {
       </Row>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+        <OfflineStatusChip style={{ marginBottom: 12 }} />
         {!current ? (
           <EmptyState
             icon="dumbbell"

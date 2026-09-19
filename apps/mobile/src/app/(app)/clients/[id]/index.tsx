@@ -10,6 +10,7 @@ import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
 import { SessionList } from '../../../../lib/logging/SessionList';
 import { StartSessionSheet } from '../../../../lib/logging/StartSessionSheet';
 import { useSessionHistory } from '../../../../lib/logging/useSessionHistory';
+import { OfflineStatusChip } from '../../../../lib/offline/OfflineStatusChip';
 import { useClientActiveProgram } from '../../../../lib/programs/useClientActiveProgram';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import {
@@ -266,6 +267,7 @@ export default function ClientDetail() {
           gap: theme.space[4],
         }}
       >
+        <OfflineStatusChip />
         <Row style={{ gap: theme.space[4], paddingHorizontal: 4 }}>
           <Avatar name={displayName} photoUrl={clientUser?.avatar_url} size={60} />
           <View style={{ flex: 1, gap: 3 }}>

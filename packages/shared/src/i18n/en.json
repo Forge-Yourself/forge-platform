@@ -1033,7 +1033,31 @@
       "errorStartFailed": "The session couldn't be created, so this can't sync.",
       "retry": "Retry",
       "discard": "Discard",
-      "retryAll": "Retry all"
+      "retryAll": "Retry all",
+      "bannerOffline_one": "Offline · 1 change waiting",
+      "bannerOffline_other": "Offline · {{count}} changes waiting",
+      "bannerSyncing_one": "Syncing 1 change…",
+      "bannerSyncing_other": "Syncing {{count}} changes…",
+      "bannerFailed_one": "1 change didn't sync",
+      "bannerFailed_other": "{{count}} changes didn't sync",
+      "bannerSynced": "Everything is up to date",
+      "subLastSynced": "Last synced {{time}}",
+      "subNeverSynced": "Not synced from this device yet",
+      "subSyncing": "Started just now · keep using the app",
+      "retryNow": "Retry now",
+      "pendingTitle": "Pending sync",
+      "pendingBody": "Everything you log is saved on this device first. Nothing is lost if the gym has no signal.",
+      "rowSession": "Session · {{name}}",
+      "rowSessionNoName": "Session",
+      "rowSets_one": "1 set · {{time}}",
+      "rowSets_other": "{{count}} sets · {{time}}",
+      "rowChanges_one": "1 change · {{time}}",
+      "rowChanges_other": "{{count}} changes · {{time}}",
+      "statusQueued": "Queued",
+      "statusSending": "Sending",
+      "needsSyncTitle": "A session hasn't synced",
+      "needsSyncBody_one": "1 change queued",
+      "needsSyncBody_other": "{{count}} changes queued"
     }
   }
 }
