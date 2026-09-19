@@ -291,7 +291,24 @@
       "aiTrainingLabel": "AI training",
       "aiTrainingSubtitle": "Allow anonymized data to improve Forge's AI features."
     },
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "offline": {
+      "heading": "Offline",
+      "label": "Offline logging (beta)",
+      "body": "Log sets with no signal. They sync when you're back online.",
+      "pending_one": "1 item waiting to sync",
+      "pending_other": "{{count}} items waiting to sync",
+      "queue": "Sync queue",
+      "cantTurnOff": "Items are still waiting to sync",
+      "cantTurnOffBody": "Go back online so they sync, or discard them. Discarded sets are gone for good.",
+      "discard_one": "Discard 1 item",
+      "discard_other": "Discard {{count}} items",
+      "keep": "Keep them",
+      "signOutPending_one": "1 item hasn't synced",
+      "signOutPending_other": "{{count}} items haven't synced",
+      "signOutPendingBody": "Signing out now deletes them from this phone.",
+      "signOutAnyway": "Sign out anyway"
+    }
   },
   "clients": {
     "title": "Clients",
@@ -988,6 +1005,35 @@
       "empty": "No sessions yet",
       "emptyBody": "Completed sessions will be listed here.",
       "error": "Couldn't load sessions."
+    },
+    "offline": {
+      "chipOffline": "Offline · synced {{time}}",
+      "chipOfflineNever": "Offline",
+      "chipPending_one": "Offline · 1 pending",
+      "chipPending_other": "Offline · {{count}} pending",
+      "chipSyncing_one": "Syncing 1…",
+      "chipSyncing_other": "Syncing {{count}}…",
+      "authPaused_one": "Sign in to sync 1 item.",
+      "authPaused_other": "Sign in to sync {{count}} items.",
+      "live": "Live",
+      "notLive": "Offline",
+      "notSynced": "Not synced yet",
+      "needsConnection": "You're offline. This needs a connection.",
+      "needsConnectionBody": "Logging still works. Everything else comes back with the signal.",
+      "queueTitle": "Sync queue",
+      "queueEmpty": "Everything is synced.",
+      "queueEmptyBody": "Sets you log offline wait here until you're back online.",
+      "statePending": "Waiting",
+      "stateFailed": "Didn't sync",
+      "opStart": "Start session · {{name}}",
+      "opStartNoName": "Start session",
+      "opSet": "Set · {{summary}}",
+      "opDelete": "Delete a set",
+      "opComplete": "Finish session",
+      "errorStartFailed": "The session couldn't be created, so this can't sync.",
+      "retry": "Retry",
+      "discard": "Discard",
+      "retryAll": "Retry all"
     }
   }
 }
