@@ -1,11 +1,15 @@
+import { isNetworkError } from '@forge/shared';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
+import { engine } from '../offline/engine';
+import { useOffline } from '../offline/offlineContext';
 import { supabase } from '../supabase';
 import type { WorkoutSessionRow } from './sessionRpc';
 
 export type InProgressSession = WorkoutSessionRow & { clientName: string | null };
 
-async function fetchInProgress(): Promise<{ session: InProgressSession | null; error: string | null }> {
+export async function fetchInProgress(): Promise<{ session: InProgressSession | null; error: string | null }> {
   const { data, error } = await supabase
     .from('workout_sessions')
     .select('*')
@@ -13,7 +17,7 @@ async function fetchInProgress(): Promise<{ session: InProgressSession | null; e
     .order('started_at', { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
-  if (error) return { session: null, error: error.message };
+  if (error) return { session: null, error: isNetworkError(error) ? OFFLINE : error.message };
   if (!data) return { session: null, error: null };
   const { data: client } = await supabase
     .from('clients')
@@ -39,6 +43,7 @@ async function fetchInProgress(): Promise<{ session: InProgressSession | null; e
  * design (spec §5.1).
  */
 export function useInProgressSession(): { session: InProgressSession | null; loading: boolean; error: string | null } {
+  const offline = useOffline();
   const [state, setState] = useState<{ session: InProgressSession | null; loading: boolean; error: string | null }>({
     session: null,
     loading: true,
@@ -48,13 +53,26 @@ export function useInProgressSession(): { session: InProgressSession | null; loa
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      void fetchInProgress().then((result) => {
-        if (!cancelled) setState({ session: result.session, loading: false, error: result.error });
-      });
+      void cachedFetch({ enabled: offline.effective, online: offline.online }, 'inprogress', fetchInProgress)
+        .then(async (result) => {
+          if (!offline.effective) return result;
+          // A session started offline exists only locally until its start replays.
+          // Only sessions with queued work count: a local copy of a server
+          // session may be stale (finished on another device since).
+          const queued = new Set((await engine.entries()).map((e) => e.sessionId));
+          const local = (await engine.localSessionsInProgress())
+            .filter((s) => queued.has(s.id))
+            .sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? ''))[0];
+          if (!local || (result.session && result.session.id === local.id)) return result;
+          return { session: { ...local, clientName: null }, error: null };
+        })
+        .then((result) => {
+          if (!cancelled) setState({ session: result.session, loading: false, error: result.error });
+        });
       return () => {
         cancelled = true;
       };
-    }, []),
+    }, [offline.effective, offline.online]),
   );
 
   return state;

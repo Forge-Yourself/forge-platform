@@ -1,6 +1,8 @@
 import type { Database, IntakeResponses, IntakeSummary } from '@forge/shared';
-import { intakeSummary } from '@forge/shared';
+import { intakeSummary, isNetworkError } from '@forge/shared';
 import { useCallback, useEffect, useState } from 'react';
+import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
+import { useOffline } from '../offline/offlineContext';
 import { supabase } from '../supabase';
 
 export type ClientRow = Database['public']['Tables']['clients']['Row'];
@@ -29,7 +31,7 @@ export type ClientDetailData = {
   refetch: () => Promise<void>;
 };
 
-async function fetchClientDetail(
+export async function fetchClientDetail(
   clientId: string,
   unitSystem: 'metric' | 'imperial',
 ): Promise<Omit<ClientDetailData, 'loading' | 'refetch'>> {
@@ -40,7 +42,7 @@ async function fetchClientDetail(
 
   if (clientResult.error || !clientResult.data) {
     return {
-      error: clientResult.error?.message ?? 'Client not found',
+      error: clientResult.error && isNetworkError(clientResult.error) ? OFFLINE : (clientResult.error?.message ?? 'Client not found'),
       client: null,
       clientUser: null,
       intake: null,
@@ -98,6 +100,7 @@ export function useClientDetail(
     summary: null,
   });
   const [loading, setLoading] = useState(true);
+  const offline = useOffline();
 
   // Mount/dependency-change fetch inlined here (same shape as
   // usePtProfileData.ts) rather than calling `refetch` below — see
@@ -112,7 +115,9 @@ export function useClientDetail(
         cancelled = true;
       };
     }
-    void fetchClientDetail(clientId, unitSystem).then((result) => {
+    void cachedFetch({ enabled: offline.effective, online: offline.online }, 'client:' + clientId, () =>
+      fetchClientDetail(clientId, unitSystem),
+    ).then((result) => {
       if (cancelled) return;
       setState(result);
       setLoading(false);
@@ -120,7 +125,7 @@ export function useClientDetail(
     return () => {
       cancelled = true;
     };
-  }, [clientId, unitSystem]);
+  }, [clientId, unitSystem, offline.effective, offline.online]);
 
   const refetch = useCallback(async (): Promise<void> => {
     if (!clientId) {
@@ -128,10 +133,12 @@ export function useClientDetail(
       return;
     }
     setLoading(true);
-    const result = await fetchClientDetail(clientId, unitSystem);
+    const result = await cachedFetch({ enabled: offline.effective, online: offline.online }, 'client:' + clientId, () =>
+      fetchClientDetail(clientId, unitSystem),
+    );
     setState(result);
     setLoading(false);
-  }, [clientId, unitSystem]);
+  }, [clientId, unitSystem, offline.effective, offline.online]);
 
   return { ...state, loading, refetch };
 }

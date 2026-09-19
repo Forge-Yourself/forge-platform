@@ -1,5 +1,7 @@
-import type { ClientState, Database } from '@forge/shared';
+import { isNetworkError, type ClientState, type Database } from '@forge/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
+import { useOffline } from '../offline/offlineContext';
 import { supabase } from '../supabase';
 
 export type ClientRow = Database['public']['Tables']['clients']['Row'];
@@ -26,7 +28,7 @@ type RawState = {
  * get wrong with no way to test it against a live app in this environment;
  * two plain queries merged here are simple to verify by reading.
  */
-async function fetchRoster(ptUserId: string): Promise<{ rows: ClientListItem[]; error: string | null }> {
+export async function fetchRoster(ptUserId: string): Promise<{ rows: ClientListItem[]; error: string | null }> {
   const { data: clients, error } = await supabase
     .from('clients')
     .select('*')
@@ -34,7 +36,7 @@ async function fetchRoster(ptUserId: string): Promise<{ rows: ClientListItem[]; 
     .order('created_at', { ascending: false });
 
   if (error) {
-    return { rows: [], error: error.message };
+    return { rows: [], error: isNetworkError(error) ? OFFLINE : error.message };
   }
 
   const linkedIds = (clients ?? [])
@@ -81,6 +83,7 @@ export function useClientList(
   search: string,
   stateFilter: ClientListFilter,
 ): ClientListData {
+  const offline = useOffline();
   const [raw, setRaw] = useState<RawState>({ rows: [], loading: true, error: null });
 
   // Mount/ptUserId-change fetch inlined here (same shape as
@@ -99,13 +102,15 @@ export function useClientList(
         cancelled = true;
       };
     }
-    void fetchRoster(ptUserId).then((result) => {
+    void cachedFetch({ enabled: offline.effective, online: offline.online }, 'roster:' + ptUserId, () =>
+      fetchRoster(ptUserId),
+    ).then((result) => {
       if (!cancelled) setRaw({ rows: result.rows, loading: false, error: result.error });
     });
     return () => {
       cancelled = true;
     };
-  }, [ptUserId]);
+  }, [ptUserId, offline.effective, offline.online]);
 
   // Exposed for callers to invoke after their own writes (invite/pause/etc.) — an
   // ordinary function call from an event handler, never from an effect.
@@ -115,9 +120,11 @@ export function useClientList(
       return;
     }
     setRaw((prev) => ({ ...prev, loading: true, error: null }));
-    const result = await fetchRoster(ptUserId);
+    const result = await cachedFetch({ enabled: offline.effective, online: offline.online }, 'roster:' + ptUserId, () =>
+      fetchRoster(ptUserId),
+    );
     setRaw({ rows: result.rows, loading: false, error: result.error });
-  }, [ptUserId]);
+  }, [ptUserId, offline.effective, offline.online]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

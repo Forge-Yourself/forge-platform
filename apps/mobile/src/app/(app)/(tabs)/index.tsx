@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useAuth } from '../../../lib/auth/AuthProvider';
+import { fetchClientHome } from '../../../lib/home/fetchClientHome';
 import { usePtDashboard, type AttentionItem } from '../../../lib/home/usePtDashboard';
 import { claimClientInvites } from '../../../lib/intake/claimInvites';
 import { openWaiverDocument } from '../../../lib/intake/openWaiver';
@@ -13,8 +14,9 @@ import { SessionList } from '../../../lib/logging/SessionList';
 import { StartSessionSheet } from '../../../lib/logging/StartSessionSheet';
 import { useInProgressSession } from '../../../lib/logging/useInProgressSession';
 import { useSessionHistory } from '../../../lib/logging/useSessionHistory';
+import { cachedFetch } from '../../../lib/offline/cachedFetch';
+import { useOffline } from '../../../lib/offline/offlineContext';
 import { useProgramList } from '../../../lib/programs/useProgramList';
-import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
   Avatar,
@@ -466,6 +468,7 @@ function ClientHome() {
   const { t } = useTranslation();
   const theme = useTheme();
   const auth = useAuth();
+  const offline = useOffline();
   const [state, setState] = useState<ClientHomeState>({
     loading: true,
     client: null,
@@ -498,31 +501,18 @@ function ClientHome() {
         // Best-effort — a failed claim just means the client sees the
         // no-trainer-yet state below, which already has its own recovery copy.
       })
-      .then(async () => {
-        const { data: client } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('client_user_id', auth.user?.id ?? '')
-          .maybeSingle();
-
-        if (!client) {
-          if (!cancelled) setState({ loading: false, client: null, ptInfo: null, intake: null });
-          return;
-        }
-
-        const [{ data: ptInfo }, { data: intake }] = await Promise.all([
-          supabase.from('users').select('display_name, avatar_url').eq('id', client.pt_user_id).maybeSingle(),
-          supabase.from('intake_forms').select('*').eq('client_id', client.id).maybeSingle(),
-        ]);
-
-        if (!cancelled) {
-          setState({ loading: false, client, ptInfo: ptInfo ?? null, intake: intake ?? null });
-        }
+      .then(() =>
+        cachedFetch({ enabled: offline.effective, online: offline.online }, 'clientHome:' + (auth.user?.id ?? ''), () =>
+          fetchClientHome(auth.user?.id ?? ''),
+        ),
+      )
+      .then((r) => {
+        if (!cancelled) setState({ loading: false, client: r.client, ptInfo: r.ptInfo, intake: r.intake });
       });
     return () => {
       cancelled = true;
     };
-  }, [auth.user?.id]);
+  }, [auth.user?.id, offline.effective, offline.online]);
 
   async function handleCopyEmail() {
     if (!auth.user?.email) return;
