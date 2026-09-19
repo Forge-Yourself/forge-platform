@@ -2209,7 +2209,7 @@ git commit -m "feat(i18n): offline chip, sync queue, live badge, settings copy"
 - Create: `apps/mobile/src/lib/offline/kvStore.ts`, `kvStore.web.ts`, `engine.ts`, `transport.ts`
 - Modify: `apps/mobile/src/lib/logging/sessionRpc.ts`
 
-- [ ] **Step 1: Install the two native dependencies through Expo**
+- [x] **Step 1: Install the two native dependencies through Expo**
 
 ```powershell
 cd apps/mobile
@@ -2219,7 +2219,7 @@ cd ../..
 
 Expected: both added to `apps/mobile/package.json` at SDK-57-compatible versions. If `expo install` adds `expo-sqlite` to `app.json` `plugins`, keep it.
 
-- [ ] **Step 2: Write `lib/offline/kvStore.ts` (native)**
+- [x] **Step 2: Write `lib/offline/kvStore.ts` (native)**
 
 ```ts
 import type { KvStore, KvTable, KvWrite } from '@forge/shared';
@@ -2265,7 +2265,7 @@ export const kvStore: KvStore = {
 };
 ```
 
-- [ ] **Step 3: Write `lib/offline/kvStore.web.ts` (IndexedDB)**
+- [x] **Step 3: Write `lib/offline/kvStore.web.ts` (IndexedDB)**
 
 ```ts
 /// <reference lib="dom" />
@@ -2337,7 +2337,7 @@ export const kvStore: KvStore = {
 };
 ```
 
-- [ ] **Step 4: Update `lib/logging/sessionRpc.ts` for the new parameters**
+- [x] **Step 4: Update `lib/logging/sessionRpc.ts` for the new parameters**
 
 Replace `startWorkoutSession` and `completeWorkoutSession` with:
 
@@ -2377,7 +2377,7 @@ export async function completeWorkoutSession(
 
 Existing callers pass neither new argument and keep M4a behaviour.
 
-- [ ] **Step 5: Write `lib/offline/transport.ts`**
+- [x] **Step 5: Write `lib/offline/transport.ts`**
 
 ```ts
 import type { PrType, RpcError, Transport } from '@forge/shared';
@@ -2434,7 +2434,7 @@ export const supabaseTransport: Transport = {
 
 If `LogSetInput` / `CompleteSessionInput` carry more fields than the literals above, typecheck names them; add them from the args (every field of the RPC is in `LogSetArgs`).
 
-- [ ] **Step 6: Write `lib/offline/engine.ts`, the one engine per app process**
+- [x] **Step 6: Write `lib/offline/engine.ts`, the one engine per app process**
 
 ```ts
 import { SyncEngine } from '@forge/shared';
@@ -2449,7 +2449,7 @@ export const OFFLINE_CHOICE_KEY = 'forge.offlineLogging';
 export const OFFLINE_MODE_KEY = 'forge.offlineMode';
 ```
 
-- [ ] **Step 7: Typecheck and commit**
+- [x] **Step 7: Typecheck and commit**
 
 ```powershell
 pnpm --filter mobile typecheck
@@ -2466,7 +2466,7 @@ git commit -m "feat(mobile): KvStore adapters, engine singleton, RPC transport"
 - Create: `apps/mobile/src/lib/offline/offlineContext.ts`, `apps/mobile/src/lib/offline/OfflineProvider.tsx`
 - Modify: `apps/mobile/src/app/_layout.tsx`, `apps/mobile/src/lib/auth/AuthProvider.tsx`
 
-- [ ] **Step 1: Write `offlineContext.ts`**
+- [x] **Step 1: Write `offlineContext.ts`**
 
 The context and `useOffline` live apart from the provider. The provider imports `warmCache`, which imports the fetch hooks, which call `useOffline`; one file would be a require cycle.
 
@@ -2505,7 +2505,7 @@ export function useOffline(): OfflineContextValue {
 }
 ```
 
-- [ ] **Step 2: Write `OfflineProvider.tsx`**
+- [x] **Step 2: Write `OfflineProvider.tsx`**
 
 ```tsx
 import NetInfo from '@react-native-community/netinfo';
@@ -2674,7 +2674,7 @@ export async function warmCache(_user: Database['public']['Tables']['users']['Ro
 }
 ```
 
-- [ ] **Step 3: Mount the provider inside `AuthProvider` in `app/_layout.tsx`**
+- [x] **Step 3: Mount the provider inside `AuthProvider` in `app/_layout.tsx`**
 
 ```tsx
 import { OfflineProvider } from '../lib/offline/OfflineProvider';
@@ -2688,7 +2688,7 @@ import { OfflineProvider } from '../lib/offline/OfflineProvider';
         </AuthProvider>
 ```
 
-- [ ] **Step 4: Cold offline boot in `AuthProvider.tsx`**
+- [x] **Step 4: Cold offline boot in `AuthProvider.tsx`**
 
 Replace `loadProfile` with:
 
@@ -2732,7 +2732,7 @@ import { engine, OFFLINE_CHOICE_KEY } from '../offline/engine';
 
 The profile goes into the KvStore, not `deviceStore`. SecureStore warns above 2 KB, and a PT profile with a bio exceeds that.
 
-- [ ] **Step 5: Typecheck, lint, commit**
+- [x] **Step 5: Typecheck, lint, commit**
 
 ```powershell
 pnpm --filter mobile typecheck
@@ -2750,7 +2750,7 @@ git commit -m "feat(mobile): OfflineProvider — switch, connectivity, drain; ca
 - Replace: `apps/mobile/src/lib/offline/warmCache.ts`
 - Modify: `apps/mobile/src/lib/clients/useClientList.ts`, `apps/mobile/src/lib/clients/useClientDetail.ts`, `apps/mobile/src/lib/logging/StartSessionSheet.tsx`, `apps/mobile/src/lib/logging/useInProgressSession.ts`, `apps/mobile/src/app/(app)/(tabs)/index.tsx`
 
-- [ ] **Step 1: Write `cachedFetch.ts`**
+- [x] **Step 1: Write `cachedFetch.ts`**
 
 ```ts
 import { engine } from './engine';
@@ -2784,7 +2784,7 @@ export async function cachedFetch<T extends { error: string | null }>(
 }
 ```
 
-- [ ] **Step 2: Map network errors to `OFFLINE` in the existing fetchers and export them**
+- [x] **Step 2: Map network errors to `OFFLINE` in the existing fetchers and export them**
 
 `lib/clients/useClientList.ts`: export `fetchRoster` and change its error line to:
 
@@ -2816,7 +2816,7 @@ import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
 import { useOffline } from '../offline/offlineContext';
 ```
 
-- [ ] **Step 3: Move `loadWeek` out of the sheet into `lib/logging/loadWeek.ts`**
+- [x] **Step 3: Move `loadWeek` out of the sheet into `lib/logging/loadWeek.ts`**
 
 ```ts
 import { isNetworkError, programTreeSchema, weekCompletion, type ProgramTree } from '@forge/shared';
@@ -2877,7 +2877,7 @@ import { useOffline } from '../offline/offlineContext';
 import { EMPTY_WEEK, loadWeek, type WeekLoad } from './loadWeek';
 ```
 
-- [ ] **Step 4: Write `lib/offline/fetchLastSets.ts`**
+- [x] **Step 4: Write `lib/offline/fetchLastSets.ts`**
 
 ```ts
 import { isNetworkError, type SetRow } from '@forge/shared';
@@ -2915,7 +2915,7 @@ export async function fetchLastSets(clientId: string): Promise<LastSets> {
 }
 ```
 
-- [ ] **Step 5: Extract `lib/home/fetchClientHome.ts` from `ClientHome`'s effect**
+- [x] **Step 5: Extract `lib/home/fetchClientHome.ts` from `ClientHome`'s effect**
 
 ```ts
 import { isNetworkError, type Database } from '@forge/shared';
@@ -2965,7 +2965,7 @@ import { cachedFetch } from '../../../lib/offline/cachedFetch';
 import { useOffline } from '../../../lib/offline/offlineContext';
 ``` `claimClientInvites()` stays first and keeps its `.catch`: offline, it fails fast and the cache answers.
 
-- [ ] **Step 6: Local in-progress sessions in `useInProgressSession.ts`**
+- [x] **Step 6: Local in-progress sessions in `useInProgressSession.ts`**
 
 Export `fetchInProgress`, map its first error with `isNetworkError(error) ? OFFLINE : error.message`, and change the focus effect's body to:
 
@@ -2997,7 +2997,7 @@ import { engine } from '../offline/engine';
 import { useOffline } from '../offline/offlineContext';
 ``` The Resume banner already renders without a name when `clientName` is null (PITFALLS I3).
 
-- [ ] **Step 7: Replace `lib/offline/warmCache.ts`**
+- [x] **Step 7: Replace `lib/offline/warmCache.ts`**
 
 ```ts
 import type { Database } from '@forge/shared';
@@ -3052,7 +3052,7 @@ export async function warmCache(user: UserRow): Promise<string | null> {
 
 Clients are warmed one at a time on purpose. Thirty parallel program-tree RPCs from a phone on a weak signal would time out together.
 
-- [ ] **Step 8: Typecheck, lint, commit**
+- [x] **Step 8: Typecheck, lint, commit**
 
 ```powershell
 pnpm --filter mobile typecheck
@@ -3069,7 +3069,7 @@ git commit -m "feat(mobile): read-through cache on roster, client, week, home, i
 - Create: `apps/mobile/src/lib/offline/loggingRepo.ts`
 - Modify: `apps/mobile/src/lib/logging/useSession.ts`, `apps/mobile/src/lib/logging/sessionModel.ts`, `apps/mobile/src/lib/logging/StartSessionSheet.tsx`, `apps/mobile/src/app/(app)/sessions/[id]/index.tsx`
 
-- [ ] **Step 1: Write `loggingRepo.ts`, the queued half of the four writes**
+- [x] **Step 1: Write `loggingRepo.ts`, the queued half of the four writes**
 
 ```ts
 import type { CompleteSessionInput, LogSetInput, SessionRow, SetRow } from '@forge/shared';
@@ -3188,7 +3188,7 @@ export async function queueComplete(session: SessionRow, input: CompleteSessionI
 }
 ```
 
-- [ ] **Step 2: Make `useSession.ts` offline-aware**
+- [x] **Step 2: Make `useSession.ts` offline-aware**
 
 Add the imports:
 
@@ -3252,7 +3252,7 @@ async function loadSession(sessionId: string, offline: { effective: boolean; onl
 
 In `useSession`, add `const offline = useOffline();`. Replace both `fetchSession(sessionId)` calls (mount effect and `refetch`) with `loadSession(sessionId, { effective: offline.effective, online: offline.online })`, and add `offline.effective, offline.online` to both dependency arrays.
 
-- [ ] **Step 3: Order sets by ULID in `sessionModel.ts` (spec D10)**
+- [x] **Step 3: Order sets by ULID in `sessionModel.ts` (spec D10)**
 
 Replace `setsFor`:
 
@@ -3264,7 +3264,7 @@ export function setsFor(sets: readonly SetRow[], exerciseId: string): SetRow[] {
 
 with `import { orderSets, type ProgramTree } from '@forge/shared';` replacing the type-only import. `nextSetNumber` is unchanged: it is what the device sends, and `displayNumbers` decides what is printed.
 
-- [ ] **Step 4: Offline start in `StartSessionSheet.tsx`**
+- [x] **Step 4: Offline start in `StartSessionSheet.tsx`**
 
 Add the imports `import { useAuth } from '../auth/AuthProvider';` and `import { queueStart } from '../offline/loggingRepo';`, add `const auth = useAuth();` next to `useOffline()`, and put this at the top of `start()`, after `setError(null)`:
 
@@ -3288,7 +3288,7 @@ Add the imports `import { useAuth } from '../auth/AuthProvider';` and `import { 
     }
 ```
 
-- [ ] **Step 5: The session screen writes through the outbox when the switch is effective**
+- [x] **Step 5: The session screen writes through the outbox when the switch is effective**
 
 In `app/(app)/sessions/[id]/index.tsx`:
 
@@ -3415,7 +3415,7 @@ if (offline.effective && !offline.online) return;
 
 and render the "+" chip disabled under the same condition. The picker is the online-only library.
 
-- [ ] **Step 6: Typecheck, lint, commit**
+- [x] **Step 6: Typecheck, lint, commit**
 
 ```powershell
 pnpm --filter mobile typecheck

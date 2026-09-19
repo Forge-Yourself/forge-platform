@@ -36,6 +36,8 @@ export { NumericKeypad } from './NumericKeypad';
 export type { NumericKeypadProps } from './NumericKeypad';
 export { PasswordStrength } from './PasswordStrength';
 export type { PasswordStrengthProps } from './PasswordStrength';
+export { LiveBadge } from './LiveBadge';
+export type { LiveBadgeProps } from './LiveBadge';
 export { PrMoment } from './PrMoment';
 export type { PrMomentProps } from './PrMoment';
 export { ProgressRing } from './ProgressRing';

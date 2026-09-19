@@ -47,12 +47,14 @@ import { useSession, type BestSet } from '../../../../lib/logging/useSession';
 import { engine } from '../../../../lib/offline/engine';
 import { queueComplete, queueDeleteSet, queueLogSet } from '../../../../lib/offline/loggingRepo';
 import { useOffline } from '../../../../lib/offline/offlineContext';
+import { useSessionChannel } from '../../../../lib/offline/useSessionChannel';
 import { takePickedExercise } from '../../../../lib/programs/exercisePicker';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import {
   Button,
   EmptyState,
   Icon,
+  LiveBadge,
   NavHeader,
   NumericKeypad,
   PrMoment,
@@ -125,6 +127,16 @@ export default function SessionScreen() {
   const unit = (auth.user?.unit_system as UnitSystem | undefined) ?? 'metric';
   const data = useSession(params.id);
   const offline = useOffline();
+  // Joined on both states: a late set (D6) must show on a summary the PT is reading.
+  const live = useSessionChannel(
+    data.session?.id ?? null,
+    {
+      onSet: data.applySet,
+      onDelete: data.removeSet,
+      onSession: () => void data.refetch(),
+    },
+    offline.effective,
+  );
   useKeepAwake();
 
   const [exerciseIndex, setExerciseIndex] = useState<number | null>(null);
@@ -895,8 +907,8 @@ export default function SessionScreen() {
 
   return (
     <Screen padded={false}>
-      {/* Prototype `session` header: back, who and where, elapsed. The artboard's
-          OFFLINE pill arrives with the M4b outbox. */}
+      {/* Prototype `session` header: back, who and where, elapsed, and the status
+          pill on the right: OFFLINE with no signal, Live while the mirror is joined. */}
       <Row style={{ gap: 10, paddingTop: 6, paddingHorizontal: 12, paddingBottom: 10 }}>
         <Pressable
           accessibilityRole="button"
@@ -914,6 +926,11 @@ export default function SessionScreen() {
             {subtitle}
           </Text>
         </View>
+        {!offline.online ? (
+          <LiveBadge state="offline" label={t('logging.offline.notLive')} />
+        ) : live ? (
+          <LiveBadge state="live" label={t('logging.offline.live')} />
+        ) : null}
       </Row>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}>
