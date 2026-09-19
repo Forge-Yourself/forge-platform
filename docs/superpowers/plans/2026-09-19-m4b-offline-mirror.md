@@ -3432,7 +3432,7 @@ git commit -m "feat(mobile): offline start, log, delete, finish through the outb
 - Create: `apps/mobile/src/lib/offline/useSessionChannel.ts`, `apps/mobile/src/ui/LiveBadge.tsx`
 - Modify: `apps/mobile/src/ui/index.ts`, `apps/mobile/src/app/(app)/sessions/[id]/index.tsx`
 
-- [ ] **Step 1: Write `useSessionChannel.ts`**
+- [x] **Step 1: Write `useSessionChannel.ts`**
 
 ```ts
 import type { SessionRow, SetRow } from '@forge/shared';
@@ -3522,7 +3522,7 @@ export function useSessionChannel(sessionId: string | null, handlers: Handlers, 
 }
 ```
 
-- [ ] **Step 2: Write `ui/LiveBadge.tsx`**
+- [x] **Step 2: Write `ui/LiveBadge.tsx`**
 
 ```tsx
 import { View } from 'react-native';
@@ -3558,7 +3558,7 @@ export function LiveBadge({ live, label }: LiveBadgeProps) {
 
 Export it from `ui/index.ts` next to `PrBanner`: `export { LiveBadge, type LiveBadgeProps } from './LiveBadge';`. If `t.colors.textMuted` does not exist, use the token `Text tone="muted"` resolves to (read `ui/Text.tsx`).
 
-- [ ] **Step 3: Wire it into the session screen**
+- [x] **Step 3: Wire it into the session screen**
 
 Import `useSessionChannel` from `../../../../lib/offline/useSessionChannel` and `LiveBadge` from the ui barrel. Below `const offline = useOffline();`:
 
@@ -3589,7 +3589,7 @@ In the in-progress `NavHeader`, replace the `title` prop with:
 
 The completed summary keeps its plain title, but the channel stays joined there too, so a late set (D6) appears on a summary the PT is looking at.
 
-- [ ] **Step 4: Typecheck, lint, commit**
+- [x] **Step 4: Typecheck, lint, commit**
 
 ```powershell
 pnpm --filter mobile typecheck
@@ -3608,7 +3608,7 @@ git commit -m "feat(mobile): live mirror over a private Realtime topic, Live bad
 
 **Correction to spec §7:** the chip is not global. It renders at the top of the scroll content of the four screens that work offline (Today, Clients, client detail, the session screen). A global overlay would sit on top of each screen's own header or its `FooterBar`, and every stack sets `headerShown: false`, so there is no shared header to put it in.
 
-- [ ] **Step 1: Write `ui/OfflineChip.tsx`**
+- [x] **Step 1: Write `ui/OfflineChip.tsx`**
 
 ```tsx
 import { Pressable } from 'react-native';
@@ -3649,7 +3649,7 @@ export function OfflineChip({ label, tone, onPress }: OfflineChipProps) {
 
 Export from `ui/index.ts`: `export { OfflineChip, type OfflineChipProps } from './OfflineChip';`.
 
-- [ ] **Step 2: Write `lib/offline/OfflineStatusChip.tsx`, the copy and visibility rule**
+- [x] **Step 2: Write `lib/offline/OfflineStatusChip.tsx`, the copy and visibility rule**
 
 ```tsx
 import { router } from 'expo-router';
@@ -3688,7 +3688,7 @@ export function OfflineStatusChip() {
 }
 ```
 
-- [ ] **Step 3: Place `<OfflineStatusChip />` on the four screens**
+- [x] **Step 3: Place `<OfflineStatusChip />` on the four screens**
 
 It goes as the first child of each screen's main `ScrollView` content container (it renders `null` when hidden, so no spacing is left behind):
 - `app/(app)/(tabs)/index.tsx`: both `PtHome`'s and `ClientHome`'s main `ScrollView`, directly above `<HomeHeader … />`.
@@ -3698,7 +3698,7 @@ It goes as the first child of each screen's main `ScrollView` content container 
 
 Import path from `app/(app)/(tabs)/*`: `'../../../lib/offline/OfflineStatusChip'`. From `app/(app)/clients/[id]/index.tsx` and `app/(app)/sessions/[id]/index.tsx`: `'../../../../lib/offline/OfflineStatusChip'`.
 
-- [ ] **Step 3b: Online-only screens say so (spec §7)**
+- [x] **Step 3b: Online-only screens say so (spec §7)**
 
 Create `lib/offline/NeedsConnection.tsx`:
 
@@ -3740,7 +3740,7 @@ Wrap these four screens. Rename each file's default-exported component to `…In
 
 Use each file's existing default-export name for the wrapper, so nothing that imports it changes.
 
-- [ ] **Step 4: Write `app/(app)/sync-queue.tsx`**
+- [x] **Step 4: Write `app/(app)/sync-queue.tsx`**
 
 ```tsx
 import { formatWeight, type OutboxEntry, type UnitSystem } from '@forge/shared';
@@ -3852,7 +3852,7 @@ export default function SyncQueueScreen() {
 
 Match the back-control idiom to the one in `app/(app)/clients/[id]/sessions.tsx` (read it first; PITFALLS N1 and N15). If `Button` has no `tone="danger"`, use the prop that `settings/index.tsx`'s MFA-unenroll confirm uses for its destructive action. If `'check'` is not an `EmptyState` icon name, use the one the history empty state uses.
 
-- [ ] **Step 5: Settings, the Offline section and the sign-out guard**
+- [x] **Step 5: Settings, the Offline section and the sign-out guard**
 
 In `app/(app)/settings/index.tsx`, add `const offline = useOffline();`, `const [offlineConfirm, setOfflineConfirm] = useState(false);`, `const [signOutConfirm, setSignOutConfirm] = useState(false);`, and `const queued = offline.status.pending + offline.status.failed;`.
 
@@ -3936,7 +3936,7 @@ and directly above the sign-out button render:
 
 Imports: `useOffline` from `'../../../lib/offline/offlineContext'`, `kvStore` from `'../../../lib/offline/kvStore'`. After `kvStore.clear()` the engine's view is empty too: it holds no rows in memory.
 
-- [ ] **Step 6: Typecheck, lint, commit**
+- [x] **Step 6: Typecheck, lint, commit**
 
 ```powershell
 pnpm --filter mobile typecheck
@@ -3953,7 +3953,7 @@ git commit -m "feat(mobile): offline chip, sync queue screen, settings switch, s
 - Create: `apps/web/app/admin/settings/page.tsx`, `apps/web/app/admin/settings/actions.ts`, `apps/web/app/admin/users/[id]/actions.ts`
 - Modify: `apps/web/app/admin/page.tsx`, `apps/web/app/admin/users/[id]/page.tsx`, `apps/web/app/admin/sessions/[id]/page.tsx`
 
-- [ ] **Step 1: Write `settings/actions.ts`**
+- [x] **Step 1: Write `settings/actions.ts`**
 
 ```ts
 'use server';
@@ -3973,7 +3973,7 @@ export async function setOfflineMode(formData: FormData): Promise<void> {
 }
 ```
 
-- [ ] **Step 2: Write `settings/page.tsx`**
+- [x] **Step 2: Write `settings/page.tsx`**
 
 ```tsx
 import { parseOfflineMode } from '@forge/shared';
@@ -4024,7 +4024,7 @@ export default async function AdminSettingsPage() {
 
 Read `apps/web/lib/ui/styles.ts` first and use the style names it actually exports (`page`, `h1`, `h2`, `card` are what `users/[id]/page.tsx` uses; confirm `page` and `h1`). Add a `Settings` link to `app/admin/page.tsx` next to the existing Programs / AI generations links.
 
-- [ ] **Step 3: Per-user beta on `users/[id]`**
+- [x] **Step 3: Per-user beta on `users/[id]`**
 
 `users/[id]/actions.ts`:
 
@@ -4062,7 +4062,7 @@ In `users/[id]/page.tsx`, add `offline_logging_beta` to the `users` select list 
 
 Update the page's doc comment ("No mutations here") to say this card is the one mutation and it goes through an `is_admin()`-guarded RPC.
 
-- [ ] **Step 4: Inspector: device and late tags on `sessions/[id]/page.tsx`**
+- [x] **Step 4: Inspector: device and late tags on `sessions/[id]/page.tsx`**
 
 Import `ulidTimeMs` from `@forge/shared`. In the set table add a `Device` column rendering `s.device_id ?? '—'`, and after the weight × reps cell render ` late` (styled like the page's existing muted text) when:
 
@@ -4070,7 +4070,7 @@ Import `ulidTimeMs` from `@forge/shared`. In the set table add a `Device` column
 session.completed_at !== null && ulidTimeMs(s.id) > new Date(session.completed_at).getTime()
 ```
 
-- [ ] **Step 5: Typecheck, lint, build, commit**
+- [x] **Step 5: Typecheck, lint, build, commit**
 
 ```powershell
 pnpm --filter web typecheck
@@ -4086,7 +4086,7 @@ git commit -m "feat(web): admin offline-logging switch, per-user beta, late-set 
 
 Run the `forge-screen-walk` skill (PITFALLS V1). Web target, headless Chrome. Offline is driven through CDP: `Network.emulateNetworkConditions({ offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 })` fires the browser `offline` event, which is what NetInfo listens to on web.
 
-- [ ] **Step 1: Arm the switch for the two test accounts**
+- [x] **Step 1: Arm the switch for the two test accounts**
 
 As `admin.test@forge.dev` on `/admin/settings`: mode Beta. On `/admin/users/<id>`: offline beta On for `pt.test@forge.dev` and `client.test@forge.dev`. Confirm with psql:
 
@@ -4094,7 +4094,7 @@ As `admin.test@forge.dev` on `/admin/settings`: mode Beta. On `/admin/users/<id>
 "/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -w -c "select value from app_config where key='offline_logging';" -c "select email, offline_logging_beta from users where email like '%test@forge.dev';"
 ```
 
-- [ ] **Step 2: Walk 1: PT offline start and log, reload, drain**
+- [x] **Step 2: Walk 1: PT offline start and log, reload, drain**
 
 Sign in as `pt.test` → Settings → switch Offline logging on → Today (wait for warm: the chip is hidden online) → go offline → Clients → the linked client → Start session → Day 1 → log three sets → screenshot (three rows marked "Not synced yet", chip "Offline · 4 pending": start plus three sets) → **reload the page** → reopen the session from the Resume banner → the three sets are still there → go online → the chip shows "Syncing…" then disappears → screenshot. Then:
 
@@ -4104,27 +4104,27 @@ Sign in as `pt.test` → Settings → switch Offline logging on → Today (wait 
 
 Expected: one `in_progress` session, 3 sets, `started_at` at the offline tap time (not the reconnect time).
 
-- [ ] **Step 3: Walk 2: the mirror**
+- [x] **Step 3: Walk 2: the mirror**
 
 Two browser contexts: `pt.test` on that session, `client.test` on the same session (client Today → Resume). The client logs a set; within ~2 s it appears on the PT's screen without a refresh, and the PT's header shows "Live". Screenshot both.
 
-- [ ] **Step 4: Walk 3: merge**
+- [x] **Step 4: Walk 3: merge**
 
 The PT finishes that session. The client goes offline → Today → Start workout → Freestyle → logs one set. The PT (online) starts a new session for the same client and logs one set. The client goes online. Expected: the client's screen `router.replace`s to the PT's session id and shows both sets; psql shows one `in_progress` session for that client with 2 sets and no row for the client's local UUID.
 
-- [ ] **Step 5: Walk 4: late set**
+- [x] **Step 5: Walk 4: late set**
 
 The PT finishes. The client (offline since before the finish) logs a set, then reconnects. Expected: the set shows on the PT's summary (mirror) and the admin inspector tags it `late`; psql shows the session still `completed`.
 
-- [ ] **Step 6: Walk 5: the switch**
+- [x] **Step 6: Walk 5: the switch**
 
 With one set queued offline, Settings → toggle off → the confirm card appears. Keep them → online → drains → toggle off succeeds. Admin mode → Off → reload the app → the Offline section is gone, and logging a set online behaves exactly as M4a (inline retry copy on a forced failure).
 
-- [ ] **Step 7: Save screenshots and results**
+- [x] **Step 7: Save screenshots and results**
 
 Screenshots go where M4a's went (see `docs/superpowers/plans/2026-09-18-m4a-log-core.md` Task 15). Any walk that fails is fixed and re-walked before Task 17; a failure that reveals a new class of bug gets a `docs/PITFALLS.md` entry.
 
-- [ ] **Step 8: Put the live project back**
+- [x] **Step 8: Put the live project back**
 
 Admin mode → Off (ships dark, spec §1). Leave the two beta flags on for the next session's testing.
 
@@ -4132,11 +4132,11 @@ Admin mode → Off (ships dark, spec §1). Leave the two beta flags on for the n
 
 ## Task 17 · Close-out
 
-- [ ] **Step 1: `docs/DESIGN_SYSTEM_GAPS.md`**: add `OfflineChip` and `LiveBadge` as built, with the screens that use them.
-- [ ] **Step 2: `CLAUDE.md`**: M4b row → ✅ done; M4c → next; Status paragraph gains the offline/mirror sentence and migration count 16 with `0016`'s one-line summary; Phase line updated.
-- [ ] **Step 3: This plan's As-built section**: every deviation found while building, in the format M4a's plan used.
-- [ ] **Step 4: Memory**: update `forge-m4-split-and-status.md` (M4b done, M4c next) and add a memory for the offline test recipe (CDP offline emulation, the arm-the-switch step) if the walk needed anything non-obvious.
-- [ ] **Step 5: Full verification (below), then commit**
+- [x] **Step 1: `docs/DESIGN_SYSTEM_GAPS.md`**: add `OfflineChip` and `LiveBadge` as built, with the screens that use them.
+- [x] **Step 2: `CLAUDE.md`**: M4b row → ✅ done; M4c → next; Status paragraph gains the offline/mirror sentence and migration count 16 with `0016`'s one-line summary; Phase line updated.
+- [x] **Step 3: This plan's As-built section**: every deviation found while building, in the format M4a's plan used.
+- [x] **Step 4: Memory**: update `forge-m4-split-and-status.md` (M4b done, M4c next) and add a memory for the offline test recipe (CDP offline emulation, the arm-the-switch step) if the walk needed anything non-obvious.
+- [x] **Step 5: Full verification (below), then commit**
 
 ```bash
 git add -A docs CLAUDE.md
@@ -4170,8 +4170,36 @@ Everything in spec §11, plus: offline PR banner at tap time, adding an off-prog
 
 ## As built — deviations from this plan
 
-Filled in at Task 17. Recorded as found:
+Executed 2026-09-19 inline (executing-plans), one commit per task on
+`feature/m4b-offline-mirror`, then a screen-walk fix commit (`2eb02d8`). `0016`
+is applied to the live project; the offline mode was left `off` and the two
+test accounts' beta flags on.
 
-- **Task 4, realtime partitions.** `0016` applied 2026-09-19. The first harness run failed only at `a set insert broadcast on the session topic`: `realtime.messages` had no partitions at all, because the Realtime service creates its daily `messages_YYYY_MM_DD` partitions only after a tenant has had a channel join, and nobody had ever subscribed on this project. `realtime.send` swallowed the insert error as `WARNING: no partition of relation "messages" found for row`. The `postgres` role cannot create partitions in `realtime` (`permission denied for schema realtime`), so the harness cannot self-heal. One anon-key `supabase.channel(...).subscribe()` created 2026-09-18 through 09-22 and the harness then passed in full (156). In production the app's own channel joins keep them rolling; with nobody subscribed a dropped broadcast has no listener anyway. If the harness ever fails on that one assertion after a quiet spell, join a channel once and rerun.
-- **Task 7, `enqueue` after a failed start.** The plan's engine queued a new op for a session whose `start` had already failed as `pending`. It would replay against a session that never existed, fail permanently with "session not found", and `retry(start)` would not free it (that only resets `start_failed` entries). `enqueue` now parks such an op as `failed` / `start_failed`, both for a new entry and a coalesced one. Test: `an op queued after its start failed waits with it, and retries with it` (21 engine tests, not 20).
-- **Task 7, test typing.** `tsconfig.base.json` has `noUncheckedIndexedAccess`, so the plan's `q[0].args` / `head.state` style indexing did not typecheck. Narrowed with a destructure or `!`; assertions unchanged.
+### Changed while implementing
+
+- **Task 4, realtime partitions.** The first harness run failed only at `a set insert broadcast on the session topic`: `realtime.messages` had no partitions at all, because the Realtime service creates its daily `messages_YYYY_MM_DD` partitions only after a tenant has had a channel join, and nobody had ever subscribed on this project. `realtime.send` swallowed the insert error as `WARNING: no partition of relation "messages" found for row`. The `postgres` role cannot create partitions in `realtime` (`permission denied for schema realtime`), so the harness cannot self-heal. One anon-key `supabase.channel(...).subscribe()` created 2026-09-18 through 09-22 and the harness then passed in full (156). In production the app's own joins keep them rolling; with nobody subscribed a dropped broadcast has no listener anyway. If the harness ever fails on that one assertion after a quiet spell, join a channel once and rerun.
+- **Task 7, `enqueue` after a failed start.** The plan's engine queued a new op for a session whose `start` had already failed as `pending`. It would replay against a session that never existed, fail permanently with "session not found", and `retry(start)` would not free it. `enqueue` now parks such an op as `failed` / `start_failed`. Test: `an op queued after its start failed waits with it, and retries with it`.
+- **Task 7, test typing.** `noUncheckedIndexedAccess` rejected the plan's `q[0].args` style indexing. Narrowed with a destructure or `!`; assertions unchanged.
+- **Tasks 11–14 were written before `ab6e150`** restyled the session screen and `useSession` to the prototype's M4 artboards. Adapted, not transcribed: `Loaded` gained `bestByExercise` / `sessionPrs` (an offline-built session leaves both empty; records are not warmed, so the Best tile is blank offline), the rest timer is `rest.start(...)` rather than an extracted `startRest`, and the PR moment on sync goes through `buildPrView` + `data.applyPrs` like the online path.
+- **Tasks 13–14 follow the prototype, not the plan, where the prototype is explicit** (it gained `session`, `sync` and `conflict` artboards after this plan was written): the status pill sits at the right of the session header (OFFLINE, or LIVE while mirrored) instead of beside the title; the offline chip is the shell's full-width strip, not a pill; the sync queue is the `sync` artboard (status banner with Retry now, guarantee copy, one row per session) rather than a per-op list; PT Today's Needs you lists an unsynced session. Settings follows the plan; the prototype is silent there. `conflict` is recorded as outstanding in `DESIGN_SYSTEM_GAPS.md`.
+- **Task 15** matches the existing admin idiom (kicker, back link, `ui.button`) rather than the plan's bare `<button>`s; the Device column and the `late` tag sit in the Reps cell.
+- **Task 16, test data.** Client Test has no program any more, so an offline start can only be Freestyle, and the library is online-only. The walk starts Freestyle offline, checks the honest empty state, adds an exercise online, then logs offline. The admin UI was not driven for Step 1 / 8: the mode and beta flags were set by psql (same end state).
+
+### Found by the screen walk (`2eb02d8`)
+
+- **Web never went offline.** NetInfo's web module listens to `navigator.connection` `change` in Chrome and never to window `online` / `offline` (PITFALLS W6). The provider now listens to both and seeds from `navigator.onLine`; the seed also stops a cold offline boot's first reads queueing ~20 s behind supabase-js's auth retries.
+- **A Finish reverted to logging** on the PT's own screen while the server and the client showed it complete: overlapping loads, and prune dropping the local completed copy under a read taken before the Finish (PITFALLS O1). Local is read first, only the newest load lands, and `applyServerSession` is monotonic (engine test `never lets a stale in_progress read regress a completed session`).
+- **The mirror stayed joined offline** in the simulation (PITFALLS O2); `useSessionChannel` now joins only while online, and the session reloads on reconnect.
+- **Offline gaps:** Today's program list and intake flags were not cached (skeletons offline); an empty offline session offered a dead Add exercise (N14); a session not on the device said "not found"; exercise names added online were lost on an offline reload; a stale cached Resume banner pointed at a finished session; the local Next up card had no client name. All fixed.
+
+### Verification
+
+- Harness: 156 pass, ends `ROLLBACK`.
+- `pnpm -r typecheck`, mobile + web lint, web build, shared suite 302 tests.
+- `walk-m4b.mjs` (local skill, `.claude/` is gitignored): 14/14 steps across walks 1–5, psql-checked: W1 `in_progress 3` after drain; W4 `completed 5` with the late set; W3 one server row, the client's local id never created. Only non-network console error: the PT sign-in's 401 `JWT issued at future`, machine clock skew, not M4b.
+
+### Still open
+
+- The native `kvStore.ts` (expo-sqlite) path is not exercised by any test; it waits for a dev-client build (M4d needs one anyway).
+- The conflict artboard (above).
+- Late sets never re-evaluate a PR against sets logged after them (inherited from M4a's edit rule).

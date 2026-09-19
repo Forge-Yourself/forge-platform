@@ -133,7 +133,12 @@ backdrop and that the fill is visible as a shape at all.
 - **Rest strip** — the inline dark strip under the set rows (prototype `session`): 44pt ring, mono time, +30s, Skip; tapping it opens the full-screen timer. `apps/mobile/src/ui/RestStrip.tsx`, ring in `ProgressRing.tsx`. (M4a)
 - **PR moment** — full-screen dark takeover (prototype `pr`), 56px mono record, previous best struck through with a delta pill. `apps/mobile/src/ui/PrMoment.tsx`. Replaces the M4a PR banner. The artboard's Share action waits for M9 comms. (M4a)
 
+## Built (M4b)
+
+- **Offline chip** — the shell's full-width "OFFLINE · 3 TO SYNC" strip (prototype shell, `offline`): 7px dot, 11.5px uppercase, tones offline / syncing / failed, taps into the sync queue. `apps/mobile/src/ui/OfflineChip.tsx`; copy and visibility in `apps/mobile/src/lib/offline/OfflineStatusChip.tsx`. On Today (both personas), Clients, client detail and the session screen. (M4b)
+- **Session status pill** — the right-hand pill in the session header (prototype `session`): OFFLINE with no signal, LIVE while the mirror channel is joined. `apps/mobile/src/ui/LiveBadge.tsx`. (M4b)
+- **Sync queue** — prototype `sync`: status banner with Retry now, the local-first guarantee, one row per session with Queued / Sending / Didn't sync, Retry / Discard on a refused one. Local to `apps/mobile/src/app/(app)/sync-queue.tsx`. (M4b)
+
 ## Outstanding
 
-No prototype-flagged gaps remain. Add new ones here as later milestones
-surface them.
+- **Conflict resolution** — prototype `conflict` (two timestamped values, tap to pick, "Keep both as a note"). M4b has no field-level conflicts to resolve: sets are keyed by client ULID and a server refusal parks the write in the sync queue. The artboard waits until a write can genuinely collide. The `sync` artboard's "1 change needs your decision" row waits with it.
