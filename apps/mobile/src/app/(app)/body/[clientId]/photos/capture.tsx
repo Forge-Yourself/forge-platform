@@ -129,7 +129,7 @@ export default function CapturePhoto() {
             <PoseGuide pose={pose} />
             <View style={{ position: 'absolute', top: theme.space[3], right: theme.space[3] }}>
               <IconButton
-                icon="share"
+                icon="flip"
                 variant="ghost"
                 accessibilityLabel={t('body.photos.capture.flip')}
                 onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}

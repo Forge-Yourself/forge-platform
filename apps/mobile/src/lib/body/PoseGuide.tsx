@@ -18,7 +18,10 @@ export function PoseGuide({ pose }: { pose: PhotoPose }) {
   const side = pose === 'side_left' || pose === 'side_right';
   return (
     <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden style={StyleSheet.absoluteFill}>
-      <Svg viewBox="0 0 300 560" preserveAspectRatio="xMidYMid meet" style={StyleSheet.absoluteFill}>
+      {/* Explicit 100% width AND height: with only a style, react-native-svg on web
+          sizes the element from the viewBox's aspect and overflows the preview,
+          which ignores `meet` and cut the legs off (M4c walk). */}
+      <Svg width="100%" height="100%" viewBox="0 0 300 560" preserveAspectRatio="xMidYMid meet">
         <G
           transform={pose === 'side_right' ? 'translate(300,0) scale(-1,1)' : undefined}
           stroke="#FFFFFF"
