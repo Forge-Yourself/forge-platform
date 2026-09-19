@@ -1185,4 +1185,224 @@ SELECT pg_temp.expect('the admin set the mode to beta', 1,
 SELECT pg_temp.expect('the admin granted PT A the offline beta', 1,
   format('SELECT count(*) FROM public.users WHERE id = %L AND offline_logging_beta', :'pt_a'));
 
+-- =============================================================================
+-- M4c — body metrics, progress photos, the progress-photos bucket
+-- =============================================================================
+\set bm_1  'b4c00000-0000-4000-8000-000000000001'
+\set bm_2  'b4c00000-0000-4000-8000-000000000002'
+\set bm_x  'b4c00000-0000-4000-8000-000000000003'
+\set ph_1  'b4c00000-0000-4000-8000-0000000000a1'
+\set ph_2  'b4c00000-0000-4000-8000-0000000000a2'
+\set ph_3  'b4c00000-0000-4000-8000-0000000000a3'
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Metrics: who writes, who reads, what the CHECKs refuse
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT public.record_body_metric(:'bm_1'::uuid, :'client_row'::uuid, NULL, 70.4, NULL, NULL, NULL);
+SELECT public.record_body_metric(:'bm_1'::uuid, :'client_row'::uuid, NULL, 99, NULL, NULL, NULL);
+SELECT pg_temp.expect('replaying a metric id keeps the first row', 1,
+  format('SELECT count(*) FROM public.body_metrics WHERE id = %L AND weight_kg = 70.4 AND recorded_by_user_id = %L', :'bm_1', :'client_a'));
+SELECT pg_temp.expect_raises('an unknown circumference site is refused',
+  format('SELECT public.record_body_metric(%L::uuid, %L::uuid, NULL, NULL, NULL, ''{"calf": 40}''::jsonb, NULL)', :'bm_x', :'client_row'));
+SELECT pg_temp.expect_raises('a circumference under 10 cm is refused',
+  format('SELECT public.record_body_metric(%L::uuid, %L::uuid, NULL, NULL, NULL, ''{"waist": 5}''::jsonb, NULL)', :'bm_x', :'client_row'));
+SELECT pg_temp.expect_raises('a string circumference is refused',
+  format('SELECT public.record_body_metric(%L::uuid, %L::uuid, NULL, NULL, NULL, ''{"waist": "80"}''::jsonb, NULL)', :'bm_x', :'client_row'));
+SELECT pg_temp.expect_raises('a check-in with no value is refused',
+  format('SELECT public.record_body_metric(%L::uuid, %L::uuid, NULL, NULL, NULL, ''{}''::jsonb, NULL)', :'bm_x', :'client_row'));
+SELECT pg_temp.expect_rls_block('a client cannot insert a metric directly',
+  format('INSERT INTO public.body_metrics (client_id, recorded_by_user_id, weight_kg) VALUES (%L, %L, 70)', :'client_row', :'client_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.record_body_metric(:'bm_2'::uuid, :'client_row'::uuid, NOW() - interval '3 days', NULL, 22.5,
+  '{"waist": 81.5, "hips": 98}'::jsonb, 'post-holiday');
+SELECT pg_temp.expect('a device time older than 24 h is clamped', 1,
+  format('SELECT count(*) FROM public.body_metrics WHERE id = %L AND measured_at >= NOW() - interval ''24 hours 1 minute''', :'bm_2'));
+SELECT pg_temp.expect('the PT reads both check-ins', 2,
+  format('SELECT count(*) FROM public.body_metrics WHERE client_id = %L', :'client_row'));
+SELECT pg_temp.expect_raises('the PT cannot delete a client-recorded metric',
+  format('SELECT public.delete_body_metric(%L::uuid)', :'bm_1'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT reads no metrics', 0,
+  format('SELECT count(*) FROM public.body_metrics WHERE client_id = %L', :'client_row'));
+SELECT pg_temp.expect_raises('another PT cannot record a metric',
+  format('SELECT public.record_body_metric(%L::uuid, %L::uuid, NULL, 70, NULL, NULL, NULL)', :'bm_x', :'client_row'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('an admin reads the metrics', 2,
+  format('SELECT count(*) FROM public.body_metrics WHERE client_id = %L', :'client_row'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.delete_body_metric(:'bm_2'::uuid);
+SELECT public.delete_body_metric(:'bm_2'::uuid);
+SELECT pg_temp.expect('the PT deletes their own metric, and a repeat is a no-op', 0,
+  format('SELECT count(*) FROM public.body_metrics WHERE id = %L', :'bm_2'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Plateau (D8 as corrected): anchored on the latest weight's UTC week, which
+-- must be this week or last; four consecutive weeks; spread of weekly means
+-- under 0.5 % of their mean. Fixtures are written as the superuser.
+-- ─────────────────────────────────────────────────────────────────────────────
+DELETE FROM public.body_metrics WHERE client_id = :'client_row';
+INSERT INTO public.body_metrics (client_id, recorded_by_user_id, weight_kg, measured_at) VALUES
+  (:'client_row', :'client_a', 80.0, NOW()),
+  (:'client_row', :'client_a', 80.2, NOW() - interval '7 days'),
+  (:'client_row', :'client_a', 80.1, NOW() - interval '14 days'),
+  (:'client_row', :'client_a', 80.3, NOW() - interval '21 days');
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('four flat weeks are a plateau', 1,
+  format('SELECT CASE WHEN public.body_plateau(%L::uuid) THEN 1 ELSE 0 END::bigint', :'client_row'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect_raises('another PT cannot ask for the plateau',
+  format('SELECT public.body_plateau(%L::uuid)', :'client_row'));
+RESET ROLE;
+
+UPDATE public.body_metrics SET weight_kg = 84 WHERE client_id = :'client_row' AND measured_at < NOW() - interval '20 days';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('a 4 kg move is not a plateau', 0,
+  format('SELECT CASE WHEN public.body_plateau(%L::uuid) THEN 1 ELSE 0 END::bigint', :'client_row'));
+RESET ROLE;
+
+DELETE FROM public.body_metrics WHERE client_id = :'client_row' AND measured_at < NOW() - interval '20 days';
+SELECT pg_temp.expect('three weeks are not enough for a plateau', 0,
+  format('SELECT CASE WHEN public.body_plateau(%L::uuid) THEN 1 ELSE 0 END::bigint', :'client_row'));
+
+UPDATE public.body_metrics SET measured_at = measured_at - interval '28 days' WHERE client_id = :'client_row';
+INSERT INTO public.body_metrics (client_id, recorded_by_user_id, weight_kg, measured_at)
+VALUES (:'client_row', :'client_a', 80.1, NOW() - interval '49 days');
+SELECT pg_temp.expect('a flat month that ended weeks ago is not flagged', 0,
+  format('SELECT CASE WHEN public.body_plateau(%L::uuid) THEN 1 ELSE 0 END::bigint', :'client_row'));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Photos: upload policy, registration, sharing, who sees rows and objects
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect_raises('registering a photo before its objects exist is refused',
+  format('SELECT public.record_progress_photo(%L::uuid, %L::uuid, ''front'', NULL, FALSE)', :'ph_1', :'client_row'));
+INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES
+  ('progress-photos', :'client_row' || '/' || :'ph_1' || '/full.jpg',  :'client_a'),
+  ('progress-photos', :'client_row' || '/' || :'ph_1' || '/thumb.jpg', :'client_a');
+SELECT pg_temp.expect_rls_block('an object name outside the layout is refused',
+  format('INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES (''progress-photos'', %L, %L)',
+         :'client_row' || '/' || :'ph_1' || '/evil.png', :'client_a'));
+SELECT public.record_progress_photo(:'ph_1'::uuid, :'client_row'::uuid, 'front', NULL, FALSE);
+SELECT public.record_progress_photo(:'ph_1'::uuid, :'client_row'::uuid, 'front', NULL, TRUE);
+SELECT pg_temp.expect('a client photo starts private, and a replay does not change it', 1,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L AND NOT is_shared_with_pt AND taken_by_user_id = %L', :'ph_1', :'client_a'));
+SELECT pg_temp.expect('the client can see their own objects', 2,
+  format('SELECT count(*) FROM storage.objects WHERE bucket_id = ''progress-photos'' AND name LIKE %L', :'client_row' || '/' || :'ph_1' || '/%'));
+SELECT pg_temp.expect_rls_block('a client cannot insert a photo row directly',
+  format('INSERT INTO public.progress_photos (client_id, photo_path, thumbnail_path, pose_type, taken_by_user_id) VALUES (%L, ''a'', ''b'', ''front'', %L)', :'client_row', :'client_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect_rls_block('another PT cannot upload into this client''s folder',
+  format('INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES (''progress-photos'', %L, %L)',
+         :'client_row' || '/' || :'ph_3' || '/full.jpg', :'pt_b'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT cannot see an unshared photo row', 0,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L', :'ph_1'));
+SELECT pg_temp.expect('the PT cannot sign an unshared photo', 0,
+  format('SELECT count(*) FROM storage.objects WHERE name LIKE %L', :'client_row' || '/' || :'ph_1' || '/%'));
+SELECT pg_temp.expect_raises('the PT cannot share a client photo',
+  format('SELECT public.set_photo_shared(%L::uuid, TRUE)', :'ph_1'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('an admin sees the photo row', 1,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L', :'ph_1'));
+SELECT pg_temp.expect('an admin cannot sign the photo', 0,
+  format('SELECT count(*) FROM storage.objects WHERE name LIKE %L', :'client_row' || '/' || :'ph_1' || '/%'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT public.set_photo_shared(:'ph_1'::uuid, TRUE);
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT sees a shared photo row', 1,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L', :'ph_1'));
+SELECT pg_temp.expect('the PT can sign a shared photo', 2,
+  format('SELECT count(*) FROM storage.objects WHERE name LIKE %L', :'client_row' || '/' || :'ph_1' || '/%'));
+INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES
+  ('progress-photos', :'client_row' || '/' || :'ph_2' || '/full.jpg',  :'pt_a'),
+  ('progress-photos', :'client_row' || '/' || :'ph_2' || '/thumb.jpg', :'pt_a');
+SELECT public.record_progress_photo(:'ph_2'::uuid, :'client_row'::uuid, 'side_left', NULL, FALSE);
+SELECT pg_temp.expect('a PT photo is shared whatever the PT passed', 1,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L AND is_shared_with_pt AND taken_by_user_id = %L', :'ph_2', :'pt_a'));
+SELECT pg_temp.expect_raises('the PT cannot delete a client-taken photo',
+  format('SELECT public.delete_progress_photo(%L::uuid)', :'ph_1'));
+SELECT pg_temp.expect_raises('an unknown pose is refused',
+  format('SELECT public.record_progress_photo(%L::uuid, %L::uuid, ''sideways'', NULL, FALSE)', :'ph_3', :'client_row'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT public.set_photo_shared(:'ph_2'::uuid, FALSE);
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the client can hide a PT-taken photo from the PT', 0,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L', :'ph_2'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Deletion: objects go through the Storage API (DELETE + SELECT policies);
+-- the RPC removes the row. storage.allow_delete_query stands in for the
+-- Storage API, which sets it before its own DELETE.
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT set_config('storage.allow_delete_query', 'true', TRUE);
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT removes no objects', 0,
+  format('WITH d AS (DELETE FROM storage.objects WHERE name LIKE %L RETURNING 1) SELECT count(*) FROM d',
+         :'client_row' || '/' || :'ph_2' || '/%'));
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('the client removes a photo''s objects', 2,
+  format('WITH d AS (DELETE FROM storage.objects WHERE name LIKE %L RETURNING 1) SELECT count(*) FROM d',
+         :'client_row' || '/' || :'ph_2' || '/%'));
+SELECT public.delete_progress_photo(:'ph_2'::uuid);
+SELECT public.delete_progress_photo(:'ph_1'::uuid);
+SELECT pg_temp.expect('the client deletes photo rows, including a PT-taken one', 0,
+  format('SELECT count(*) FROM public.progress_photos WHERE client_id = %L', :'client_row'));
+SELECT pg_temp.expect_raises('only the service role lists orphans',
+  $q$SELECT public.progress_photo_orphans(interval '-1 minute')$q$);
+RESET ROLE;
+
+-- NOW() is fixed for the whole transaction, so the objects' created_at equals
+-- it; a negative grace period is how "older than zero" is asked inside one.
+SELECT pg_temp.expect('ph_1''s objects, left behind without a row, are orphans', 2,
+  format('SELECT count(*) FROM public.progress_photo_orphans(interval ''-1 minute'') AS o(name) WHERE o.name LIKE %L',
+         :'client_row' || '/' || :'ph_1' || '/%'));
+SELECT pg_temp.expect('a fresh orphan is not swept inside the grace period', 0,
+  format('SELECT count(*) FROM public.progress_photo_orphans(interval ''24 hours'') AS o(name) WHERE o.name LIKE %L',
+         :'client_row' || '/' || :'ph_1' || '/%'));
+
 ROLLBACK;
