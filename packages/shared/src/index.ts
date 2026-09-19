@@ -6,3 +6,4 @@ export * from './offline/index';
 export * from './body/index';
 export * from './rest/index';
 export * from './voice/index';
+export * from './floor/index';
