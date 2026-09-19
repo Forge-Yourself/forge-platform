@@ -4,3 +4,4 @@ export * from './schemas/index';
 export type { Database } from './database.types';
 export * from './offline/index';
 export * from './body/index';
+export * from './rest/index';
