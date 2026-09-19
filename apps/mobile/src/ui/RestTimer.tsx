@@ -39,8 +39,8 @@ export function formatClock(seconds: number): string {
 /**
  * Prototype `timer` artboard: dark surface regardless of theme (read across a
  * gym), 52px mono time, ring as a secondary cue. Presentational — the clock
- * lives in useRestTimer so the inline strip and this view share one rest.
- * Lock-screen persistence is M4d.
+ * lives in the persisted rest store (useRest), so the inline strip, this view
+ * and the lock screen all show one rest.
  */
 export function RestTimer({ phase, remaining, progress, labels, onToggle, onPlus30, onSkip, onDone }: RestTimerProps) {
   const t = useTheme();

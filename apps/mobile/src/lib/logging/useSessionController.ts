@@ -13,7 +13,6 @@ import {
   type PrType,
   type UnitSystem,
 } from '@forge/shared';
-import { useAudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { useKeepAwake } from 'expo-keep-awake';
 import { router, useFocusEffect } from 'expo-router';
@@ -38,10 +37,8 @@ import {
 } from './sessionModel';
 import { completeWorkoutSession, deleteSet, logSet, type SetRow } from './sessionRpc';
 import { newUlid } from './ulid';
-import { useRestTimer } from './useRestTimer';
+import { useRest } from './useRest';
 import { useSession, type BestSet } from './useSession';
-
-const timerCue = require('../../../assets/sounds/timer-done.wav');
 
 export type Draft = {
   weightKg: number | null;
@@ -133,20 +130,13 @@ export function useSessionController(sessionId: string) {
   // Lazy initialiser: React Compiler's purity rule rejects a bare Date.now()
   // in the render body.
   const [clock, setClock] = useState(() => Date.now());
-  const player = useAudioPlayer(timerCue);
-
-  const onRestZero = useCallback(() => {
-    try {
-      void player.seekTo(0).catch(() => undefined);
-      player.play();
-    } catch {
-      /* cue optional; the haptic is the signal */
-    }
-    haptic('success');
-  }, [player]);
-  const rest = useRestTimer(onRestZero);
 
   const session = data.session;
+  // The rest lives in the shared store, keyed by session: it survives a reload,
+  // a switch on the console and the app going to the background. The zero cue
+  // is the driver's (spec §6.1), because the rest that ends need not be the
+  // client on screen.
+  const rest = useRest(session?.id ?? null);
   const inProgress = session?.status === 'in_progress';
   const viewerId = auth.user?.id ?? '';
   const viewerIsClient = auth.user?.role === 'client';
@@ -279,6 +269,15 @@ export function useSessionController(sessionId: string) {
     };
   }
 
+  /** Lock-screen copy for the rest that follows `set`: "Next: 100 kg × 8", with the client for a PT. */
+  function restLabels(set: { weight_kg: number | null; reps: number | null }, exerciseName: string) {
+    const summary =
+      set.weight_kg === null
+        ? t('logging.session.repsOnly', { reps: set.reps ?? 0 })
+        : `${shownNumber(set.weight_kg, unit)} ${unitLabel(unit)} × ${set.reps ?? '—'}`;
+    return { clientName: viewerIsClient ? null : data.clientName, exerciseName, nextLabel: summary };
+  }
+
   async function submitSet(existing: SetRow | null, values: Draft) {
     if (!session || !current) return;
     const id = existing?.id ?? newUlid();
@@ -344,7 +343,12 @@ export function useSessionController(sessionId: string) {
       setPending((p) => ({ ...p, [id]: { id, error: null, queued: true } }));
       offline.drainNow();
       if (!existing && !input.data.is_warmup) {
-        rest.start(current.restSec ?? DEFAULT_REST_SEC, setNumber + 1, current.targetSets);
+        rest.start(
+          current.restSec ?? DEFAULT_REST_SEC,
+          setNumber + 1,
+          current.targetSets,
+          restLabels(optimistic, exerciseName),
+        );
       }
       return;
     }
@@ -369,7 +373,12 @@ export function useSessionController(sessionId: string) {
       // Spec §6.2: rest follows a working set. A warm-up rolls straight into
       // the next one — nobody waits 90s after an empty-bar set.
       if (!input.data.is_warmup) {
-        rest.start(current.restSec ?? DEFAULT_REST_SEC, setNumber + 1, current.targetSets);
+        rest.start(
+          current.restSec ?? DEFAULT_REST_SEC,
+          setNumber + 1,
+          current.targetSets,
+          restLabels(result.set, exerciseName),
+        );
       }
     }
   }
