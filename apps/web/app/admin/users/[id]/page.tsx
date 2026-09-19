@@ -142,6 +142,11 @@ export default async function AdminUserDetailPage({
   >;
   let sessions: (SessionRow & { setCount: number; loggedBy: string })[] = [];
 
+  type BodyRow = Pick<
+    Database['public']['Tables']['body_metrics']['Row'],
+    'id' | 'measured_at' | 'weight_kg' | 'body_fat_pct' | 'circumferences' | 'recorded_by_user_id'
+  >;
+  let body: { rows: BodyRow[]; photosTotal: number; photosShared: number; plateau: boolean } | null = null;
   let clientRow: { id: string; pt_user_id: string } | null = null;
 
   if (target.role === 'client') {
@@ -205,6 +210,28 @@ export default async function AdminUserDetailPage({
         setCount: counts[r.id] ?? 0,
         loggedBy: names[r.logged_by_user_id] ?? r.logged_by_user_id,
       }));
+
+      const [{ data: bodyRows }, { count: photosTotal }, { count: photosShared }, { data: plateauFlag }] = await Promise.all([
+        supabase
+          .from('body_metrics')
+          .select('id, measured_at, weight_kg, body_fat_pct, circumferences, recorded_by_user_id')
+          .eq('client_id', clientRow.id)
+          .order('measured_at', { ascending: false })
+          .limit(20),
+        supabase.from('progress_photos').select('id', { head: true, count: 'exact' }).eq('client_id', clientRow.id),
+        supabase
+          .from('progress_photos')
+          .select('id', { head: true, count: 'exact' })
+          .eq('client_id', clientRow.id)
+          .eq('is_shared_with_pt', true),
+        supabase.rpc('body_plateau', { p_client_id: clientRow.id }),
+      ]);
+      body = {
+        rows: bodyRows ?? [],
+        photosTotal: photosTotal ?? 0,
+        photosShared: photosShared ?? 0,
+        plateau: plateauFlag === true,
+      };
     }
   }
 
@@ -411,6 +438,44 @@ export default async function AdminUserDetailPage({
                     <td style={ui.td}>
                       <span style={s.status === 'in_progress' ? ui.neutralBadge : ui.badge}>{s.status}</span>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      ) : null}
+      {target.role === 'client' && body ? (
+        <section style={ui.card}>
+          <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Body</h2>
+          <Field label="Progress photos" value={`${body.photosTotal} total · ${body.photosShared} shared with PT`} />
+          <Field label="Weight plateau" value={body.plateau ? 'yes — within 0.5% for 4 weeks' : 'no'} />
+          <p style={ui.muted}>Photos are never shown here: admins see metadata only (M4c spec D9).</p>
+          {body.rows.length === 0 ? (
+            <p style={ui.muted}>No measurements yet.</p>
+          ) : (
+            <table style={ui.table}>
+              <thead>
+                <tr>
+                  <th style={ui.th}>Measured</th>
+                  <th style={ui.th}>Weight (kg)</th>
+                  <th style={ui.th}>Body fat (%)</th>
+                  <th style={ui.th}>Circumferences (cm)</th>
+                  <th style={ui.th}>Recorded by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {body.rows.map((r) => (
+                  <tr key={r.id}>
+                    <td style={ui.td}>{new Date(r.measured_at).toLocaleString()}</td>
+                    <td style={ui.td}>{r.weight_kg ?? '—'}</td>
+                    <td style={ui.td}>{r.body_fat_pct ?? '—'}</td>
+                    <td style={ui.td}>
+                      {r.circumferences && typeof r.circumferences === 'object' && !Array.isArray(r.circumferences)
+                        ? Object.entries(r.circumferences).map(([k, v]) => `${k} ${String(v)}`).join(', ')
+                        : '—'}
+                    </td>
+                    <td style={ui.td}>{r.recorded_by_user_id === id ? 'client' : 'PT'}</td>
                   </tr>
                 ))}
               </tbody>

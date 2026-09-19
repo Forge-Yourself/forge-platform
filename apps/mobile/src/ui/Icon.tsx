@@ -47,7 +47,8 @@ export type IconName =
   | 'edit'
   | 'inbox'
   | 'backspace'
-  | 'minus';
+  | 'minus'
+  | 'flip';
 
 type Glyph = { d: string[]; circles?: [number, number, number][]; fill?: boolean };
 
@@ -109,6 +110,8 @@ const GLYPHS: Record<IconName, Glyph> = {
     ],
   },
   minus: { d: ['M5.2 12h13.6'] },
+  // Switch camera: two arrows chasing each other round a circle.
+  flip: { d: ['M4.5 11a7.5 7.5 0 0 1 13.1-4.4L19.5 8.5', 'M19.5 4v4.5H15', 'M19.5 13a7.5 7.5 0 0 1-13.1 4.4L4.5 15.5', 'M4.5 20v-4.5H9'] },
   inbox: { d: ['M3.5 12.5h4l1.6 2.8h5.8l1.6-2.8h4', 'M6.4 4.5h11.2l2.9 8v5a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2v-5z'] },
 };
 

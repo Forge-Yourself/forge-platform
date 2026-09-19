@@ -1,9 +1,10 @@
-import { weekCompletion } from '@forge/shared';
+import { bodyToDisplay, bodyUnit, formatBody, weekCompletion } from '@forge/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { useAuth } from '../../../../lib/auth/AuthProvider';
+import { useBodySummary } from '../../../../lib/body/useBodySummary';
 import { resendInvite, revokeInvite, setClientState } from '../../../../lib/clients/clientActions';
 import { useClientDetail } from '../../../../lib/clients/useClientDetail';
 import { useAsyncSubmit } from '../../../../lib/forms/useAsyncSubmit';
@@ -140,6 +141,7 @@ export default function ClientDetail() {
   const [startOpen, setStartOpen] = useState(false);
   // Last 3 for the preview; the "See all" route reads the full 50.
   const sessions = useSessionHistory(params.id, 3);
+  const body = useBodySummary(params.id);
   // The footer becomes Resume rather than Start when one of them is still
   // running — starting again would only hand back the same row anyway
   // (start_workout_session resumes), and this says so before the tap.
@@ -386,6 +388,36 @@ export default function ClientDetail() {
                 isLast
               />
             ) : null}
+          </SectionCard>
+        </View>
+
+        <View style={{ gap: theme.space[2] }}>
+          <SectionLabel>{t('body.cardTitle')}</SectionLabel>
+          <SectionCard>
+            <ListRow
+              leading={<Icon name="sliders" size={19} color={theme.colors.textMuted} />}
+              title={
+                body.latestKg === null
+                  ? t('body.cardEmpty')
+                  : `${formatBody(bodyToDisplay('weight', body.latestKg, unitSystem), 'weight', unitSystem)} ${bodyUnit('weight', unitSystem)}`
+              }
+              subtitle={
+                body.delta4wKg === null
+                  ? undefined
+                  : t('body.cardDelta', {
+                      delta: `${body.delta4wKg > 0 ? '+' : ''}${formatBody(bodyToDisplay('weight', body.delta4wKg, unitSystem), 'weight', unitSystem)}`,
+                    })
+              }
+              trailing={body.plateau ? <Tag label={t('body.plateau')} tone="warn" /> : undefined}
+              onPress={() => router.push({ pathname: '/(app)/body/[clientId]', params: { clientId: client.id } })}
+            />
+            <ListRow
+              leading={<Icon name="user" size={19} color={theme.colors.textMuted} />}
+              title={t('body.sharedPhotos')}
+              trailing={<Tag label={String(body.photoCount)} numeric />}
+              onPress={() => router.push({ pathname: '/(app)/body/[clientId]/photos', params: { clientId: client.id } })}
+              isLast
+            />
           </SectionCard>
         </View>
 

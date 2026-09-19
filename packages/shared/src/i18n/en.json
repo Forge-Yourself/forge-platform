@@ -1059,5 +1059,93 @@
       "needsSyncBody_one": "1 change queued",
       "needsSyncBody_other": "{{count}} changes queued"
     }
+  },
+  "body": {
+    "title": "Body metrics",
+    "subtitle": "Last {{weeks}} weeks",
+    "metric": {
+      "weight": "Weight",
+      "body_fat": "Body fat",
+      "waist": "Waist",
+      "hips": "Hips",
+      "chest": "Chest",
+      "arm": "Arm",
+      "thigh": "Thigh",
+      "neck": "Neck"
+    },
+    "window": "{{weeks}}w",
+    "weekLabel": "Wk {{n}}",
+    "chartLabel": "{{metric}} trend",
+    "plateau": "Within 0.5% for 4 weeks",
+    "logToday": "Log today",
+    "firstValue": "First measurement",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "save": "Save measurement",
+    "history": "History",
+    "emptyTitle": "No measurements yet",
+    "emptyBody": "Log the first one below. The chart starts with the second.",
+    "loadError": "Couldn't load measurements.",
+    "saveError": "Couldn't save. Try again.",
+    "needsConnection": "Needs a connection to save",
+    "deleteHint": "Long-press a row you recorded to delete it.",
+    "deleteTitle": "Delete this measurement?",
+    "deleteConfirm": "Delete",
+    "cardTitle": "Body",
+    "cardEmpty": "No measurements yet",
+    "cardDelta": "{{delta}} in 4 weeks",
+    "sharedPhotos": "Shared photos",
+    "photos": {
+      "title": "Progress photos",
+      "take": "Take photos",
+      "compare": "Compare",
+      "all": "All",
+      "pose": {
+        "front": "Front",
+        "back": "Back",
+        "side_left": "Side L",
+        "side_right": "Side R",
+        "custom": "Other"
+      },
+      "private": "Only you can see this",
+      "emptyTitle": "No photos yet",
+      "emptyBody": "Photos taken in the same pose and light make the change visible.",
+      "loadError": "Couldn't load photos.",
+      "unavailable": "Photo unavailable",
+      "capture": {
+        "title": "New photo",
+        "ghost": "Show last photo",
+        "shutter": "Take photo",
+        "retake": "Retake",
+        "use": "Use photo",
+        "library": "Choose from library",
+        "flip": "Switch camera",
+        "share": "Share with my PT",
+        "ptNote": "Photos you take are visible to you and the client. The client can hide them from you.",
+        "needsConnection": "Needs a connection to upload",
+        "uploadError": "Upload failed. Try again.",
+        "permissionTitle": "Camera access is off",
+        "permissionBody": "Allow camera access to take progress photos, or choose one from your library.",
+        "permissionGrant": "Allow camera",
+        "openSettings": "Open settings"
+      },
+      "detail": {
+        "takenByYou": "Taken by you",
+        "takenByPt": "Taken by your PT",
+        "takenByClient": "Taken by the client",
+        "share": "Share with my PT",
+        "delete": "Delete photo",
+        "deleteTitle": "Delete this photo?",
+        "deleteBody": "This removes it for you and your PT.",
+        "error": "Couldn't update the photo."
+      },
+      "compareScreen": {
+        "title": "Compare",
+        "before": "Before",
+        "after": "After",
+        "noWeight": "No weight that week",
+        "needTwo": "Take this pose on two different days to compare."
+      }
+    }
   }
 }

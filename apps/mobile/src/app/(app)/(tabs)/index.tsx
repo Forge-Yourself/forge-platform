@@ -582,6 +582,9 @@ function ClientHome() {
     );
   }
 
+  // Captured once: a narrowed `state.client` does not survive into the onPress closures below.
+  const clientRowId = state.client.id;
+
   const intakeState = state.intake?.state ?? 'pending';
   const waiverSigned = intakeState === 'waiver_signed';
   const needsWaiver = intakeState === 'completed' || intakeState === 'red_flag_review';
@@ -764,6 +767,23 @@ function ClientHome() {
             </SectionCard>
           </View>
         ) : null}
+
+        <View style={{ gap: theme.space[2] }}>
+          <SectionLabel>{t('body.cardTitle')}</SectionLabel>
+          <SectionCard>
+            <ListRow
+              leading={<Icon name="sliders" size={20} color={theme.colors.textMuted} />}
+              title={t('body.title')}
+              onPress={() => router.push({ pathname: '/(app)/body/[clientId]', params: { clientId: clientRowId } })}
+            />
+            <ListRow
+              leading={<Icon name="user" size={20} color={theme.colors.textMuted} />}
+              title={t('body.photos.title')}
+              onPress={() => router.push({ pathname: '/(app)/body/[clientId]/photos', params: { clientId: clientRowId } })}
+              isLast
+            />
+          </SectionCard>
+        </View>
 
         <View style={{ gap: theme.space[2] }}>
           <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
