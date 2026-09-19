@@ -1004,6 +1004,8 @@ export type Database = {
           created_at: string
           id: string
           measured_at: string
+          note: string | null
+          recorded_by_user_id: string
           source: string
           updated_at: string
           weight_kg: number | null
@@ -1015,6 +1017,8 @@ export type Database = {
           created_at?: string
           id?: string
           measured_at?: string
+          note?: string | null
+          recorded_by_user_id: string
           source?: string
           updated_at?: string
           weight_kg?: number | null
@@ -1026,11 +1030,20 @@ export type Database = {
           created_at?: string
           id?: string
           measured_at?: string
+          note?: string | null
+          recorded_by_user_id?: string
           source?: string
           updated_at?: string
           weight_kg?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "body_metrics_recorded_by_user_id_fkey"
+            columns: ["recorded_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_bm_client"
             columns: ["client_id"]
@@ -4961,37 +4974,37 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
-          encryption_key_id: string
           id: string
           is_shared_with_pt: boolean
-          photo_url: string
-          pose_type: string | null
+          photo_path: string
+          pose_type: string
           taken_at: string
-          thumbnail_url: string | null
+          taken_by_user_id: string
+          thumbnail_path: string
           updated_at: string
         }
         Insert: {
           client_id: string
           created_at?: string
-          encryption_key_id: string
           id?: string
           is_shared_with_pt?: boolean
-          photo_url: string
-          pose_type?: string | null
+          photo_path: string
+          pose_type: string
           taken_at?: string
-          thumbnail_url?: string | null
+          taken_by_user_id: string
+          thumbnail_path: string
           updated_at?: string
         }
         Update: {
           client_id?: string
           created_at?: string
-          encryption_key_id?: string
           id?: string
           is_shared_with_pt?: boolean
-          photo_url?: string
-          pose_type?: string | null
+          photo_path?: string
+          pose_type?: string
           taken_at?: string
-          thumbnail_url?: string | null
+          taken_by_user_id?: string
+          thumbnail_path?: string
           updated_at?: string
         }
         Relationships: [
@@ -5000,6 +5013,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progress_photos_taken_by_user_id_fkey"
+            columns: ["taken_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -7241,6 +7261,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      body_circumferences_valid: { Args: { p: Json }; Returns: boolean }
+      body_plateau: { Args: { p_client_id: string }; Returns: boolean }
+      can_delete_progress_photo_object: {
+        Args: { p_name: string }
+        Returns: boolean
+      }
+      can_view_progress_photo_object: {
+        Args: { p_name: string }
+        Returns: boolean
+      }
       claim_client_invites: { Args: never; Returns: number }
       complete_workout_session: {
         Args: {
@@ -7336,6 +7366,8 @@ export type Database = {
         Returns: string
       }
       current_user_role: { Args: never; Returns: string }
+      delete_body_metric: { Args: { p_id: string }; Returns: undefined }
+      delete_progress_photo: { Args: { p_id: string }; Returns: undefined }
       delete_set: { Args: { p_id: string }; Returns: undefined }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
@@ -7606,6 +7638,71 @@ export type Database = {
         }[]
       }
       program_tree: { Args: { p_program_id: string }; Returns: Json }
+      progress_photo_orphans: {
+        Args: { p_limit?: number; p_older_than?: string }
+        Returns: string[]
+      }
+      progress_photo_path_uuid: {
+        Args: { p_name: string; p_part: number }
+        Returns: string
+      }
+      record_body_metric: {
+        Args: {
+          p_body_fat_pct?: number
+          p_circumferences?: Json
+          p_client_id: string
+          p_id: string
+          p_measured_at?: string
+          p_note?: string
+          p_weight_kg?: number
+        }
+        Returns: {
+          body_fat_pct: number | null
+          circumferences: Json | null
+          client_id: string
+          created_at: string
+          id: string
+          measured_at: string
+          note: string | null
+          recorded_by_user_id: string
+          source: string
+          updated_at: string
+          weight_kg: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "body_metrics"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_progress_photo: {
+        Args: {
+          p_client_id: string
+          p_id: string
+          p_pose_type: string
+          p_share?: boolean
+          p_taken_at?: string
+        }
+        Returns: {
+          client_id: string
+          created_at: string
+          id: string
+          is_shared_with_pt: boolean
+          photo_path: string
+          pose_type: string
+          taken_at: string
+          taken_by_user_id: string
+          thumbnail_path: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "progress_photos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       refund_ai_credit: {
         Args: { p_generation_id: string; p_reason?: string }
         Returns: undefined
@@ -7650,6 +7747,27 @@ export type Database = {
         Returns: undefined
       }
       set_initial_role: { Args: { p_role: string }; Returns: undefined }
+      set_photo_shared: {
+        Args: { p_id: string; p_shared: boolean }
+        Returns: {
+          client_id: string
+          created_at: string
+          id: string
+          is_shared_with_pt: boolean
+          photo_path: string
+          pose_type: string
+          taken_at: string
+          taken_by_user_id: string
+          thumbnail_path: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "progress_photos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       st_3dclosestpoint: {
