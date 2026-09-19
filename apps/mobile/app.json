@@ -49,7 +49,22 @@
         }
       ],
       "expo-audio",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Forge uses the camera to take progress photos.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Forge lets you choose a progress photo from your library.",
+          "cameraPermission": "Forge uses the camera to take progress photos."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
