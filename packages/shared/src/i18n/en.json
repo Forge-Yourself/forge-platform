@@ -35,48 +35,39 @@
     "share": "Share"
   },
   "home": {
-    "greetingMorning": "Good morning",
-    "greetingAfternoon": "Good afternoon",
-    "greetingEvening": "Good evening",
-    "stats": {
-      "clients": "Clients",
-      "programs": "Running",
-      "credits": "AI credits"
+    "greetMorning": "Morning",
+    "greetAfternoon": "Afternoon",
+    "greetEvening": "Evening",
+    "greetMorningName": "Morning, {{name}}",
+    "greetAfternoonName": "Afternoon, {{name}}",
+    "greetEveningName": "Evening, {{name}}",
+    "counts": {
+      "today": "Sessions today",
+      "dueToLog": "Due to log",
+      "awaitingIntake": "Awaiting intake"
+    },
+    "nextUp": {
+      "heading": "Next up",
+      "programWeek": "{{program}} · Week {{week}}",
+      "weekShort": "W{{week}}",
+      "resume": "Resume session",
+      "start": "Start session"
+    },
+    "needsYou": {
+      "heading": "Needs you",
+      "emptyTitle": "Invite your first client",
+      "emptyBody": "Send a link — they fill in intake before session one."
     },
     "attention": {
-      "heading": "Needs attention",
       "allClearTitle": "Nothing waiting on you",
       "allClearBody": "Every client is linked, reviewed and programmed.",
       "invited": "Invite not accepted yet",
       "redFlags_one": "1 intake answer to review",
       "redFlags_other": "{{count}} intake answers to review",
       "waiver": "Waiver not signed yet",
-      "noProgram": "No program assigned",
-      "tagInvited": "INVITED",
-      "tagFlags": "REVIEW",
-      "tagWaiver": "WAIVER",
-      "tagProgram": "PROGRAM"
+      "noProgram": "No program assigned"
     },
-    "actions": {
-      "heading": "Quick actions",
-      "invite": "Invite a client",
-      "newProgram": "New program",
-      "aiDraft": "Draft with AI",
-      "library": "Exercises"
-    },
-    "roster": {
-      "heading": "Your roster",
-      "seeAll": "See all",
-      "more_one": "{{count}} more client",
-      "more_other": "{{count}} more clients"
-    },
-    "error": "Couldn't load your dashboard.",
-    "resume": {
-      "title": "Session in progress",
-      "body": "{{name}} · started {{time}}",
-      "bodyNoName": "Started {{time}}",
-      "button": "Resume"
-    }
+    "error": "Couldn't load your dashboard."
   },
   "auth": {
     "signIn": {
@@ -875,12 +866,6 @@
       "error": "Couldn't start the session. Please try again."
     },
     "session": {
-      "finish": "Finish",
-      "setOf": "Set {{n}} of {{total}}",
-      "setN": "Set {{n}}",
-      "last": "Last: {{summary}}",
-      "firstTime": "First time on this exercise",
-      "logSet": "Log this set",
       "addExercise": "Add exercise",
       "noExercises": "No exercises yet",
       "noExercisesBody": "Add one from the library to start logging.",
@@ -892,7 +877,6 @@
       "notePlaceholder": "Anything worth remembering?",
       "warmup": "Warm-up",
       "coachTag": "COACH",
-      "previousSets": "Sets this session",
       "editSet": "Edit set",
       "deleteSet": "Delete set",
       "setSummary": "{{weight}} × {{reps}}",
@@ -903,7 +887,36 @@
       "errorClosed": "This session is already finished.",
       "errorGeneric": "Couldn't save the set. Please try again.",
       "notFound": "Session not found",
-      "notFoundBody": "It may belong to another account, or the link is stale."
+      "notFoundBody": "It may belong to another account, or the link is stale.",
+      "elapsed": "{{time}} elapsed",
+      "subtitle": "{{day}} · {{time}} elapsed",
+      "rxSetsReps": "{{sets}} × {{reps}}",
+      "rxSets": "{{sets}} sets",
+      "rxRpe": "@ RPE {{rpe}}",
+      "rxTempo": "{{tempo}} tempo",
+      "addedToday": "Added this session",
+      "coachCue": "COACH CUE",
+      "lastSession": "LAST SESSION",
+      "best": "BEST",
+      "bestValue": "{{weight}} × {{reps}} · {{date}}",
+      "bestNoReps": "{{weight}} · {{date}}",
+      "firstTimeShort": "First time",
+      "cellReps": "REPS",
+      "warmupShort": "W",
+      "editSetN": "Edit set {{n}}",
+      "logSetN": "Log set {{n}}",
+      "logWarmup": "Log warm-up",
+      "restCaption": "Rest · set {{n}} of {{total}}",
+      "restCaptionSimple": "Rest · set {{n}}",
+      "openTimer": "Open rest timer",
+      "swap": "Swap exercise",
+      "addNote": "Add note",
+      "hideNote": "Hide note",
+      "nextUp": "Next · {{name}}",
+      "lastExercise": "Last exercise",
+      "position": "{{n}} OF {{total}}",
+      "allExercises": "Exercises",
+      "end": "End"
     },
     "timer": {
       "rest": "REST · SET {{n}} OF {{total}}",
@@ -917,14 +930,23 @@
       "resume": "Resume",
       "plus30": "+30s",
       "skip": "Skip rest",
-      "back": "Back to set"
+      "back": "Back to set",
+      "skipShort": "Skip"
     },
     "pr": {
       "weight": "New weight PR · {{value}}",
       "reps": "New rep PR · {{value}} reps",
       "volume": "New volume PR · {{value}}",
       "heading_one": "1 personal record",
-      "heading_other": "{{count}} personal records"
+      "heading_other": "{{count}} personal records",
+      "kicker": "NEW PERSONAL RECORD",
+      "keepGoing": "Keep going",
+      "detail": "× {{reps}} reps",
+      "detailRpe": "× {{reps}} reps @ RPE {{rpe}}",
+      "repsUnit": "reps",
+      "sinceToday": "Set {{date}}",
+      "since_one": "Set {{date}} · 1 day ago",
+      "since_other": "Set {{date}} · {{count}} days ago"
     },
     "finish": {
       "title": "Finish session?",
@@ -934,14 +956,23 @@
       "notesPlaceholder": "Optional",
       "confirm": "Finish session",
       "cancel": "Keep logging",
-      "error": "Couldn't finish the session. Please try again."
+      "error": "Couldn't finish the session. Please try again.",
+      "draft_one": "1 working set, {{volume}} moved.",
+      "draft_other": "{{count}} working sets, {{volume}} moved.",
+      "draftPr": "New best on {{exercise}}: {{value}}."
     },
     "summary": {
-      "duration": "Duration",
-      "sets": "Sets",
-      "volume": "Volume",
-      "prs": "PRs",
-      "completedAt": "Completed {{date}}",
+      "title": "Session complete",
+      "durationK": "DURATION",
+      "setsK": "SETS",
+      "volumeK": "{{unit}} VOLUME",
+      "whatWasDone": "What was done",
+      "noteFor": "Note for {{name}}",
+      "specDone": "{{sets}} × {{reps}} · {{weight}}",
+      "specDoneNoWeight": "{{sets}} × {{reps}}",
+      "specPartial": "{{done}} of {{total}} sets",
+      "specSkipped": "Not done",
+      "ratingA11y": "Rated {{rating}} of 5",
       "noSets": "No sets were logged.",
       "notes": "Notes"
     },

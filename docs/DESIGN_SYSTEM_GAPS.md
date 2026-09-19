@@ -127,9 +127,11 @@ backdrop and that the fill is visible as a shape at all.
 
 ## Built (M4a)
 
-- **Set stepper** — the −5 / −1 / +1 / +5 row under the logging focus card, 56pt keys, unit-agnostic labels. `apps/mobile/src/ui/SetStepper.tsx`. (M4a)
-- **Rest timer** — full-screen dark surface, 52px mono countdown from a target timestamp, running / paused / complete, +30s and Skip. `apps/mobile/src/ui/RestTimer.tsx`. Lock-screen variant outstanding (M4d). (M4a)
-- **PR banner** — 2.5s ember slide-in over the focus card, one line per record. `apps/mobile/src/ui/PrBanner.tsx`. (M4a)
+- **Set stepper** — −5 / −1 / +1 / +5 keys, 56pt, unit-agnostic labels. `apps/mobile/src/ui/SetStepper.tsx`. Unused since the prototype `session` pass (the set row replaced the focus card); kept for the M4c ± measurement stepper. (M4a)
+- **Logging set row** — prototype `session`'s "one logging-row component": set number, three mono cells (weight / reps / RPE), 44pt check; done / current / planned states. Local to `apps/mobile/src/app/(app)/sessions/[id]/index.tsx` as `SetRowView`. The artboard's mic button is voice logging, outstanding (M4d). (M4a)
+- **Rest timer** — full-screen dark surface (prototype `timer`), 52px mono countdown, running / paused / complete, +30s and Skip rest. Presentational: `apps/mobile/src/ui/RestTimer.tsx`, clock in `apps/mobile/src/lib/logging/useRestTimer.ts`. Lock-screen variant outstanding (M4d). (M4a)
+- **Rest strip** — the inline dark strip under the set rows (prototype `session`): 44pt ring, mono time, +30s, Skip; tapping it opens the full-screen timer. `apps/mobile/src/ui/RestStrip.tsx`, ring in `ProgressRing.tsx`. (M4a)
+- **PR moment** — full-screen dark takeover (prototype `pr`), 56px mono record, previous best struck through with a delta pill. `apps/mobile/src/ui/PrMoment.tsx`. Replaces the M4a PR banner. The artboard's Share action waits for M9 comms. (M4a)
 
 ## Outstanding
 

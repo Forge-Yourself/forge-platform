@@ -35,16 +35,30 @@
     "share": "مشاركة"
   },
   "home": {
-    "greetingMorning": "صباح الخير",
-    "greetingAfternoon": "مساء الخير",
-    "greetingEvening": "مساء الخير",
-    "stats": {
-      "clients": "العملاء",
-      "programs": "الجارية",
-      "credits": "رصيد الذكاء"
+    "greetMorning": "صباح الخير",
+    "greetAfternoon": "مساء الخير",
+    "greetEvening": "مساء الخير",
+    "greetMorningName": "صباح الخير، {{name}}",
+    "greetAfternoonName": "مساء الخير، {{name}}",
+    "greetEveningName": "مساء الخير، {{name}}",
+    "counts": {
+      "today": "جلسات اليوم",
+      "dueToLog": "بانتظار التسجيل",
+      "awaitingIntake": "بانتظار الاستبيان"
+    },
+    "nextUp": {
+      "heading": "التالي",
+      "programWeek": "{{program}} · الأسبوع {{week}}",
+      "weekShort": "أ{{week}}",
+      "resume": "استئناف الجلسة",
+      "start": "ابدأ الجلسة"
+    },
+    "needsYou": {
+      "heading": "يحتاجك",
+      "emptyTitle": "ادعُ عميلك الأول",
+      "emptyBody": "أرسل رابطاً — يملأ الاستبيان قبل الجلسة الأولى."
     },
     "attention": {
-      "heading": "يحتاج انتباهك",
       "allClearTitle": "لا شيء ينتظرك",
       "allClearBody": "كل عميل مرتبط ومُراجَع ولديه برنامج.",
       "invited": "لم تُقبل الدعوة بعد",
@@ -55,36 +69,9 @@
       "redFlags_many": "{{count}} إجابة في الاستبيان تحتاج مراجعة",
       "redFlags_other": "{{count}} إجابة في الاستبيان تحتاج مراجعة",
       "waiver": "لم يُوقَّع الإقرار بعد",
-      "noProgram": "لا يوجد برنامج مُسنَد",
-      "tagInvited": "مدعو",
-      "tagFlags": "مراجعة",
-      "tagWaiver": "إقرار",
-      "tagProgram": "برنامج"
+      "noProgram": "لا يوجد برنامج مُسنَد"
     },
-    "actions": {
-      "heading": "إجراءات سريعة",
-      "invite": "دعوة عميل",
-      "newProgram": "برنامج جديد",
-      "aiDraft": "مسودة بالذكاء الاصطناعي",
-      "library": "التمارين"
-    },
-    "roster": {
-      "heading": "قائمة عملائك",
-      "seeAll": "عرض الكل",
-      "more_zero": "لا عملاء إضافيين",
-      "more_one": "عميل واحد إضافي",
-      "more_two": "عميلان إضافيان",
-      "more_few": "{{count}} عملاء إضافيون",
-      "more_many": "{{count}} عميلًا إضافيًا",
-      "more_other": "{{count}} عميل إضافي"
-    },
-    "error": "تعذّر تحميل لوحتك.",
-    "resume": {
-      "title": "جلسة جارية",
-      "body": "{{name}} · بدأت {{time}}",
-      "bodyNoName": "بدأت {{time}}",
-      "button": "استئناف"
-    }
+    "error": "تعذّر تحميل لوحتك."
   },
   "auth": {
     "signIn": {
@@ -899,12 +886,6 @@
       "error": "تعذّر بدء الجلسة. حاول مرة أخرى."
     },
     "session": {
-      "finish": "إنهاء",
-      "setOf": "المجموعة {{n}} من {{total}}",
-      "setN": "المجموعة {{n}}",
-      "last": "آخر مرة: {{summary}}",
-      "firstTime": "أول مرة في هذا التمرين",
-      "logSet": "سجّل هذه المجموعة",
       "addExercise": "أضف تمريناً",
       "noExercises": "لا توجد تمارين بعد",
       "noExercisesBody": "أضف تمريناً من المكتبة لبدء التسجيل.",
@@ -916,7 +897,6 @@
       "notePlaceholder": "أي شيء يستحق التذكّر؟",
       "warmup": "إحماء",
       "coachTag": "المدرب",
-      "previousSets": "مجموعات هذه الجلسة",
       "editSet": "تعديل المجموعة",
       "deleteSet": "حذف المجموعة",
       "setSummary": "{{weight}} × {{reps}}",
@@ -927,7 +907,36 @@
       "errorClosed": "انتهت هذه الجلسة بالفعل.",
       "errorGeneric": "تعذّر حفظ المجموعة. حاول مرة أخرى.",
       "notFound": "الجلسة غير موجودة",
-      "notFoundBody": "قد تكون لحساب آخر، أو أن الرابط قديم."
+      "notFoundBody": "قد تكون لحساب آخر، أو أن الرابط قديم.",
+      "elapsed": "مضى {{time}}",
+      "subtitle": "{{day}} · مضى {{time}}",
+      "rxSetsReps": "{{sets}} × {{reps}}",
+      "rxSets": "{{sets}} مجموعات",
+      "rxRpe": "@ RPE {{rpe}}",
+      "rxTempo": "إيقاع {{tempo}}",
+      "addedToday": "أُضيف في هذه الجلسة",
+      "coachCue": "توجيه المدرب",
+      "lastSession": "الجلسة السابقة",
+      "best": "الأفضل",
+      "bestValue": "{{weight}} × {{reps}} · {{date}}",
+      "bestNoReps": "{{weight}} · {{date}}",
+      "firstTimeShort": "أول مرة",
+      "cellReps": "تكرار",
+      "warmupShort": "إ",
+      "editSetN": "تعديل المجموعة {{n}}",
+      "logSetN": "سجّل المجموعة {{n}}",
+      "logWarmup": "سجّل الإحماء",
+      "restCaption": "راحة · المجموعة {{n}} من {{total}}",
+      "restCaptionSimple": "راحة · المجموعة {{n}}",
+      "openTimer": "افتح مؤقت الراحة",
+      "swap": "بدّل التمرين",
+      "addNote": "أضف ملاحظة",
+      "hideNote": "أخفِ الملاحظة",
+      "nextUp": "التالي · {{name}}",
+      "lastExercise": "آخر تمرين",
+      "position": "{{n}} من {{total}}",
+      "allExercises": "التمارين",
+      "end": "إنهاء"
     },
     "timer": {
       "rest": "راحة · المجموعة {{n}} من {{total}}",
@@ -941,7 +950,8 @@
       "resume": "متابعة",
       "plus30": "+30 ث",
       "skip": "تخطّي الراحة",
-      "back": "عودة إلى المجموعة"
+      "back": "عودة إلى المجموعة",
+      "skipShort": "تخطَّ"
     },
     "pr": {
       "weight": "رقم قياسي جديد في الوزن · {{value}}",
@@ -952,7 +962,19 @@
       "heading_two": "رقمان قياسيان",
       "heading_few": "{{count}} أرقام قياسية",
       "heading_many": "{{count}} رقماً قياسياً",
-      "heading_other": "{{count}} رقم قياسي"
+      "heading_other": "{{count}} رقم قياسي",
+      "kicker": "رقم قياسي شخصي جديد",
+      "keepGoing": "تابع",
+      "detail": "× {{reps}} تكرارات",
+      "detailRpe": "× {{reps}} تكرارات @ RPE {{rpe}}",
+      "repsUnit": "تكرارات",
+      "sinceToday": "سُجّل {{date}}",
+      "since_zero": "سُجّل {{date}}",
+      "since_one": "سُجّل {{date}} · منذ يوم",
+      "since_two": "سُجّل {{date}} · منذ يومين",
+      "since_few": "سُجّل {{date}} · منذ {{count}} أيام",
+      "since_many": "سُجّل {{date}} · منذ {{count}} يوماً",
+      "since_other": "سُجّل {{date}} · منذ {{count}} يوم"
     },
     "finish": {
       "title": "إنهاء الجلسة؟",
@@ -962,14 +984,27 @@
       "notesPlaceholder": "اختياري",
       "confirm": "إنهاء الجلسة",
       "cancel": "متابعة التسجيل",
-      "error": "تعذّر إنهاء الجلسة. حاول مرة أخرى."
+      "error": "تعذّر إنهاء الجلسة. حاول مرة أخرى.",
+      "draft_zero": "لا مجموعات أساسية، {{volume}} إجمالاً.",
+      "draft_one": "مجموعة أساسية واحدة، {{volume}} إجمالاً.",
+      "draft_two": "مجموعتان أساسيتان، {{volume}} إجمالاً.",
+      "draft_few": "{{count}} مجموعات أساسية، {{volume}} إجمالاً.",
+      "draft_many": "{{count}} مجموعة أساسية، {{volume}} إجمالاً.",
+      "draft_other": "{{count}} مجموعة أساسية، {{volume}} إجمالاً.",
+      "draftPr": "رقم جديد في {{exercise}}: {{value}}."
     },
     "summary": {
-      "duration": "المدة",
-      "sets": "المجموعات",
-      "volume": "الحجم",
-      "prs": "الأرقام القياسية",
-      "completedAt": "اكتملت {{date}}",
+      "title": "اكتملت الجلسة",
+      "durationK": "المدة",
+      "setsK": "المجموعات",
+      "volumeK": "الحجم ({{unit}})",
+      "whatWasDone": "ما تم إنجازه",
+      "noteFor": "ملاحظة لـ{{name}}",
+      "specDone": "{{sets}} × {{reps}} · {{weight}}",
+      "specDoneNoWeight": "{{sets}} × {{reps}}",
+      "specPartial": "{{done}} من {{total}} مجموعات",
+      "specSkipped": "لم يُنجز",
+      "ratingA11y": "التقييم {{rating}} من 5",
       "noSets": "لم تُسجَّل أي مجموعات.",
       "notes": "ملاحظات"
     },

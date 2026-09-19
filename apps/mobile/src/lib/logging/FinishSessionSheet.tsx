@@ -9,16 +9,21 @@ export type FinishSessionSheetProps = {
   visible: boolean;
   submitting: boolean;
   error: string | null;
+  /**
+   * Prototype `summary`: the note is pre-written from the session so the PT
+   * edits rather than composes. Remount the sheet (key) to reseed it.
+   */
+  initialNotes?: string;
   onConfirm: (rating: number | null, notes: string | null) => void;
   onDismiss: () => void;
 };
 
 /** Spec §5.3: rating 1–5 (chk_ws_rating) and a note, then complete_workout_session. */
-export function FinishSessionSheet({ visible, submitting, error, onConfirm, onDismiss }: FinishSessionSheetProps) {
+export function FinishSessionSheet({ visible, submitting, error, initialNotes = '', onConfirm, onDismiss }: FinishSessionSheetProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [rating, setRating] = useState<number | null>(null);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(initialNotes);
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onDismiss}>

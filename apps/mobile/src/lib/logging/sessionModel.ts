@@ -1,4 +1,5 @@
 import type { ProgramTree } from '@forge/shared';
+import { slotFor } from '../programs/draftModel';
 import type { SetRow } from './sessionRpc';
 
 export type ProgramDay = ProgramTree['weeks'][number]['days'][number];
@@ -15,6 +16,12 @@ export type SessionExercise = {
   targetWeightKg: number | null;
   targetRpe: number | null;
   restSec: number | null;
+  /** "3-1-1" — the programmed tempo, shown in the prescription line. */
+  tempo: string | null;
+  /** The PT's note on this exercise in the program — the client's coach cue. */
+  cue: string | null;
+  /** Builder slot, A1 / A2 / B1…; null for an exercise added during the session. */
+  slot: string | null;
   programmed: boolean;
 };
 
@@ -34,8 +41,8 @@ export function buildExerciseList(
 ): SessionExercise[] {
   const out: SessionExercise[] = [];
   const seen = new Set<string>();
-  for (const block of day?.blocks ?? []) {
-    for (const ex of block.exercises) {
+  for (const [blockIndex, block] of (day?.blocks ?? []).entries()) {
+    for (const [rowIndex, ex] of block.exercises.entries()) {
       if (seen.has(ex.exercise_id)) continue;
       seen.add(ex.exercise_id);
       out.push({
@@ -48,6 +55,9 @@ export function buildExerciseList(
         targetWeightKg: ex.target_weight_kg,
         targetRpe: ex.target_rpe,
         restSec: ex.rest_sec ?? block.rest_between_sec ?? null,
+        tempo: ex.tempo_prescribed,
+        cue: ex.notes,
+        slot: slotFor(blockIndex, rowIndex),
         programmed: true,
       });
     }
@@ -66,6 +76,9 @@ export function buildExerciseList(
       targetWeightKg: null,
       targetRpe: null,
       restSec: null,
+      tempo: null,
+      cue: null,
+      slot: null,
       programmed: false,
     });
   }
@@ -118,4 +131,15 @@ export function initialExerciseIndex(list: readonly SessionExercise[], sets: rea
     return ex.targetSets === null ? done === 0 : done < ex.targetSets;
   });
   return i === -1 ? 0 : i;
+}
+
+/** Working sets logged so far for one exercise (warm-ups do not count toward the target). */
+export function workingCount(sets: readonly SetRow[], exerciseId: string): number {
+  return setsFor(sets, exerciseId).filter((s) => !s.is_warmup).length;
+}
+
+/** Done means the prescription was met; with no prescription, any working set counts. */
+export function isExerciseDone(exercise: SessionExercise, sets: readonly SetRow[]): boolean {
+  const n = workingCount(sets, exercise.exerciseId);
+  return exercise.targetSets === null ? n > 0 : n >= exercise.targetSets;
 }

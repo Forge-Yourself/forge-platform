@@ -1,10 +1,16 @@
-import { programTreeSchema } from '@forge/shared';
+import { programTreeSchema, type PrType } from '@forge/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import type { ProgramDay } from './sessionModel';
 import type { SetRow, WorkoutSessionRow } from './sessionRpc';
 
 export type ExerciseName = { name: string; name_ar: string | null };
+
+/** The client's heaviest set on an exercise — the "Best" tile and the PR moment's struck-through line. */
+export type BestSet = { weightKg: number; reps: number | null; achievedAt: string };
+
+/** One record this session set, from exercise_prs (the server is the authority on what counts). */
+export type SessionPr = { exerciseId: string; prType: PrType; value: number; setId: string };
 
 export type SessionData = {
   loading: boolean;
@@ -21,17 +27,22 @@ export type SessionData = {
   names: Record<string, ExerciseName>;
   /** Most recent completed working set per exercise, from earlier sessions. */
   lastByExercise: Record<string, SetRow>;
+  bestByExercise: Record<string, BestSet>;
+  sessionPrs: SessionPr[];
   refetch: () => Promise<void>;
   /** Optimistic local edits between refetches. */
   applySet: (set: SetRow) => void;
   removeSet: (id: string) => void;
+  /** Fold a log_set PR result into bestByExercise / sessionPrs without a refetch. */
+  applyPrs: (set: SetRow, types: readonly PrType[]) => void;
   ensureNames: (exerciseIds: string[]) => Promise<void>;
 };
 
-type Loaded = Omit<SessionData, 'refetch' | 'applySet' | 'removeSet' | 'ensureNames'>;
+type Loaded = Omit<SessionData, 'refetch' | 'applySet' | 'removeSet' | 'applyPrs' | 'ensureNames'>;
 
 const EMPTY: Loaded = {
   loading: false, error: null, session: null, sets: [], day: null, clientName: null, names: {}, lastByExercise: {},
+  bestByExercise: {}, sessionPrs: [],
 };
 
 async function fetchNames(ids: string[]): Promise<Record<string, ExerciseName>> {
@@ -116,7 +127,56 @@ async function fetchSession(sessionId: string): Promise<Loaded> {
     }
   }
 
-  return { loading: false, error: null, session, sets: setRows, day, clientName, names, lastByExercise };
+  // Records: every weight PR row for these exercises (heaviest first, so the
+  // first per exercise is the best), plus whatever this session's own sets set.
+  const bestByExercise: Record<string, BestSet> = {};
+  let sessionPrs: SessionPr[] = [];
+  if (exerciseIds.length > 0) {
+    const setIds = setRows.map((s) => s.id);
+    const [{ data: weightPrs }, { data: mine }] = await Promise.all([
+      supabase
+        .from('exercise_prs')
+        .select('exercise_id, value, set_id, achieved_at')
+        .eq('client_id', session.client_id)
+        .eq('pr_type', 'weight')
+        .in('exercise_id', exerciseIds)
+        .order('value', { ascending: false }),
+      setIds.length > 0
+        ? supabase.from('exercise_prs').select('exercise_id, pr_type, value, set_id').in('set_id', setIds)
+        : Promise.resolve({ data: [] as { exercise_id: string; pr_type: string; value: number; set_id: string | null }[] }),
+    ]);
+    const bestRows = new Map<string, { value: number; set_id: string | null; achieved_at: string }>();
+    for (const row of weightPrs ?? []) if (!bestRows.has(row.exercise_id)) bestRows.set(row.exercise_id, row);
+    const bestSetIds = [...bestRows.values()].map((r) => r.set_id).filter((id): id is string => id !== null);
+    const { data: bestSets } =
+      bestSetIds.length > 0
+        ? await supabase.from('sets').select('id, reps').in('id', bestSetIds)
+        : { data: [] as { id: string; reps: number | null }[] };
+    const repsBySet = new Map((bestSets ?? []).map((r) => [r.id, r.reps]));
+    for (const [exerciseId, row] of bestRows) {
+      bestByExercise[exerciseId] = {
+        weightKg: Number(row.value),
+        reps: row.set_id ? (repsBySet.get(row.set_id) ?? null) : null,
+        achievedAt: row.achieved_at,
+      };
+    }
+    sessionPrs = (mine ?? [])
+      .filter((r): r is typeof r & { set_id: string } => r.set_id !== null)
+      .map((r) => ({ exerciseId: r.exercise_id, prType: r.pr_type as PrType, value: Number(r.value), setId: r.set_id }));
+  }
+
+  return {
+    loading: false,
+    error: null,
+    session,
+    sets: setRows,
+    day,
+    clientName,
+    names,
+    lastByExercise,
+    bestByExercise,
+    sessionPrs,
+  };
 }
 
 export function useSession(sessionId: string | undefined): SessionData {
@@ -161,10 +221,31 @@ export function useSession(sessionId: string | undefined): SessionData {
     setState((prev) => ({ ...prev, sets: prev.sets.filter((s) => s.id !== id) }));
   }, []);
 
+  const applyPrs = useCallback((set: SetRow, types: readonly PrType[]) => {
+    if (types.length === 0) return;
+    setState((prev) => {
+      const bestByExercise =
+        types.includes('weight') && set.weight_kg !== null
+          ? {
+              ...prev.bestByExercise,
+              [set.exercise_id]: { weightKg: set.weight_kg, reps: set.reps, achievedAt: set.created_at },
+            }
+          : prev.bestByExercise;
+      const added: SessionPr[] = types.map((prType) => ({
+        exerciseId: set.exercise_id,
+        prType,
+        value:
+          prType === 'weight' ? (set.weight_kg ?? 0) : prType === 'reps' ? (set.reps ?? 0) : (set.weight_kg ?? 0) * (set.reps ?? 0),
+        setId: set.id,
+      }));
+      return { ...prev, bestByExercise, sessionPrs: [...prev.sessionPrs, ...added] };
+    });
+  }, []);
+
   const ensureNames = useCallback(async (exerciseIds: string[]) => {
     const fetched = await fetchNames(exerciseIds);
     setState((prev) => ({ ...prev, names: { ...prev.names, ...fetched } }));
   }, []);
 
-  return { ...state, refetch, applySet, removeSet, ensureNames };
+  return { ...state, refetch, applySet, removeSet, applyPrs, ensureNames };
 }

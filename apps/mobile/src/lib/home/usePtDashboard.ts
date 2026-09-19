@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useClientList, type ClientListItem } from '../clients/useClientList';
-import { useProgramList } from '../programs/useProgramList';
+import { useProgramList, type ProgramListItem } from '../programs/useProgramList';
 import { supabase } from '../supabase';
 
 /** Why a client is on the Today list. Ordered by how early it blocks the work. */
@@ -24,6 +24,12 @@ export type PtDashboardData = {
   activeClients: ClientListItem[];
   /** Assigned, non-draft programs currently running. */
   runningProgramCount: number;
+  runningPrograms: ProgramListItem[];
+  /**
+   * Roster clients whose intake is not through the waiver yet. RLS hides an
+   * intake row until it is submitted, so "no row" counts as awaiting too.
+   */
+  awaitingIntakeCount: number;
   attention: AttentionItem[];
 };
 
@@ -117,10 +123,15 @@ export function usePtDashboard(ptUserId: string | undefined): PtDashboardData {
     [clients.items],
   );
 
-  const runningProgramCount = useMemo(
-    () => programs.items.filter((p) => p.state === 'active').length,
+  const runningPrograms = useMemo(
+    () => programs.items.filter((p) => p.state === 'active'),
     [programs.items],
   );
+
+  const awaitingIntakeCount = useMemo(() => {
+    const signed = new Set(flags.rows.filter((f) => f.state === 'waiver_signed').map((f) => f.clientId));
+    return activeClients.filter((c) => !signed.has(c.id)).length;
+  }, [activeClients, flags.rows]);
 
   const attention = useMemo(() => {
     const flagByClient = new Map(flags.rows.map((f) => [f.clientId, f]));
@@ -154,7 +165,9 @@ export function usePtDashboard(ptUserId: string | undefined): PtDashboardData {
     loading: clients.loading || programs.loading || flagsLoading,
     error: clients.error ?? programs.error ?? flags.error,
     activeClients,
-    runningProgramCount,
+    runningProgramCount: runningPrograms.length,
+    runningPrograms,
+    awaitingIntakeCount,
     attention,
   };
 }

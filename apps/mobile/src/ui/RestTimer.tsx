@@ -1,7 +1,7 @@
 import { colorSchemes } from '@forge/shared';
-import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import { ProgressRing } from './ProgressRing';
 import { Text } from './Text';
 
 export type RestTimerState = 'running' | 'paused' | 'complete';
@@ -19,82 +19,40 @@ export type RestTimerLabels = {
 };
 
 export type RestTimerProps = {
-  /** Total rest in seconds; the timer runs from `startedAt` so background time counts. */
-  seconds: number;
-  startedAt: number;
+  phase: RestTimerState;
+  /** Whole seconds left. */
+  remaining: number;
+  /** 0 → 1 as the rest elapses. */
+  progress: number;
   labels: RestTimerLabels;
-  onDone: () => void;
+  onToggle: () => void;
+  onPlus30: () => void;
   onSkip: () => void;
-  onZero?: () => void;
+  /** "Back to set" — closes the full-screen view once the rest is over. */
+  onDone: () => void;
 };
+
+export function formatClock(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
 
 /**
  * Prototype `timer` artboard: dark surface regardless of theme (read across a
- * gym), 52px mono time, ring as a secondary cue. The countdown is derived from
- * a target timestamp, not a decrementing counter, so a phone that sleeps for
- * 40s shows 40s less when it wakes. Pausing stores the remaining ms and
- * resuming sets a new target. Lock-screen persistence is M4d.
+ * gym), 52px mono time, ring as a secondary cue. Presentational — the clock
+ * lives in useRestTimer so the inline strip and this view share one rest.
+ * Lock-screen persistence is M4d.
  */
-export function RestTimer({ seconds, startedAt, labels, onDone, onSkip, onZero }: RestTimerProps) {
+export function RestTimer({ phase, remaining, progress, labels, onToggle, onPlus30, onSkip, onDone }: RestTimerProps) {
   const t = useTheme();
   const dark = colorSchemes.dark;
-  const [target, setTarget] = useState(startedAt + seconds * 1000);
-  const [pausedRemaining, setPausedRemaining] = useState<number | null>(null);
-  const [now, setNow] = useState(() => Date.now());
-  const firedZero = useRef(false);
-
-  const remainingMs = pausedRemaining ?? Math.max(0, target - now);
-  const remaining = Math.ceil(remainingMs / 1000);
-  const state: RestTimerState = pausedRemaining !== null ? 'paused' : remaining === 0 ? 'complete' : 'running';
-
-  useEffect(() => {
-    if (state !== 'running') return;
-    const id = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, [state]);
-
-  useEffect(() => {
-    if (state === 'complete' && !firedZero.current) {
-      firedZero.current = true;
-      onZero?.();
-    }
-  }, [state, onZero]);
-
-  const total = Math.max(1, (target - startedAt) / 1000);
-  const fraction = Math.min(1, Math.max(0, remainingMs / 1000 / total));
-  const mm = Math.floor(remaining / 60);
-  const ss = String(remaining % 60).padStart(2, '0');
-  const fg = state === 'complete' ? dark.successAccent : state === 'paused' ? dark.textSecondary : dark.accent;
-
-  function toggle() {
-    if (state === 'complete') {
-      onDone();
-      return;
-    }
-    if (pausedRemaining === null) {
-      setPausedRemaining(remainingMs);
-    } else {
-      setTarget(Date.now() + pausedRemaining);
-      setPausedRemaining(null);
-      setNow(Date.now());
-    }
-  }
-
-  function plus30() {
-    if (pausedRemaining !== null) {
-      setPausedRemaining(pausedRemaining + 30_000);
-    } else {
-      setTarget((v) => Math.max(v, Date.now()) + 30_000);
-      firedZero.current = false;
-    }
-  }
+  const fg = phase === 'complete' ? dark.successAccent : phase === 'paused' ? dark.textSecondary : dark.accent;
 
   return (
-    <View style={{ flex: 1, backgroundColor: dark.surfaceSunken, padding: t.space[5], paddingBottom: t.space[6] }}>
+    <View style={{ flex: 1, backgroundColor: dark.surfaceSunken, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 22 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={{ color: dark.accentText, fontSize: 10.5, fontWeight: '700', letterSpacing: 1.4 }}>{labels.kicker}</Text>
-          <Text variant="bodyBold" style={{ color: dark.textPrimary }}>
+          <Text numberOfLines={1} style={{ color: dark.textPrimary, fontSize: 16, fontWeight: '700' }}>
             {labels.exercise}
           </Text>
         </View>
@@ -113,75 +71,56 @@ export function RestTimer({ seconds, startedAt, labels, onDone, onSkip, onZero }
         </Pressable>
       </View>
 
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.space[3] }}>
-        <View
-          style={{
-            width: 216,
-            height: 216,
-            borderRadius: 108,
-            backgroundColor: dark.surface,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 6,
-            borderColor: dark.surfaceRaised,
-          }}
-        >
-          {/* Ring: a top arc whose opacity tracks the fraction. Secondary cue only — the number is the signal. */}
-          <View
-            style={{
-              position: 'absolute',
-              top: -6,
-              left: -6,
-              right: -6,
-              bottom: -6,
-              borderRadius: 108,
-              borderWidth: 6,
-              borderColor: 'transparent',
-              borderTopColor: fg,
-              opacity: 0.3 + 0.7 * fraction,
-            }}
-          />
-          <Text numeric style={{ color: fg, fontSize: 52, fontWeight: '700', lineHeight: 56 }}>
-            {mm}:{ss}
-          </Text>
-          <Text style={{ color: dark.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.4, marginTop: 4 }}>
-            {labels.state[state]}
-          </Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <View style={{ width: 216, height: 216, borderRadius: 108, backgroundColor: dark.surface }}>
+          <ProgressRing size={216} stroke={6} progress={progress} color={fg} trackColor={dark.surfaceRaised}>
+            <View style={{ alignItems: 'center' }}>
+              <Text
+                numeric
+                style={{ color: fg, fontSize: 52, fontWeight: '700', lineHeight: 56 }}
+              >
+                {formatClock(remaining)}
+              </Text>
+              <Text style={{ color: dark.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.4, marginTop: 4 }}>
+                {labels.state[phase]}
+              </Text>
+            </View>
+          </ProgressRing>
         </View>
         <Text style={{ color: dark.textMuted, textAlign: 'center', maxWidth: 250, fontSize: 13.5 }}>{labels.hint}</Text>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: t.space[3] }}>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
         <Pressable
           accessibilityRole="button"
-          onPress={toggle}
+          onPress={phase === 'complete' ? onDone : onToggle}
           style={{
             flex: 1,
             minHeight: 56,
-            borderRadius: t.radius.md,
-            backgroundColor: state === 'complete' ? dark.successAccent : dark.accent,
+            borderRadius: 12,
+            backgroundColor: phase === 'complete' ? dark.successAccent : dark.accent,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Text variant="bodyBold" style={{ color: dark.onAccent, fontSize: 16 }}>
-            {state === 'complete' ? labels.back : state === 'paused' ? labels.resume : labels.pause}
+          <Text style={{ color: dark.onAccent, fontSize: 16, fontWeight: '700' }}>
+            {phase === 'complete' ? labels.back : phase === 'paused' ? labels.resume : labels.pause}
           </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={plus30}
+          onPress={onPlus30}
           style={{
             minHeight: 56,
             paddingHorizontal: 20,
-            borderRadius: t.radius.md,
+            borderRadius: 12,
             borderWidth: 1.5,
             borderColor: dark.border,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Text numeric variant="bodyBold" style={{ color: dark.textPrimary }}>
+          <Text numeric style={{ color: dark.textPrimary, fontSize: 15, fontWeight: '700' }}>
             {labels.plus30}
           </Text>
         </Pressable>
