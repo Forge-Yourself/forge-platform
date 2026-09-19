@@ -556,7 +556,7 @@ export function useSessionController(sessionId: string) {
     editing, setEditing, finishOpen, setFinishOpen, finishDraft, setFinishDraft, finishing, finishError,
     clock, rest, openPicker, submitSet, removeSet, draftNote, finish, buildPrView, goBack,
     dayTitle, title, weightLabel, elapsed, subtitle, allSets, warmups, workingSets, setNo,
-    planned, futureRows, last, best, next, reps, rx, setLine, canLog, logLabel, restCaption,
+    futureRows, last, best, next, reps, rx, setLine, canLog, logLabel, restCaption,
   };
 }
 
