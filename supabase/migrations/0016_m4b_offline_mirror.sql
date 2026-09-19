@@ -321,3 +321,120 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.complete_workout_session(UUID, INTEGER, TEXT, TIMESTAMPTZ) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.complete_workout_session(UUID, INTEGER, TEXT, TIMESTAMPTZ) TO authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Live mirror. Triggers on the partitioned parent fire for every partition.
+-- The table name is passed as a literal: TG_TABLE_NAME would be the partition
+-- (sets_2026_09), which the app should never need to know about.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.broadcast_set_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  PERFORM realtime.broadcast_changes(
+    'session:' || COALESCE(NEW.workout_session_id, OLD.workout_session_id)::TEXT,
+    TG_OP, TG_OP, 'sets', 'public', NEW, OLD
+  );
+  RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trg_sets_broadcast
+  AFTER INSERT OR UPDATE OR DELETE ON public.sets
+  FOR EACH ROW EXECUTE FUNCTION public.broadcast_set_change();
+
+CREATE OR REPLACE FUNCTION public.broadcast_session_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  PERFORM realtime.broadcast_changes(
+    'session:' || NEW.id::TEXT, TG_OP, TG_OP, 'workout_sessions', 'public', NEW, OLD
+  );
+  RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trg_workout_sessions_broadcast
+  AFTER UPDATE ON public.workout_sessions
+  FOR EACH ROW EXECUTE FUNCTION public.broadcast_session_change();
+
+REVOKE EXECUTE ON FUNCTION public.broadcast_set_change()     FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.broadcast_session_change() FROM PUBLIC, anon, authenticated;
+
+-- Private channel authorization: Realtime runs this SELECT as the joining
+-- user with realtime.topic() set to the channel name. No INSERT policy.
+CREATE POLICY forge_session_topic_read ON realtime.messages
+  FOR SELECT TO authenticated
+  USING (
+    realtime.messages.extension = 'broadcast'
+    AND realtime.topic() ~ '^session:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    AND (
+      public.is_session_participant(substring(realtime.topic() FROM 9)::UUID)
+      OR public.is_admin()
+    )
+  );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Offline-logging switch (spec §4.3).
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE public.app_config (
+  key        TEXT        PRIMARY KEY,
+  value      JSONB       NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_by UUID                              -- app-enforced FK -> users.id
+);
+ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY app_config_select ON public.app_config FOR SELECT TO authenticated USING (TRUE);
+REVOKE INSERT, UPDATE, DELETE ON public.app_config FROM anon, authenticated;
+
+INSERT INTO public.app_config (key, value) VALUES ('offline_logging', '"off"'::jsonb);
+
+-- Deliberately absent from 0003's GRANT UPDATE (…) ON users column list, so a
+-- user can read it on their own row but never set it.
+ALTER TABLE public.users ADD COLUMN offline_logging_beta BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE OR REPLACE FUNCTION public.admin_set_offline_logging(p_mode TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'not authorized' USING ERRCODE = '42501';
+  END IF;
+  IF p_mode NOT IN ('off', 'beta', 'all') THEN
+    RAISE EXCEPTION 'unknown offline mode' USING ERRCODE = '23514';
+  END IF;
+  UPDATE public.app_config
+     SET value = to_jsonb(p_mode), updated_at = NOW(), updated_by = auth.uid()
+   WHERE key = 'offline_logging';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_set_offline_beta(p_user_id UUID, p_enabled BOOLEAN)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'not authorized' USING ERRCODE = '42501';
+  END IF;
+  UPDATE public.users SET offline_logging_beta = p_enabled, updated_at = NOW() WHERE id = p_user_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_set_offline_logging(TEXT)        FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.admin_set_offline_beta(UUID, BOOLEAN)  FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION public.admin_set_offline_logging(TEXT)        TO authenticated;
+GRANT  EXECUTE ON FUNCTION public.admin_set_offline_beta(UUID, BOOLEAN)  TO authenticated;
+
+COMMIT;
