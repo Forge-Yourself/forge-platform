@@ -177,6 +177,27 @@ export type Database = {
           },
         ]
       }
+      app_config: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -6815,6 +6836,7 @@ export type Database = {
           is_deleted: boolean
           is_quarantined: boolean
           locale: string
+          offline_logging_beta: boolean
           onboarding_completed: boolean
           phone: string | null
           quarantine_reason: string | null
@@ -6837,6 +6859,7 @@ export type Database = {
           is_deleted?: boolean
           is_quarantined?: boolean
           locale?: string
+          offline_logging_beta?: boolean
           onboarding_completed?: boolean
           phone?: string | null
           quarantine_reason?: string | null
@@ -6859,6 +6882,7 @@ export type Database = {
           is_deleted?: boolean
           is_quarantined?: boolean
           locale?: string
+          offline_logging_beta?: boolean
           onboarding_completed?: boolean
           phone?: string | null
           quarantine_reason?: string | null
@@ -7200,6 +7224,14 @@ export type Database = {
             }
             Returns: string
           }
+      admin_set_offline_beta: {
+        Args: { p_enabled: boolean; p_user_id: string }
+        Returns: undefined
+      }
+      admin_set_offline_logging: {
+        Args: { p_mode: string }
+        Returns: undefined
+      }
       archive_program: { Args: { p_program_id: string }; Returns: undefined }
       assign_program: {
         Args: {
@@ -7211,7 +7243,12 @@ export type Database = {
       }
       claim_client_invites: { Args: never; Returns: number }
       complete_workout_session: {
-        Args: { p_notes?: string; p_rating?: number; p_session_id: string }
+        Args: {
+          p_completed_at?: string
+          p_notes?: string
+          p_rating?: number
+          p_session_id: string
+        }
         Returns: {
           booking_id: string | null
           client_id: string
@@ -8197,7 +8234,12 @@ export type Database = {
         Returns: unknown
       }
       start_workout_session: {
-        Args: { p_client_id: string; p_program_day_id?: string }
+        Args: {
+          p_client_id: string
+          p_id?: string
+          p_program_day_id?: string
+          p_started_at?: string
+        }
         Returns: {
           booking_id: string | null
           client_id: string

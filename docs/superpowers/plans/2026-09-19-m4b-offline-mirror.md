@@ -770,7 +770,7 @@ git commit -m "feat(db): 0016 broadcast mirror, topic policy, offline switch"
 
 ## Task 4 · Apply, prove, regenerate types
 
-- [ ] **Step 1: Push the migration**
+- [x] **Step 1: Push the migration**
 
 ```powershell
 $env:COREPACK_INTEGRITY_KEYS='0'
@@ -780,7 +780,7 @@ $env:COREPACK_INTEGRITY_KEYS='0'
 
 Expected: `0016_m4b_offline_mirror` listed on both local and remote. If the push fails with `must be owner of table messages`, the `realtime.messages` policy needs the `supabase_admin` path. Stop and report it; do not work around it with a service-role broadcast.
 
-- [ ] **Step 2: Run the harness, expect every assertion to pass**
+- [x] **Step 2: Run the harness, expect every assertion to pass**
 
 ```bash
 "/c/Program Files/PostgreSQL/18/bin/psql" "$PGURL" -w -v ON_ERROR_STOP=1 -f db/rls_assertions.sql 2>&1 | grep -c "^psql.*pass\|NOTICE:  pass"
@@ -789,7 +789,7 @@ Expected: `0016_m4b_offline_mirror` listed on both local and remote. If the push
 
 Expected: no `FAIL`, last line `ROLLBACK`. If only `a set insert broadcast on the session topic` fails, today's `realtime.messages` partition does not exist yet (Realtime creates them). Check with `SELECT tablename FROM pg_tables WHERE schemaname='realtime' AND tablename LIKE 'messages_%' ORDER BY 1 DESC LIMIT 3;` and record the result in the As-built section. Do not delete the assertion.
 
-- [ ] **Step 3: Regenerate types**
+- [x] **Step 3: Regenerate types**
 
 ```powershell
 pnpm types:gen
@@ -798,7 +798,7 @@ git diff --stat packages/shared/src/database.types.ts
 
 Expected: `start_workout_session` Args gain `p_id?` and `p_started_at?`; `complete_workout_session` gains `p_completed_at?`; `app_config` table; `users.offline_logging_beta`; two `admin_set_*` functions.
 
-- [ ] **Step 4: Typecheck the monorepo; fix the one expected break**
+- [x] **Step 4: Typecheck the monorepo; fix the one expected break**
 
 ```powershell
 pnpm -r typecheck
@@ -806,7 +806,7 @@ pnpm -r typecheck
 
 Expected: pass. The new params are optional, so `sessionRpc.ts` still compiles.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/shared/src/database.types.ts
@@ -4172,6 +4172,6 @@ Everything in spec §11, plus: offline PR banner at tap time, adding an off-prog
 
 Filled in at Task 17. Recorded as found:
 
-- **Task 4 not yet run (2026-09-19).** Tasks 1-3 and 5-8 are committed; `supabase db push` of `0016` to the live project was held for the user's explicit go-ahead. Tasks 9+ depend on the regenerated types, so they wait on it.
+- **Task 4, realtime partitions.** `0016` applied 2026-09-19. The first harness run failed only at `a set insert broadcast on the session topic`: `realtime.messages` had no partitions at all, because the Realtime service creates its daily `messages_YYYY_MM_DD` partitions only after a tenant has had a channel join, and nobody had ever subscribed on this project. `realtime.send` swallowed the insert error as `WARNING: no partition of relation "messages" found for row`. The `postgres` role cannot create partitions in `realtime` (`permission denied for schema realtime`), so the harness cannot self-heal. One anon-key `supabase.channel(...).subscribe()` created 2026-09-18 through 09-22 and the harness then passed in full (156). In production the app's own channel joins keep them rolling; with nobody subscribed a dropped broadcast has no listener anyway. If the harness ever fails on that one assertion after a quiet spell, join a channel once and rerun.
 - **Task 7, `enqueue` after a failed start.** The plan's engine queued a new op for a session whose `start` had already failed as `pending`. It would replay against a session that never existed, fail permanently with "session not found", and `retry(start)` would not free it (that only resets `start_failed` entries). `enqueue` now parks such an op as `failed` / `start_failed`, both for a new entry and a coalesced one. Test: `an op queued after its start failed waits with it, and retries with it` (21 engine tests, not 20).
 - **Task 7, test typing.** `tsconfig.base.json` has `noUncheckedIndexedAccess`, so the plan's `q[0].args` / `head.state` style indexing did not typecheck. Narrowed with a destructure or `!`; assertions unchanged.
