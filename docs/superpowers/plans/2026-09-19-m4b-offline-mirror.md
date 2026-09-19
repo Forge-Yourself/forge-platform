@@ -91,7 +91,7 @@
 **Files:**
 - Modify: `db/rls_assertions.sql`
 
-- [ ] **Step 1: Flip the M4a completed-session assertion**
+- [x] **Step 1: Flip the M4a completed-session assertion**
 
 Replace this block (in the M4a section, right after `workout_complete was audited once`):
 
@@ -115,7 +115,7 @@ SELECT pg_temp.expect('log_set appends a late set to a completed session', 1,
 RESET ROLE;
 ```
 
-- [ ] **Step 2: Append the M4b block immediately above the final `ROLLBACK;`**
+- [x] **Step 2: Append the M4b block immediately above the final `ROLLBACK;`**
 
 ```sql
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -253,7 +253,7 @@ SELECT pg_temp.expect('the admin granted PT A the offline beta', 1,
   format('SELECT count(*) FROM public.users WHERE id = %L AND offline_logging_beta', :'pt_a'));
 ```
 
-- [ ] **Step 3: Run the harness and confirm it fails at the first M4b-dependent line**
+- [x] **Step 3: Run the harness and confirm it fails at the first M4b-dependent line**
 
 ```bash
 set -a && . ./.env && set +a
@@ -264,7 +264,7 @@ export PGPASSWORD="$SUPABASE_DB_PASSWORD"
 
 Expected: every pre-M4b `pass` line prints, then a failure at `log_set appends a late set to a completed session` (the RPC still raises `session is not in progress`). Everything runs inside `ROLLBACK`, so nothing persists.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add db/rls_assertions.sql
@@ -278,7 +278,7 @@ git commit -m "test(db): M4b harness block (failing until 0016)"
 **Files:**
 - Create: `supabase/migrations/0016_m4b_offline_mirror.sql`
 
-- [ ] **Step 1: Write the header and the new `start_workout_session`**
+- [x] **Step 1: Write the header and the new `start_workout_session`**
 
 ```sql
 -- =============================================================================
@@ -395,7 +395,7 @@ REVOKE EXECUTE ON FUNCTION public.start_workout_session(UUID, UUID, UUID, TIMEST
 GRANT EXECUTE ON FUNCTION public.start_workout_session(UUID, UUID, UUID, TIMESTAMPTZ) TO authenticated;
 ```
 
-- [ ] **Step 2: Append `log_set` with the widened status check**
+- [x] **Step 2: Append `log_set` with the widened status check**
 
 The body is `0015`'s with one changed condition. It is repeated in full because `CREATE OR REPLACE` replaces the whole body.
 
@@ -528,7 +528,7 @@ $$;
 
 (The grants from `0015` survive `CREATE OR REPLACE`; no re-grant needed.)
 
-- [ ] **Step 3: Append `delete_set` and the new `complete_workout_session`**
+- [x] **Step 3: Append `delete_set` and the new `complete_workout_session`**
 
 ```sql
 CREATE OR REPLACE FUNCTION public.delete_set(p_id CHAR(26))
@@ -620,7 +620,7 @@ GRANT EXECUTE ON FUNCTION public.complete_workout_session(UUID, INTEGER, TEXT, T
 
 Note on the clamp: when `started_at` is itself older than 24 h (a session left open for days), `GREATEST(v_started, NOW() − 24 h, …)` still floors at `NOW() − 24 h`, which is after `v_started`, so `completed_at ≥ started_at` holds.
 
-- [ ] **Step 4: Commit (migration is not applied until Task 4)**
+- [x] **Step 4: Commit (migration is not applied until Task 4)**
 
 ```bash
 git add supabase/migrations/0016_m4b_offline_mirror.sql
@@ -634,7 +634,7 @@ git commit -m "feat(db): 0016 RPCs — client session id, device times, late set
 **Files:**
 - Modify: `supabase/migrations/0016_m4b_offline_mirror.sql` (append before nothing; the file has no `COMMIT;` yet)
 
-- [ ] **Step 1: Append the broadcast triggers and topic policy**
+- [x] **Step 1: Append the broadcast triggers and topic policy**
 
 ```sql
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -696,7 +696,7 @@ CREATE POLICY forge_session_topic_read ON realtime.messages
   );
 ```
 
-- [ ] **Step 2: Append the switch and commit the transaction**
+- [x] **Step 2: Append the switch and commit the transaction**
 
 ```sql
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -759,7 +759,7 @@ GRANT  EXECUTE ON FUNCTION public.admin_set_offline_beta(UUID, BOOLEAN)  TO auth
 COMMIT;
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add supabase/migrations/0016_m4b_offline_mirror.sql
@@ -820,7 +820,7 @@ git commit -m "chore(shared): regenerate types for 0016"
 - Create: `packages/shared/src/offline/types.ts`, `classify.ts`, `classify.test.ts`, `availability.ts`, `availability.test.ts`, `index.ts`
 - Modify: `packages/shared/src/index.ts`
 
-- [ ] **Step 1: Write `types.ts`**
+- [x] **Step 1: Write `types.ts`**
 
 ```ts
 import type { Database } from '../database.types';
@@ -899,7 +899,7 @@ export interface KvStore {
 }
 ```
 
-- [ ] **Step 2: Write the failing `classify.test.ts`**
+- [x] **Step 2: Write the failing `classify.test.ts`**
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -945,7 +945,7 @@ describe('backoffMs', () => {
 });
 ```
 
-- [ ] **Step 3: Run it and see it fail**
+- [x] **Step 3: Run it and see it fail**
 
 ```powershell
 pnpm --filter @forge/shared test -- offline/classify
@@ -953,7 +953,7 @@ pnpm --filter @forge/shared test -- offline/classify
 
 Expected: FAIL, `Cannot find module './classify'`.
 
-- [ ] **Step 4: Write `classify.ts`**
+- [x] **Step 4: Write `classify.ts`**
 
 ```ts
 import type { RpcError } from './types';
@@ -990,7 +990,7 @@ export function backoffMs(attempts: number): number {
 }
 ```
 
-- [ ] **Step 5: Run it and see it pass**
+- [x] **Step 5: Run it and see it pass**
 
 ```powershell
 pnpm --filter @forge/shared test -- offline/classify
@@ -998,7 +998,7 @@ pnpm --filter @forge/shared test -- offline/classify
 
 Expected: PASS, 7 tests.
 
-- [ ] **Step 6: Write the failing `availability.test.ts`**
+- [x] **Step 6: Write the failing `availability.test.ts`**
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -1030,7 +1030,7 @@ describe('resolveOfflineLogging', () => {
 });
 ```
 
-- [ ] **Step 7: Run it and see it fail, then write `availability.ts`**
+- [x] **Step 7: Run it and see it fail, then write `availability.ts`**
 
 ```ts
 export type OfflineMode = 'off' | 'beta' | 'all';
@@ -1060,7 +1060,7 @@ pnpm --filter @forge/shared test -- offline/availability
 
 Expected: PASS, 7 tests.
 
-- [ ] **Step 8: Write `offline/index.ts` (it grows in Tasks 6 and 7) and export it**
+- [x] **Step 8: Write `offline/index.ts` (it grows in Tasks 6 and 7) and export it**
 
 ```ts
 export * from './types';
@@ -1074,7 +1074,7 @@ Append to `packages/shared/src/index.ts`:
 export * from './offline/index';
 ```
 
-- [ ] **Step 9: Typecheck and commit**
+- [x] **Step 9: Typecheck and commit**
 
 ```powershell
 pnpm --filter @forge/shared typecheck
@@ -1091,7 +1091,7 @@ git commit -m "feat(shared): offline types, error classifier, availability resol
 - Create: `packages/shared/src/offline/order.ts`, `order.test.ts`, `memoryStore.ts`
 - Modify: `packages/shared/src/offline/index.ts`
 
-- [ ] **Step 1: Add a failing decode test to `schemas/ulid.test.ts`**
+- [x] **Step 1: Add a failing decode test to `schemas/ulid.test.ts`**
 
 Add `ulidTimeMs` to the existing `import { … } from './ulid'` line, then append:
 
@@ -1107,7 +1107,7 @@ describe('ulidTimeMs', () => {
 });
 ```
 
-- [ ] **Step 2: Run, see it fail, then add to `schemas/ulid.ts`**
+- [x] **Step 2: Run, see it fail, then add to `schemas/ulid.ts`**
 
 ```ts
 /** The 48-bit millisecond timestamp in the first 10 chars. NaN if not a ULID. */
@@ -1125,7 +1125,7 @@ pnpm --filter @forge/shared test -- schemas/ulid
 
 Expected: PASS.
 
-- [ ] **Step 3: Write the failing `offline/order.test.ts`**
+- [x] **Step 3: Write the failing `offline/order.test.ts`**
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -1161,7 +1161,7 @@ describe('displayNumbers', () => {
 });
 ```
 
-- [ ] **Step 4: Run, see it fail, then write `offline/order.ts`**
+- [x] **Step 4: Run, see it fail, then write `offline/order.ts`**
 
 ```ts
 type Orderable = { id: string; exercise_id: string; is_warmup: boolean };
@@ -1200,7 +1200,7 @@ pnpm --filter @forge/shared test -- offline/order
 
 Expected: PASS, 3 tests.
 
-- [ ] **Step 5: Write `offline/memoryStore.ts`**
+- [x] **Step 5: Write `offline/memoryStore.ts`**
 
 ```ts
 import type { KvStore, KvTable, KvWrite } from './types';
@@ -1242,7 +1242,7 @@ export class MemoryKvStore implements KvStore {
 }
 ```
 
-- [ ] **Step 6: Export and commit**
+- [x] **Step 6: Export and commit**
 
 Append to `offline/index.ts`:
 
@@ -1266,7 +1266,7 @@ git commit -m "feat(shared): ULID time decode, client-time set ordering, memory 
 - Create: `packages/shared/src/offline/engine.ts`, `engine.test.ts`
 - Modify: `packages/shared/src/offline/index.ts`
 
-- [ ] **Step 1: Write the failing `engine.test.ts`**
+- [x] **Step 1: Write the failing `engine.test.ts`**
 
 ```ts
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -1575,7 +1575,7 @@ describe('merging server rows', () => {
 });
 ```
 
-- [ ] **Step 2: Run it and see it fail**
+- [x] **Step 2: Run it and see it fail**
 
 ```powershell
 pnpm --filter @forge/shared test -- offline/engine
@@ -1583,7 +1583,7 @@ pnpm --filter @forge/shared test -- offline/engine
 
 Expected: FAIL, `Cannot find module './engine'`.
 
-- [ ] **Step 3: Write `engine.ts`**
+- [x] **Step 3: Write `engine.ts`**
 
 ```ts
 import { backoffMs, classifyError } from './classify';
@@ -2015,7 +2015,7 @@ export class SyncEngine {
 }
 ```
 
-- [ ] **Step 4: Run and see it pass**
+- [x] **Step 4: Run and see it pass**
 
 ```powershell
 pnpm --filter @forge/shared test -- offline/engine
@@ -2023,7 +2023,7 @@ pnpm --filter @forge/shared test -- offline/engine
 
 Expected: PASS, 20 tests. If `never coalesces into the entry on the wire` reports `['log_set']` only, `enqueue` is filtering on `state` rather than `seq !== this.inflight`. Fix the filter, not the test.
 
-- [ ] **Step 5: Export, run the whole shared suite, commit**
+- [x] **Step 5: Export, run the whole shared suite, commit**
 
 Append to `offline/index.ts`:
 
@@ -2045,7 +2045,7 @@ git commit -m "feat(shared): SyncEngine — outbox, replay, id rewrite, merge ru
 **Files:**
 - Modify: `packages/shared/src/i18n/en.json`, `packages/shared/src/i18n/ar.json`
 
-- [ ] **Step 1: Add `logging.offline` as the last key of the `logging` object in `en.json`**
+- [x] **Step 1: Add `logging.offline` as the last key of the `logging` object in `en.json`**
 
 ```json
 "offline": {
@@ -2079,7 +2079,7 @@ git commit -m "feat(shared): SyncEngine — outbox, replay, id rewrite, merge ru
 }
 ```
 
-- [ ] **Step 2: Add `settings.offline` as the last key of the `settings` object in `en.json`**
+- [x] **Step 2: Add `settings.offline` as the last key of the `settings` object in `en.json`**
 
 ```json
 "offline": {
@@ -2101,7 +2101,7 @@ git commit -m "feat(shared): SyncEngine — outbox, replay, id rewrite, merge ru
 }
 ```
 
-- [ ] **Step 3: Add the same two objects to `ar.json`, same positions and key order**
+- [x] **Step 3: Add the same two objects to `ar.json`, same positions and key order**
 
 `logging.offline`:
 
@@ -2185,7 +2185,7 @@ git commit -m "feat(shared): SyncEngine — outbox, replay, id rewrite, merge ru
 
 `opStart` has its no-name variant `opStartNoName` (PITFALLS I3). The chip's `{{time}}` has `chipOfflineNever` for the never-warmed case.
 
-- [ ] **Step 4: Run the i18n parity test**
+- [x] **Step 4: Run the i18n parity test**
 
 ```powershell
 pnpm --filter @forge/shared test -- i18n
@@ -2193,7 +2193,7 @@ pnpm --filter @forge/shared test -- i18n
 
 Expected: PASS. A failure naming a plural category means an `ar` form is missing; add it, don't remove the `en` one.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/shared/src/i18n
@@ -4170,4 +4170,8 @@ Everything in spec §11, plus: offline PR banner at tap time, adding an off-prog
 
 ## As built — deviations from this plan
 
-Filled in at Task 17.
+Filled in at Task 17. Recorded as found:
+
+- **Task 4 not yet run (2026-09-19).** Tasks 1-3 and 5-8 are committed; `supabase db push` of `0016` to the live project was held for the user's explicit go-ahead. Tasks 9+ depend on the regenerated types, so they wait on it.
+- **Task 7, `enqueue` after a failed start.** The plan's engine queued a new op for a session whose `start` had already failed as `pending`. It would replay against a session that never existed, fail permanently with "session not found", and `retry(start)` would not free it (that only resets `start_failed` entries). `enqueue` now parks such an op as `failed` / `start_failed`, both for a new entry and a coalesced one. Test: `an op queued after its start failed waits with it, and retries with it` (21 engine tests, not 20).
+- **Task 7, test typing.** `tsconfig.base.json` has `noUncheckedIndexedAccess`, so the plan's `q[0].args` / `head.state` style indexing did not typecheck. Narrowed with a destructure or `!`; assertions unchanged.
