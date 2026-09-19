@@ -1157,6 +1157,45 @@ SELECT pg_temp.expect_rls_block('nobody can broadcast on a session topic',
 RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Presence on session topics (0018). Participants track and read; admins do
+-- neither (an inspector must not show up as a device on the client's mirror).
+-- ─────────────────────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT set_config('realtime.topic', 'session:' || :'m4b_s1', TRUE);
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('the client tracks presence on their session topic', 1,
+  format('WITH i AS (INSERT INTO realtime.messages (topic, extension, payload, event, private) VALUES (%L, ''presence'', ''{}'', ''track'', TRUE) RETURNING 1) SELECT count(*) FROM i',
+         'session:' || :'m4b_s1'));
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT tracks presence on the session topic', 1,
+  format('WITH i AS (INSERT INTO realtime.messages (topic, extension, payload, event, private) VALUES (%L, ''presence'', ''{}'', ''track'', TRUE) RETURNING 1) SELECT count(*) FROM i',
+         'session:' || :'m4b_s1'));
+SELECT pg_temp.expect('the PT reads presence on the session topic', 1,
+  format('SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END::bigint FROM realtime.messages WHERE topic = %L AND extension = ''presence''',
+         'session:' || :'m4b_s1'));
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect_rls_block('another PT cannot track presence on the session topic',
+  format('INSERT INTO realtime.messages (topic, extension, payload, event, private) VALUES (%L, ''presence'', ''{}'', ''track'', TRUE)',
+         'session:' || :'m4b_s1'));
+SELECT pg_temp.expect('another PT reads no presence', 0,
+  format('SELECT count(*) FROM realtime.messages WHERE topic = %L AND extension = ''presence''', 'session:' || :'m4b_s1'));
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect_rls_block('an admin cannot track presence on a session topic',
+  format('INSERT INTO realtime.messages (topic, extension, payload, event, private) VALUES (%L, ''presence'', ''{}'', ''track'', TRUE)',
+         'session:' || :'m4b_s1'));
+SELECT pg_temp.expect('an admin reads no presence', 0,
+  format('SELECT count(*) FROM realtime.messages WHERE topic = %L AND extension = ''presence''', 'session:' || :'m4b_s1'));
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect_rls_block('presence does not open broadcast: still nobody broadcasts',
+  format('INSERT INTO realtime.messages (topic, extension, payload, event, private) VALUES (%L, ''broadcast'', ''{}'', ''x'', TRUE)',
+         'session:' || :'m4b_s1'));
+SELECT set_config('realtime.topic', 'session:0192f000-0000-7000-8000-0000000000ff', TRUE);
+SELECT pg_temp.expect_rls_block('presence on a topic that is not a session the caller is in',
+  format('INSERT INTO realtime.messages (topic, extension, payload, event, private) VALUES (%L, ''presence'', ''{}'', ''track'', TRUE)',
+         'session:0192f000-0000-7000-8000-0000000000ff'));
+RESET ROLE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Offline-logging switch
 -- ─────────────────────────────────────────────────────────────────────────────
 SET LOCAL ROLE authenticated;
