@@ -3,8 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { SessionList } from '../../lib/logging/SessionList';
 import { useSessionHistory } from '../../lib/logging/useSessionHistory';
+import { NeedsConnection } from '../../lib/offline/NeedsConnection';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Banner, Button, EmptyState, NavHeader, Screen, Skeleton } from '../../ui';
+
+export default function MySessions() {
+  return (
+    <NeedsConnection pushed>
+      <MySessionsInner />
+    </NeedsConnection>
+  );
+}
 
 /**
  * The client's own workout history — the "See all" behind Recent workouts on
@@ -17,7 +26,7 @@ import { Banner, Button, EmptyState, NavHeader, Screen, Skeleton } from '../../u
  * Back is `dismissTo` (PITFALLS N15) — Today is a tab, so there may be nothing
  * to pop on a cold deep link.
  */
-export default function MySessions() {
+function MySessionsInner() {
   const { t } = useTranslation();
   const theme = useTheme();
   const history = useSessionHistory(undefined);

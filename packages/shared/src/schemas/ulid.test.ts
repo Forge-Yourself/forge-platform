@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isUlid, makeUlid, ULID_REGEX } from './ulid';
+import { isUlid, makeUlid, ULID_REGEX, ulidTimeMs } from './ulid';
 
 const zeros = new Uint8Array(10);
 const ones = new Uint8Array(10).fill(0xff);
@@ -35,5 +35,15 @@ describe('isUlid', () => {
     expect(isUlid('01J8RZ0000000000000000AAAI')).toBe(false); // I is not in the alphabet
     expect(isUlid('01J8RZ0000000000000000AAA')).toBe(false); // 25 chars
     expect(isUlid('01j8rz0000000000000000aaaa')).toBe(false); // lower case
+  });
+});
+
+describe('ulidTimeMs', () => {
+  it('round-trips the timestamp makeUlid encoded', () => {
+    const t = 1_758_000_000_123;
+    expect(ulidTimeMs(makeUlid(t, new Uint8Array(10)))).toBe(t);
+  });
+  it('is NaN for something that is not a ULID', () => {
+    expect(ulidTimeMs('nope')).toBeNaN();
   });
 });

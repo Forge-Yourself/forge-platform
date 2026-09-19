@@ -37,3 +37,11 @@ export function makeUlid(nowMs: number, randomBytes: Uint8Array): string {
   }
   return time + rand;
 }
+
+/** The 48-bit millisecond timestamp in the first 10 chars. NaN if not a ULID. */
+export function ulidTimeMs(id: string): number {
+  if (!ULID_REGEX.test(id)) return Number.NaN;
+  let t = 0;
+  for (const ch of id.slice(0, 10)) t = t * 32 + ALPHABET.indexOf(ch);
+  return t;
+}

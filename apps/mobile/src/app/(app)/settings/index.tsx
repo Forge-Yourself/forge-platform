@@ -9,6 +9,8 @@ import { unenrollMfaFactor } from '../../../lib/auth/mfa';
 import { refreshAuthProfile } from '../../../lib/auth/refreshProfile';
 import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
 import { setLocale } from '../../../lib/i18n';
+import { kvStore } from '../../../lib/offline/kvStore';
+import { useOffline } from '../../../lib/offline/offlineContext';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
@@ -161,6 +163,10 @@ export default function Settings() {
   );
   const [unenrollOpen, setUnenrollOpen] = useState(false);
   const [unenrollError, setUnenrollError] = useState<string | null>(null);
+  const offline = useOffline();
+  const [offlineConfirm, setOfflineConfirm] = useState(false);
+  const [signOutConfirm, setSignOutConfirm] = useState(false);
+  const queued = offline.status.pending + offline.status.failed;
 
   useEffect(() => {
     if (!userId) return;
@@ -318,12 +324,20 @@ export default function Settings() {
     });
   }
 
-  async function handleSignOut() {
+  async function handleSignOut(force = false) {
+    if (queued > 0 && !force) {
+      setSignOutConfirm(true);
+      return;
+    }
     setError(null);
     await run(async () => {
       // Must happen BEFORE signOut() — log_account_event needs an authenticated
       // session, which is gone the instant signOut() resolves.
       await logAccountEvent('user_logout');
+      // The outbox belongs to this user's session; the next account on this
+      // device must never replay it (spec §4.3). The read cache goes too: its
+      // keys are not all user-scoped, and it holds RLS-filtered rows.
+      await kvStore.clear();
       await supabase.auth.signOut();
     });
   }
@@ -437,6 +451,51 @@ export default function Settings() {
           </SectionCard>
         </View>
 
+        {offline.available || queued > 0 ? (
+          <View style={{ gap: theme.space[2] }}>
+            <SectionLabel>{t('settings.offline.heading')}</SectionLabel>
+            <SectionCard>
+              <ListRow
+                title={t('settings.offline.label')}
+                subtitle={queued > 0 ? t('settings.offline.pending', { count: queued }) : t('settings.offline.body')}
+                trailing={
+                  <Toggle
+                    label={t('settings.offline.label')}
+                    value={offline.effective}
+                    disabled={!offline.available && !offline.effective}
+                    onValueChange={(next) =>
+                      void offline.setDeviceChoice(next).then((r) => {
+                        if (r === 'queue_not_empty') setOfflineConfirm(true);
+                      })
+                    }
+                  />
+                }
+              />
+              <ListRow title={t('settings.offline.queue')} onPress={() => router.push('/(app)/sync-queue')} />
+            </SectionCard>
+            {offlineConfirm ? (
+              <Card style={{ borderColor: theme.colors.dangerAccent, gap: theme.space[3] }}>
+                <Text variant="bodyBold">{t('settings.offline.cantTurnOff')}</Text>
+                <Text tone="secondary">{t('settings.offline.cantTurnOffBody')}</Text>
+                <Row style={{ gap: theme.space[3] }}>
+                  <Button
+                    label={t('settings.offline.keep')}
+                    variant="ghost"
+                    onPress={() => setOfflineConfirm(false)}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    label={t('settings.offline.discard', { count: queued })}
+                    tone="danger"
+                    onPress={() => void offline.discardAllAndDisable().then(() => setOfflineConfirm(false))}
+                    style={{ flex: 1 }}
+                  />
+                </Row>
+              </Card>
+            ) : null}
+          </View>
+        ) : null}
+
         <View style={{ gap: theme.space[2] }}>
           <SectionLabel>{t('settings.account.heading')}</SectionLabel>
           <SectionCard>
@@ -522,6 +581,26 @@ export default function Settings() {
           </SectionCard>
         </View>
 
+        {signOutConfirm ? (
+          <Card style={{ borderColor: theme.colors.dangerAccent, gap: theme.space[3] }}>
+            <Text variant="bodyBold">{t('settings.offline.signOutPending', { count: queued })}</Text>
+            <Text tone="secondary">{t('settings.offline.signOutPendingBody')}</Text>
+            <Row style={{ gap: theme.space[3] }}>
+              <Button
+                label={t('settings.offline.keep')}
+                variant="ghost"
+                onPress={() => setSignOutConfirm(false)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                label={t('settings.offline.signOutAnyway')}
+                tone="danger"
+                onPress={() => void handleSignOut(true)}
+                style={{ flex: 1 }}
+              />
+            </Row>
+          </Card>
+        ) : null}
         <Button
           label={t('settings.signOut')}
           variant="ghost"

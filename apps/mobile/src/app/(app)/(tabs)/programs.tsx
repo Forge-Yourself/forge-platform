@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { useAsyncSubmit } from '../../../lib/forms/useAsyncSubmit';
+import { NeedsConnection } from '../../../lib/offline/NeedsConnection';
 import { createProgram } from '../../../lib/programs/programActions';
 import {
   useProgramList,
@@ -156,11 +157,19 @@ function TemplateCard({ program }: { program: ProgramListItem }) {
   );
 }
 
+export default function ProgramsIndex() {
+  return (
+    <NeedsConnection>
+      <ProgramsIndexInner />
+    </NeedsConnection>
+  );
+}
+
 /**
  * Program and template lists. Assigned | Templates is one route behind a
  * SegmentedPill, not two routes, per the annotation.
  */
-export default function ProgramsIndex() {
+function ProgramsIndexInner() {
   const { t } = useTranslation();
   const theme = useTheme();
   const [tab, setTab] = useState<ProgramListTab>('assigned');

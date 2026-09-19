@@ -1,11 +1,12 @@
 import { weekCompletion, type Database } from '@forge/shared';
+import type { TFunction } from 'i18next';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
-import { useCreditBalance } from '../../../lib/ai/useCreditBalance';
 import { useAuth } from '../../../lib/auth/AuthProvider';
+import { fetchClientHome } from '../../../lib/home/fetchClientHome';
 import { usePtDashboard, type AttentionItem } from '../../../lib/home/usePtDashboard';
 import { claimClientInvites } from '../../../lib/intake/claimInvites';
 import { openWaiverDocument } from '../../../lib/intake/openWaiver';
@@ -13,8 +14,10 @@ import { SessionList } from '../../../lib/logging/SessionList';
 import { StartSessionSheet } from '../../../lib/logging/StartSessionSheet';
 import { useInProgressSession } from '../../../lib/logging/useInProgressSession';
 import { useSessionHistory } from '../../../lib/logging/useSessionHistory';
+import { cachedFetch } from '../../../lib/offline/cachedFetch';
+import { OfflineStatusChip } from '../../../lib/offline/OfflineStatusChip';
+import { useOffline } from '../../../lib/offline/offlineContext';
 import { useProgramList } from '../../../lib/programs/useProgramList';
-import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
   Avatar,
@@ -22,7 +25,7 @@ import {
   Button,
   Card,
   Icon,
-  IconButton,
+  initialsFor,
   ListRow,
   Row,
   Screen,
@@ -30,354 +33,429 @@ import {
   SectionLabel,
   Skeleton,
   Spinner,
-  StatTile,
   Tag,
   Text,
   WeekStrip,
-  type IconName,
 } from '../../../ui';
 
 type ClientRow = Database['public']['Tables']['clients']['Row'];
 type IntakeFormRow = Database['public']['Tables']['intake_forms']['Row'];
 type PtInfo = { display_name: string; avatar_url: string | null };
 
-/**
- * The ONLY way into (app)/settings, and therefore the only way to sign out, change
- * language or units, enrol/unenrol MFA, edit a profile, or withdraw a consent — every
- * one of those lives behind that route and nothing else links to it.
- *
- * It sits on Today rather than in the tab bar because a client has no tab bar at all
- * ((tabs)/_layout.tsx renders none for them), so a fifth tab would leave the client
- * personas exactly as stranded as before. Today is the one screen both personas land
- * on, which makes it the one place this row is reachable from for everyone.
- */
-function SettingsButton() {
-  const { t } = useTranslation();
-  return (
-    <IconButton
-      icon="sliders"
-      variant="ghost"
-      accessibilityLabel={t('settings.title')}
-      onPress={() => router.push('/(app)/settings')}
-    />
-  );
-}
-
-/** "09:14" — the wall-clock start of a running session, for the Resume banner. */
+/** "09:14" — the wall-clock start of a running session. */
 function sessionStartTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-/** "Good morning / afternoon / evening" — the device clock, no locale calendar needed. */
+/** "Morning / Afternoon / Evening" — the device clock, no locale calendar needed. */
 function greetingKey(hour: number): string {
-  if (hour < 12) return 'home.greetingMorning';
-  if (hour < 18) return 'home.greetingAfternoon';
-  return 'home.greetingEvening';
+  if (hour < 12) return 'home.greetMorning';
+  if (hour < 18) return 'home.greetAfternoon';
+  return 'home.greetEvening';
+}
+
+/** Prototype `home`: the 11/700 uppercase kicker used for the date and every section rule. */
+function Kicker({ children }: { children: string }) {
+  const theme = useTheme();
+  return (
+    <Text
+      accessibilityRole="header"
+      style={{
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 1.4,
+        textTransform: 'uppercase',
+        color: theme.colors.textMuted,
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+/** Rounded-square initials tile — the prototype's avatar shape on Today (42/r14, 46/r14). */
+function InitialsTile({ name, size, accent }: { name: string | null; size: number; accent?: boolean }) {
+  const theme = useTheme();
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 14,
+        backgroundColor: accent ? theme.colors.accentSurfaceSoft : theme.colors.surfaceSunken,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: Math.round(size * 0.35),
+          fontWeight: '800',
+          color: accent ? theme.colors.onAccentSurfaceSoft : theme.colors.textSecondary,
+        }}
+      >
+        {initialsFor(name)}
+      </Text>
+    </View>
+  );
 }
 
 /**
- * The greeting block both personas share: a muted time-of-day line, the person's
- * own name at screen-title size, and the settings control.
+ * Prototype `home` header: the date as a kicker, "Morning, Rami" at 25/800, and
+ * the person's initials tile on the trailing edge.
+ *
+ * The tile is also the ONLY way into (app)/settings, and therefore the only way
+ * to sign out, change language or units, enrol/unenrol MFA, edit a profile, or
+ * withdraw a consent. It sits on Today rather than in the tab bar because a
+ * client has no tab bar at all ((tabs)/_layout.tsx renders none for them), and
+ * Today is the one screen both personas land on. The artboard draws the tile
+ * without saying what it does; making it the settings control is ours.
  */
 function HomeHeader({ name }: { name: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
+  const now = new Date();
+  const weekday = now.toLocaleDateString(i18n.language, { weekday: 'long' });
+  const date = now.toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' });
+  const firstName = name.trim().split(/\s+/)[0] ?? '';
+  const key = greetingKey(now.getHours());
 
   return (
-    <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: theme.space[3] }}>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="caption" tone="muted">
-          {t(greetingKey(new Date().getHours()))}
-        </Text>
+    <Row style={{ justifyContent: 'space-between', alignItems: 'center', gap: theme.space[3] }}>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Kicker>{`${weekday} · ${date}`}</Kicker>
         <Text
           accessibilityRole="header"
           numberOfLines={1}
-          style={{ fontSize: 27, fontWeight: '800', letterSpacing: -0.5 }}
+          style={{ fontSize: 25, fontWeight: '800', letterSpacing: -0.4 }}
         >
-          {name}
+          {firstName ? t(key + 'Name', { name: firstName }) : t(key)}
         </Text>
       </View>
-      <SettingsButton />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('settings.title')}
+        onPress={() => router.push('/(app)/settings')}
+        hitSlop={4}
+        style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+      >
+        <InitialsTile name={name} size={42} accent />
+      </Pressable>
     </Row>
   );
 }
 
-/** One square of the quick-actions grid: icon disc, label, whole tile is the target. */
-function ActionTile({
-  icon,
-  label,
-  accent,
+/** One of the three counts: mono 24/700 figure over a 10.5/600 label. */
+function CountTile({ value, label, color }: { value: string; label: string; color?: string }) {
+  const theme = useTheme();
+  return (
+    <View
+      accessible
+      accessibilityLabel={`${label}: ${value}`}
+      style={{
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surfaceRaised,
+      }}
+    >
+      <Text
+        numeric
+        style={{ fontSize: 24, fontWeight: '700', lineHeight: 26, color: color ?? theme.colors.textPrimary }}
+      >
+        {value}
+      </Text>
+      <Text style={{ fontSize: 10.5, lineHeight: 14, fontWeight: '600', color: theme.colors.textMuted, marginTop: 6 }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/** Prototype `home` "Needs you" row: status dot, two lines, chevron; the whole row is the target. */
+function NeedsRow({
+  title,
+  subtitle,
+  dot,
   onPress,
 }: {
-  icon: IconName;
-  label: string;
-  accent?: boolean;
-  onPress: () => void;
+  title: string;
+  subtitle: string;
+  dot: string;
+  onPress?: () => void;
 }) {
   const theme = useTheme();
-
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
       onPress={onPress}
       style={({ pressed }) => ({
-        flexGrow: 1,
-        flexBasis: '47%',
-        minHeight: 96,
-        justifyContent: 'space-between',
-        padding: theme.space[4],
-        borderRadius: theme.radius.lg,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 11,
+        minHeight: 58,
+        padding: 12,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: accent ? theme.colors.accent : theme.colors.border,
-        backgroundColor: accent ? theme.colors.accentSurfaceSoft : theme.colors.surfaceRaised,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surfaceRaised,
         opacity: pressed ? 0.85 : 1,
       })}
     >
-      <Icon
-        name={icon}
-        size={22}
-        color={accent ? theme.colors.onAccentSurfaceSoft : theme.colors.textSecondary}
-      />
-      <Text
-        numberOfLines={2}
-        style={{
-          fontSize: 14,
-          fontWeight: '700',
-          color: accent ? theme.colors.onAccentSurfaceSoft : theme.colors.textPrimary,
-        }}
-      >
-        {label}
-      </Text>
+      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '700' }}>
+          {title}
+        </Text>
+        <Text numberOfLines={1} style={{ fontSize: 12.5, color: theme.colors.textSecondary, marginTop: 2 }}>
+          {subtitle}
+        </Text>
+      </View>
+      {onPress ? <Icon name="chevron" size={16} color={theme.colors.textMuted} /> : null}
     </Pressable>
   );
 }
 
-const ATTENTION_TAG_TONE = {
-  flags: 'danger',
-  waiver: 'warn',
-  invited: 'neutral',
-  noProgram: 'accent',
-} as const;
-
-function AttentionRow({ item, isLast }: { item: AttentionItem; isLast: boolean }) {
-  const { t } = useTranslation();
-
-  const subtitle =
-    item.reason === 'flags'
-      ? t('home.attention.redFlags', { count: item.count ?? 0 })
-      : t('home.attention.' + item.reason);
-
-  const tagKey =
-    item.reason === 'flags'
-      ? 'tagFlags'
-      : item.reason === 'waiver'
-        ? 'tagWaiver'
-        : item.reason === 'invited'
-          ? 'tagInvited'
-          : 'tagProgram';
-
-  return (
-    <ListRow
-      minHeight={68}
-      leading={<Avatar name={item.name} photoUrl={item.avatarUrl} size={38} />}
-      title={item.name}
-      subtitle={subtitle}
-      trailing={<Tag label={t('home.attention.' + tagKey)} tone={ATTENTION_TAG_TONE[item.reason]} />}
-      isLast={isLast}
-      onPress={() => router.push({ pathname: '/(app)/clients/[id]', params: { id: item.clientId } })}
-    />
-  );
+function attentionSubtitle(item: AttentionItem, t: TFunction): string {
+  return item.reason === 'flags'
+    ? t('home.attention.redFlags', { count: item.count ?? 0 })
+    : t('home.attention.' + item.reason);
 }
 
+type NextUp =
+  | { kind: 'live'; session: NonNullable<ReturnType<typeof useInProgressSession>['session']> }
+  | { kind: 'suggested'; clientId: string; name: string; programName: string; week: number | null };
+
 /**
- * The PT's home. Three bands: where the roster stands, who is blocking, and the
- * four things a PT starts a day by doing.
+ * The PT's home — prototype `home`. Three counts, one Next up card, then the
+ * things blocking work. The PT needs one decision on open, not a dashboard.
  *
- * What this replaced was M0 scaffolding that never got swapped out — a "Foundation
- * online" card reporting the colour scheme, the layout direction and a Supabase
- * reachability probe, followed by a typography specimen ("Aa", one line per type
- * style). Useful on the day the monorepo booted; the PT's home screen for three
- * milestones after that.
- *
- * There is no session list and no adherence figure here, because logging is M4 and
- * scheduling is M5. Every number below is read from a table that exists today.
+ * Where the artboard assumes M5 bookings it is adapted, not faked:
+ * - "Sessions today" counts sessions actually started today; "Due to log" is
+ *   the sessions still open.
+ * - Next up is the running session if there is one; otherwise the programmed
+ *   client who trained least recently, which is who a PT without a calendar
+ *   would see next. The trailing mono figure is their program week, not a
+ *   booking time, and there is no "Later today" list until bookings exist.
  */
 function PtHome() {
   const { t } = useTranslation();
   const theme = useTheme();
   const auth = useAuth();
   const dashboard = usePtDashboard(auth.user?.id);
-  const credits = useCreditBalance(auth.user?.id);
+  const offline = useOffline();
+  const unsynced = offline.status.pending + offline.status.failed;
   const live = useInProgressSession();
+  const history = useSessionHistory(undefined, 50);
+  const [startFor, setStartFor] = useState<string | null>(null);
 
-  // Bound once so the press handler closes over a non-null row rather than a
-  // `!` assertion on something the render already narrowed.
-  const liveSession = live.session;
-  const rosterPreview = dashboard.activeClients.slice(0, 4);
-  const remaining = dashboard.activeClients.length - rosterPreview.length;
+  const today = new Date().toDateString();
+  const todays = history.items.filter(
+    (s) => s.started_at !== null && new Date(s.started_at).toDateString() === today,
+  );
+  const openCount = history.items.filter((s) => s.status === 'in_progress').length;
+
+  let nextUp: NextUp | null = live.session ? { kind: 'live', session: live.session } : null;
+  if (!nextUp && !history.loading) {
+    const lastTrained = new Map<string, number>();
+    for (const s of history.items) {
+      const at = new Date(s.started_at ?? s.created_at).getTime();
+      lastTrained.set(s.client_id, Math.max(lastTrained.get(s.client_id) ?? 0, at));
+    }
+    const candidates = dashboard.runningPrograms
+      .map((p) => ({ p, client: dashboard.activeClients.find((c) => c.id === p.client_id) }))
+      .filter((x) => x.client && x.client.state === 'active')
+      .sort((a, b) => (lastTrained.get(a.p.client_id ?? '') ?? 0) - (lastTrained.get(b.p.client_id ?? '') ?? 0));
+    const pick = candidates[0];
+    if (pick?.client) {
+      nextUp = {
+        kind: 'suggested',
+        clientId: pick.client.id,
+        name: pick.client.displayName,
+        programName: pick.p.name,
+        week: weekCompletion(
+          { duration_weeks: pick.p.duration_weeks, start_date: pick.p.start_date },
+          new Date(),
+        ).currentWeek,
+      };
+    }
+  }
+
+  const dotFor: Record<AttentionItem['reason'], string> = {
+    flags: theme.colors.dangerAccent,
+    waiver: theme.colors.warnAccent,
+    invited: theme.colors.textMuted,
+    noProgram: theme.colors.accent,
+  };
 
   return (
     <Screen padded={false}>
       <ScrollView
         contentContainerStyle={{
-          padding: theme.space[5],
+          paddingTop: theme.space[2],
+          paddingHorizontal: theme.space[5],
           paddingBottom: theme.space[9],
-          gap: theme.space[5],
         }}
       >
-        <HomeHeader name={auth.user?.display_name ?? ''} />
-
-        {/* Spec §5.1 — one banner, naming the client, for the most recently
-            started session the PT can still see. It sits above everything else
-            on Today because it is the only card that is time-critical. */}
-        {liveSession ? (
-          <Card
-            style={{
-              gap: theme.space[2],
-              borderColor: theme.colors.accent,
-              backgroundColor: theme.colors.accentSurfaceSoft,
-            }}
-          >
-            <Text variant="h3" style={{ color: theme.colors.onAccentSurfaceSoft }}>
-              {t('home.resume.title')}
-            </Text>
-            <Text style={{ color: theme.colors.onAccentSurfaceSoft }}>
-              {liveSession.clientName
-                ? t('home.resume.body', {
-                    name: liveSession.clientName,
-                    time: sessionStartTime(liveSession.started_at ?? liveSession.created_at),
-                  })
-                : t('home.resume.bodyNoName', {
-                    time: sessionStartTime(liveSession.started_at ?? liveSession.created_at),
-                  })}
-            </Text>
-            <Button
-              label={t('home.resume.button')}
-              size="lg"
-              onPress={() =>
-                router.push({ pathname: '/(app)/sessions/[id]', params: { id: liveSession.id } })
-              }
-            />
-          </Card>
-        ) : null}
-
-        {dashboard.error ? <Banner variant="danger" message={t('home.error')} /> : null}
-
-        {dashboard.loading ? (
-          <Skeleton height={66} radius={theme.radius.lg - 2} />
-        ) : (
-          <Row style={{ gap: theme.space[2], alignItems: 'stretch' }}>
-            <StatTile label={t('home.stats.clients')} value={String(dashboard.activeClients.length)} />
-            <StatTile label={t('home.stats.programs')} value={String(dashboard.runningProgramCount)} />
-            <StatTile
-              label={t('home.stats.credits')}
-              value={credits.state === 'loading' ? '—' : String(credits.balance ?? 0)}
-              tone="accent"
-            />
-          </Row>
-        )}
-
-        {!dashboard.loading && dashboard.activeClients.length > 0 ? (
-          <View style={{ gap: theme.space[2] }}>
-            <SectionLabel>{t('home.attention.heading')}</SectionLabel>
-            {dashboard.attention.length === 0 ? (
-              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space[3] }}>
-                <View
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 19,
-                    backgroundColor: theme.colors.successSurface,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icon name="check" size={19} color={theme.colors.onSuccessSurface} strokeWidth={2.4} />
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="bodyBold">{t('home.attention.allClearTitle')}</Text>
-                  <Text variant="caption" tone="muted">
-                    {t('home.attention.allClearBody')}
-                  </Text>
-                </View>
-              </Card>
-            ) : (
-              <SectionCard>
-                {dashboard.attention.map((item, index) => (
-                  <AttentionRow
-                    key={item.clientId}
-                    item={item}
-                    isLast={index === dashboard.attention.length - 1}
-                  />
-                ))}
-              </SectionCard>
-            )}
-          </View>
-        ) : null}
-
-        <View style={{ gap: theme.space[2] }}>
-          <SectionLabel>{t('home.actions.heading')}</SectionLabel>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space[2] }}>
-            <ActionTile
-              icon="users"
-              label={t('home.actions.invite')}
-              onPress={() => router.push('/(app)/clients/invite')}
-            />
-            <ActionTile
-              icon="calendar"
-              label={t('home.actions.newProgram')}
-              onPress={() => router.push('/(app)/(tabs)/programs')}
-            />
-            <ActionTile
-              icon="sparkle"
-              label={t('home.actions.aiDraft')}
-              accent
-              onPress={() => router.push('/(app)/programs/ai')}
-            />
-            <ActionTile
-              icon="dumbbell"
-              label={t('home.actions.library')}
-              onPress={() => router.push('/(app)/(tabs)/library')}
-            />
-          </View>
+        <OfflineStatusChip style={{ marginBottom: 12 }} />
+        <View style={{ marginBottom: 18 }}>
+          <HomeHeader name={auth.user?.display_name ?? ''} />
         </View>
 
-        {rosterPreview.length > 0 ? (
-          <View style={{ gap: theme.space[2] }}>
-            <Row style={{ justifyContent: 'space-between' }}>
-              <SectionLabel>{t('home.roster.heading')}</SectionLabel>
-              <Button
-                label={t('home.roster.seeAll')}
-                variant="link"
-                onPress={() => router.push('/(app)/(tabs)/clients')}
-              />
-            </Row>
-            <SectionCard>
-              {rosterPreview.map((client, index) => (
-                <ListRow
-                  key={client.id}
-                  minHeight={64}
-                  leading={<Avatar name={client.displayName} photoUrl={client.avatarUrl} size={36} />}
-                  title={client.displayName}
-                  subtitle={t('clients.stateLabels.' + client.state)}
-                  isLast={index === rosterPreview.length - 1 && remaining <= 0}
-                  onPress={() =>
-                    router.push({ pathname: '/(app)/clients/[id]', params: { id: client.id } })
-                  }
-                />
-              ))}
-              {remaining > 0 ? (
-                <ListRow
-                  title={t('home.roster.more', { count: remaining })}
-                  isLast
-                  onPress={() => router.push('/(app)/(tabs)/clients')}
-                />
-              ) : null}
-            </SectionCard>
+        {dashboard.error ? (
+          <View style={{ marginBottom: theme.space[4] }}>
+            <Banner variant="danger" message={t('home.error')} />
           </View>
         ) : null}
+
+        {!auth.user?.id || dashboard.loading || history.loading ? (
+          <View style={{ gap: theme.space[3] }}>
+            <Skeleton height={72} radius={12} />
+            <Skeleton height={148} radius={14} />
+          </View>
+        ) : (
+          <>
+            <Row style={{ gap: 8, alignItems: 'stretch', marginBottom: 20 }}>
+              <CountTile value={String(todays.length)} label={t('home.counts.today')} />
+              <CountTile value={String(openCount)} label={t('home.counts.dueToLog')} color={theme.colors.accent} />
+              <CountTile
+                value={String(dashboard.awaitingIntakeCount)}
+                label={t('home.counts.awaitingIntake')}
+                color={theme.colors.warnAccent}
+              />
+            </Row>
+
+            {nextUp ? (
+              <View style={{ marginBottom: 22 }}>
+                <View style={{ marginBottom: 9 }}>
+                  <Kicker>{t('home.nextUp.heading')}</Kicker>
+                </View>
+                <View
+                  style={{
+                    padding: 16,
+                    borderRadius: 14,
+                    borderWidth: 1.5,
+                    borderColor: theme.colors.accent,
+                    backgroundColor: theme.colors.surfaceRaised,
+                  }}
+                >
+                  <Row style={{ gap: 12 }}>
+                    <InitialsTile
+                      name={nextUp.kind === 'live' ? nextUp.session.clientName : nextUp.name}
+                      size={46}
+                      accent
+                    />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: '700' }}>
+                        {(nextUp.kind === 'live' ? nextUp.session.clientName : nextUp.name) ?? '—'}
+                      </Text>
+                      <Text numberOfLines={1} style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 }}>
+                        {nextUp.kind === 'live'
+                          ? nextUp.session.week_number === null
+                            ? t('logging.history.freestyle')
+                            : nextUp.session.day_label
+                              ? t('logging.history.dayLabelNamed', {
+                                  label: nextUp.session.day_label,
+                                  week: nextUp.session.week_number,
+                                })
+                              : t('logging.history.dayLabel', {
+                                  week: nextUp.session.week_number,
+                                  day: nextUp.session.day_number ?? 1,
+                                })
+                          : nextUp.week
+                            ? t('home.nextUp.programWeek', { program: nextUp.programName, week: nextUp.week })
+                            : nextUp.programName}
+                      </Text>
+                    </View>
+                    <Text numeric style={{ fontSize: 14, fontWeight: '700', color: theme.colors.accentText }}>
+                      {nextUp.kind === 'live'
+                        ? sessionStartTime(nextUp.session.started_at ?? nextUp.session.created_at)
+                        : nextUp.week
+                          ? t('home.nextUp.weekShort', { week: nextUp.week })
+                          : ''}
+                    </Text>
+                  </Row>
+                  <View style={{ marginTop: 14 }}>
+                    {nextUp.kind === 'live' ? (
+                      <Button
+                        label={t('home.nextUp.resume')}
+                        size="lg"
+                        onPress={() =>
+                          router.push({
+                            pathname: '/(app)/sessions/[id]',
+                            params: { id: (nextUp as Extract<NextUp, { kind: 'live' }>).session.id },
+                          })
+                        }
+                      />
+                    ) : (
+                      <Button
+                        label={t('home.nextUp.start')}
+                        size="lg"
+                        onPress={() => setStartFor((nextUp as Extract<NextUp, { kind: 'suggested' }>).clientId)}
+                      />
+                    )}
+                  </View>
+                </View>
+              </View>
+            ) : null}
+
+            <View style={{ marginBottom: 9 }}>
+              <Kicker>{t('home.needsYou.heading')}</Kicker>
+            </View>
+            <View style={{ gap: 8 }}>
+              {/* Prototype `home`: Needs you collects an unsynced session alongside intake blockers. */}
+              {unsynced > 0 ? (
+                <NeedsRow
+                  title={t('logging.offline.needsSyncTitle')}
+                  subtitle={t('logging.offline.needsSyncBody', { count: unsynced })}
+                  dot={offline.status.failed > 0 ? theme.colors.dangerAccent : theme.colors.accent}
+                  onPress={() => router.push('/(app)/sync-queue')}
+                />
+              ) : null}
+              {dashboard.activeClients.length === 0 ? (
+                <NeedsRow
+                  title={t('home.needsYou.emptyTitle')}
+                  subtitle={t('home.needsYou.emptyBody')}
+                  dot={theme.colors.accent}
+                  onPress={() => router.push('/(app)/clients/invite')}
+                />
+              ) : dashboard.attention.length === 0 ? (
+                <NeedsRow
+                  title={t('home.attention.allClearTitle')}
+                  subtitle={t('home.attention.allClearBody')}
+                  dot={theme.colors.successAccent}
+                />
+              ) : (
+                dashboard.attention.map((item) => (
+                  <NeedsRow
+                    key={item.clientId}
+                    title={item.name}
+                    subtitle={attentionSubtitle(item, t)}
+                    dot={dotFor[item.reason]}
+                    onPress={() =>
+                      router.push({ pathname: '/(app)/clients/[id]', params: { id: item.clientId } })
+                    }
+                  />
+                ))
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
+
+      {startFor ? (
+        <StartSessionSheet
+          visible
+          clientId={startFor}
+          viewerIsPt
+          onDismiss={() => setStartFor(null)}
+        />
+      ) : null}
     </Screen>
   );
 }
@@ -403,6 +481,7 @@ function ClientHome() {
   const { t } = useTranslation();
   const theme = useTheme();
   const auth = useAuth();
+  const offline = useOffline();
   const [state, setState] = useState<ClientHomeState>({
     loading: true,
     client: null,
@@ -435,31 +514,18 @@ function ClientHome() {
         // Best-effort — a failed claim just means the client sees the
         // no-trainer-yet state below, which already has its own recovery copy.
       })
-      .then(async () => {
-        const { data: client } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('client_user_id', auth.user?.id ?? '')
-          .maybeSingle();
-
-        if (!client) {
-          if (!cancelled) setState({ loading: false, client: null, ptInfo: null, intake: null });
-          return;
-        }
-
-        const [{ data: ptInfo }, { data: intake }] = await Promise.all([
-          supabase.from('users').select('display_name, avatar_url').eq('id', client.pt_user_id).maybeSingle(),
-          supabase.from('intake_forms').select('*').eq('client_id', client.id).maybeSingle(),
-        ]);
-
-        if (!cancelled) {
-          setState({ loading: false, client, ptInfo: ptInfo ?? null, intake: intake ?? null });
-        }
+      .then(() =>
+        cachedFetch({ enabled: offline.effective, online: offline.online }, 'clientHome:' + (auth.user?.id ?? ''), () =>
+          fetchClientHome(auth.user?.id ?? ''),
+        ),
+      )
+      .then((r) => {
+        if (!cancelled) setState({ loading: false, client: r.client, ptInfo: r.ptInfo, intake: r.intake });
       });
     return () => {
       cancelled = true;
     };
-  }, [auth.user?.id]);
+  }, [auth.user?.id, offline.effective, offline.online]);
 
   async function handleCopyEmail() {
     if (!auth.user?.email) return;
@@ -565,6 +631,7 @@ function ClientHome() {
           gap: theme.space[5],
         }}
       >
+        <OfflineStatusChip />
         <HomeHeader name={auth.user?.display_name ?? ''} />
 
         {waiverError ? <Banner variant="danger" message={waiverError} /> : null}

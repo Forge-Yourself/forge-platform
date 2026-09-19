@@ -28,6 +28,9 @@ export default async function AdminPage() {
         <Link href="/admin/ai-generations" style={ui.link}>
           AI generations
         </Link>
+        <Link href="/admin/settings" style={ui.link}>
+          Settings
+        </Link>
         <span style={{ marginInlineStart: 'auto' }}>
           <AdminSignOut />
         </span>

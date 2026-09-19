@@ -12,10 +12,13 @@ export type LogSetResult = { set: SetRow; newPrs: PrType[] };
 export async function startWorkoutSession(
   clientId: string,
   programDayId: string | null,
+  opts: { id?: string; startedAt?: string } = {},
 ): Promise<{ session: WorkoutSessionRow | null; error: Error | null }> {
   const { data, error } = await supabase.rpc('start_workout_session', {
     p_client_id: clientId,
     ...(programDayId ? { p_program_day_id: programDayId } : {}),
+    ...(opts.id ? { p_id: opts.id } : {}),
+    ...(opts.startedAt ? { p_started_at: opts.startedAt } : {}),
   });
   if (error) return { session: null, error };
   return { session: data ?? null, error: null };
@@ -60,11 +63,13 @@ export async function deleteSet(id: string): Promise<{ error: Error | null }> {
 export async function completeWorkoutSession(
   sessionId: string,
   input: CompleteSessionInput,
+  completedAt?: string,
 ): Promise<{ session: WorkoutSessionRow | null; error: Error | null }> {
   const { data, error } = await supabase.rpc('complete_workout_session', {
     p_session_id: sessionId,
     ...(input.rating !== null ? { p_rating: input.rating } : {}),
     ...(input.notes !== null ? { p_notes: input.notes } : {}),
+    ...(completedAt ? { p_completed_at: completedAt } : {}),
   });
   if (error) return { session: null, error };
   return { session: data ?? null, error: null };

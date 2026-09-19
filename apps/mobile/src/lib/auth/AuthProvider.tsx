@@ -1,6 +1,8 @@
-import type { Database } from '@forge/shared';
+import { isNetworkError, type Database } from '@forge/shared';
 import type { AuthMFAListFactorsResponse, Session } from '@supabase/supabase-js';
 import { createContext, use, useEffect, useState, type ReactNode } from 'react';
+import { getStoredValue } from '../deviceStore';
+import { engine, OFFLINE_CHOICE_KEY } from '../offline/engine';
 import { supabase } from '../supabase';
 
 type UserRow = Database['public']['Tables']['users']['Row'];
@@ -35,16 +37,27 @@ const AuthContext = createContext<AuthState>(initialState);
 async function loadProfile(
   userId: string,
 ): Promise<{ user: UserRow | null; ptProfile: PtProfileRow | null; mfaFactors: MfaFactors }> {
-  const [{ data: user }, { data: mfaData }] = await Promise.all([
+  const [{ data: user, error: userError }, { data: mfaData }] = await Promise.all([
     supabase.from('users').select('*').eq('id', userId).maybeSingle(),
     supabase.auth.mfa.listFactors(),
   ]);
+
+  // M4b cold offline boot: with offline logging switched on for this device,
+  // a profile read that never reached the server falls back to the last one
+  // we saw for this same user id, so the gate can let a basement session in.
+  const offlineChoice = (await getStoredValue(OFFLINE_CHOICE_KEY)) === '1';
+  if (!user && offlineChoice && isNetworkError(userError)) {
+    const cached = await engine.getCache<{ user: UserRow; ptProfile: PtProfileRow | null }>('profile:' + userId);
+    if (cached) return { user: cached.value.user, ptProfile: cached.value.ptProfile, mfaFactors: mfaData ?? null };
+  }
 
   let ptProfile: PtProfileRow | null = null;
   if (user?.role === 'pt') {
     const { data } = await supabase.from('pt_profiles').select('*').eq('user_id', userId).maybeSingle();
     ptProfile = data ?? null;
   }
+
+  if (user && offlineChoice) void engine.putCache('profile:' + userId, { user, ptProfile });
 
   return { user: user ?? null, ptProfile, mfaFactors: mfaData ?? null };
 }

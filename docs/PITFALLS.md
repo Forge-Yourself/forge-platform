@@ -458,6 +458,50 @@ is true — so deleting it changes nothing there.
 (→ `aria-hidden`); `library/[id].tsx`'s `pointerEvents="none"` → `style.pointerEvents`.
 The `shadow*` → `boxShadow` deprecation in the theme's elevation tokens is still open.
 
+### W6. NetInfo on web does not hear the browser go offline
+
+`@react-native-community/netinfo`'s web module listens to `navigator.connection`'s
+`change` event whenever that API exists (Chrome, Edge), and in that case never to the
+window `online` / `offline` events. A browser dropping its connection may never reach
+a NetInfo listener, so an offline-aware screen keeps behaving as if online.
+
+**Rule:** on web, also listen to window `online` / `offline` and read `navigator.onLine`,
+and seed the initial state from it rather than assuming online.
+
+**Seen in:** `lib/offline/OfflineProvider.tsx` (M4b). The initial `useState(true)` also
+sent a cold offline boot's first reads to the network, where they queued behind
+supabase-js's own auth retries for ~20 s before the cache answered.
+
+---
+
+## Offline and sync
+
+### O1. Overlapping loads land out of order, and a stale one wins
+
+A screen reloads on focus, after its own write, and on a broadcast. Each load is a
+chain of round trips, so a read that *started* before a write landed can *finish*
+after a newer one, and the last `setState` wins. With an outbox the window is wider:
+the Finish replays, `prune` drops the local copy, and a server read taken a moment
+earlier returns `in_progress` with nothing local left to outvote it.
+
+**Rules:** only the newest load may land (a sequence ref); read the local row
+*before* the server; and make state that only moves forward monotonic at the store
+(`applyServerSession` never regresses `completed` to `in_progress`).
+
+**Seen in:** `lib/logging/useSession.ts` (M4b). The PT pressed Finish, the server
+completed the session, the client's screen showed the summary, and the PT's own
+screen went back to logging. Caught by the M4b screen walk, not by review.
+
+### O2. A browser offline simulation that leaves the socket up lies
+
+Blocking Supabase HTTP in a test (Playwright `route().abort()`) does not close an
+open Realtime websocket, so a "offline" device still receives broadcasts, and a
+feature that depends on the socket looks fine. On a real device the socket dies
+with the signal.
+
+**Rule:** anything subscribed to Realtime keys its join off the app's `online`
+state, so going offline (simulated or real) leaves the channel. `useSessionChannel`
+does. `walk-m4b.mjs` in the `forge-screen-walk` skill shows the simulation recipe.
 
 ---
 

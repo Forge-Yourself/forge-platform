@@ -1,11 +1,14 @@
-import { programTreeSchema, weekCompletion, type ProgramTree } from '@forge/shared';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Banner, Button, ListRow, SectionCard, SectionLabel, Skeleton, Tag, Text, TextLink } from '../../ui';
-import { supabase } from '../supabase';
+import { useAuth } from '../auth/AuthProvider';
+import { cachedFetch } from '../offline/cachedFetch';
+import { queueStart } from '../offline/loggingRepo';
+import { useOffline } from '../offline/offlineContext';
+import { EMPTY_WEEK, loadWeek, type WeekLoad } from './loadWeek';
 import { startWorkoutSession } from './sessionRpc';
 
 export type StartSessionSheetProps = {
@@ -16,42 +19,6 @@ export type StartSessionSheetProps = {
   onDismiss: () => void;
 };
 
-type DayOption = { id: string; dayNumber: number; label: string | null; done: boolean };
-type Loaded = { program: ProgramTree | null; week: number; days: DayOption[] };
-
-const EMPTY: Loaded = { program: null, week: 1, days: [] };
-
-async function loadWeek(clientId: string): Promise<Loaded> {
-  const { data: active } = await supabase
-    .from('programs')
-    .select('id, duration_weeks, start_date')
-    .eq('client_id', clientId)
-    .eq('state', 'active')
-    .maybeSingle();
-  if (!active) return EMPTY;
-  const { data: raw } = await supabase.rpc('program_tree', { p_program_id: active.id });
-  const parsed = programTreeSchema.safeParse(raw);
-  if (!parsed.success) return EMPTY;
-  const current = weekCompletion({ duration_weeks: active.duration_weeks, start_date: active.start_date }).currentWeek ?? 1;
-  const weekNode = parsed.data.weeks.find((w) => w.week_number === current) ?? parsed.data.weeks[0];
-  const dayIds = (weekNode?.days ?? []).map((d) => d.id);
-  let doneIds = new Set<string>();
-  if (dayIds.length > 0) {
-    const { data: done } = await supabase
-      .from('workout_sessions')
-      .select('program_day_id')
-      .eq('client_id', clientId)
-      .eq('status', 'completed')
-      .in('program_day_id', dayIds);
-    doneIds = new Set((done ?? []).map((r) => r.program_day_id).filter((id): id is string => id !== null));
-  }
-  return {
-    program: parsed.data,
-    week: weekNode?.week_number ?? current,
-    days: (weekNode?.days ?? []).map((d) => ({ id: d.id, dayNumber: d.day_number, label: d.label, done: doneIds.has(d.id) })),
-  };
-}
-
 /**
  * Spec §5.2. Lists the active program's days for the current week with a DONE
  * tag where a completed session already points at the day, pre-highlights the
@@ -61,8 +28,10 @@ async function loadWeek(clientId: string): Promise<Loaded> {
 export function StartSessionSheet({ visible, clientId, viewerIsPt, onDismiss }: StartSessionSheetProps) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const offline = useOffline();
+  const auth = useAuth();
   const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState<Loaded>(EMPTY);
+  const [loaded, setLoaded] = useState<WeekLoad>(EMPTY_WEEK);
   const [selected, setSelected] = useState<string | 'freestyle' | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +39,7 @@ export function StartSessionSheet({ visible, clientId, viewerIsPt, onDismiss }: 
   useEffect(() => {
     if (!visible) return;
     let cancelled = false;
-    void loadWeek(clientId).then((r) => {
+    void cachedFetch({ enabled: offline.effective, online: offline.online }, 'week:' + clientId, () => loadWeek(clientId)).then((r) => {
       if (cancelled) return;
       setLoaded(r);
       setSelected(r.days.find((d) => !d.done)?.id ?? r.days[0]?.id ?? 'freestyle');
@@ -79,12 +48,29 @@ export function StartSessionSheet({ visible, clientId, viewerIsPt, onDismiss }: 
     return () => {
       cancelled = true;
     };
-  }, [visible, clientId]);
+  }, [visible, clientId, offline.effective, offline.online]);
 
   async function start() {
     if (!selected) return;
     setStarting(true);
     setError(null);
+    if (offline.effective) {
+      const day = selected === 'freestyle' ? null : (loaded.days.find((d) => d.id === selected) ?? null);
+      const id = await queueStart({
+        clientId,
+        programDayId: day?.id ?? null,
+        dayLabel: day?.label ?? null,
+        dayNumber: day?.dayNumber ?? null,
+        weekNumber: day ? loaded.week : null,
+        viewerId: auth.user?.id ?? '',
+        isPtLed: viewerIsPt,
+      });
+      offline.drainNow();
+      setStarting(false);
+      onDismiss();
+      router.replace({ pathname: '/(app)/sessions/[id]', params: { id } });
+      return;
+    }
     const { session, error: err } = await startWorkoutSession(clientId, selected === 'freestyle' ? null : selected);
     setStarting(false);
     if (err || !session) {

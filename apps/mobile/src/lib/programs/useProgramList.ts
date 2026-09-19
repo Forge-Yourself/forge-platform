@@ -1,6 +1,8 @@
-import type { Database } from '@forge/shared';
+import { isNetworkError, type Database } from '@forge/shared';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
+import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
+import { useOffline } from '../offline/offlineContext';
 import { supabase } from '../supabase';
 
 export type ProgramSummary = Database['public']['Functions']['program_summaries']['Returns'][number];
@@ -19,9 +21,9 @@ export type ProgramListTab = 'assigned' | 'templates';
  * needs a constraint-name hint that is easy to get wrong and hard to verify
  * without a live app.
  */
-async function fetchPrograms(): Promise<{ rows: ProgramListItem[]; error: string | null }> {
+export async function fetchPrograms(): Promise<{ rows: ProgramListItem[]; error: string | null }> {
   const { data, error } = await supabase.rpc('program_summaries');
-  if (error) return { rows: [], error: error.message };
+  if (error) return { rows: [], error: isNetworkError(error) ? OFFLINE : error.message };
 
   const summaries = data ?? [];
   const clientIds = [...new Set(summaries.map((p) => p.client_id).filter((id): id is string => id !== null))];
@@ -90,6 +92,7 @@ export function useProgramList(tab: ProgramListTab): ProgramListData {
     loading: boolean;
     error: string | null;
   }>({ rows: [], loading: true, error: null });
+  const offline = useOffline();
 
   // Refetch on every focus, not just on mount: the Programs and Today tabs stay
   // mounted underneath builder/assign/ai, so a plain mount effect never re-ran
@@ -101,20 +104,20 @@ export function useProgramList(tab: ProgramListTab): ProgramListData {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      void fetchPrograms().then((result) => {
+      void cachedFetch({ enabled: offline.effective, online: offline.online }, 'programs', fetchPrograms).then((result) => {
         if (!cancelled) setState({ rows: result.rows, loading: false, error: result.error });
       });
       return () => {
         cancelled = true;
       };
-    }, []),
+    }, [offline.effective, offline.online]),
   );
 
   const refetch = useCallback(async (): Promise<void> => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
-    const result = await fetchPrograms();
+    const result = await cachedFetch({ enabled: offline.effective, online: offline.online }, 'programs', fetchPrograms);
     setState({ rows: result.rows, loading: false, error: result.error });
-  }, []);
+  }, [offline.effective, offline.online]);
 
   // Memoized because `items` is this hook's public identity: usePtDashboard
   // keys two useMemos on it, and a fresh array every render made both of them

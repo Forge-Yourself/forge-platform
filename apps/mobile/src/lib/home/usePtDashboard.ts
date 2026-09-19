@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useClientList, type ClientListItem } from '../clients/useClientList';
-import { useProgramList } from '../programs/useProgramList';
+import { useProgramList, type ProgramListItem } from '../programs/useProgramList';
+import { isNetworkError } from '@forge/shared';
+import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
+import { useOffline } from '../offline/offlineContext';
 import { supabase } from '../supabase';
 
 /** Why a client is on the Today list. Ordered by how early it blocks the work. */
@@ -17,6 +20,20 @@ export type AttentionItem = {
 
 type IntakeFlag = { clientId: string; state: string; flagCount: number };
 
+/** Submitted intakes for these clients (RLS hides the rest), for the red-flag and waiver counts. */
+export async function fetchIntakeFlags(ids: string[]): Promise<{ rows: IntakeFlag[]; error: string | null }> {
+  const { data, error } = await supabase.from('intake_forms').select('client_id, state, red_flags').in('client_id', ids);
+  if (error) return { rows: [], error: isNetworkError(error) ? OFFLINE : error.message };
+  return {
+    rows: (data ?? []).map((row) => ({
+      clientId: row.client_id,
+      state: row.state,
+      flagCount: Array.isArray(row.red_flags) ? row.red_flags.length : 0,
+    })),
+    error: null,
+  };
+}
+
 export type PtDashboardData = {
   loading: boolean;
   error: string | null;
@@ -24,6 +41,12 @@ export type PtDashboardData = {
   activeClients: ClientListItem[];
   /** Assigned, non-draft programs currently running. */
   runningProgramCount: number;
+  runningPrograms: ProgramListItem[];
+  /**
+   * Roster clients whose intake is not through the waiver yet. RLS hides an
+   * intake row until it is submitted, so "no row" counts as awaiting too.
+   */
+  awaitingIntakeCount: number;
   attention: AttentionItem[];
 };
 
@@ -46,6 +69,7 @@ export type PtDashboardData = {
 export function usePtDashboard(ptUserId: string | undefined): PtDashboardData {
   const clients = useClientList(ptUserId, '', 'all');
   const programs = useProgramList('assigned');
+  const offline = useOffline();
 
   /**
    * `settledKey` is the roster this state was fetched FOR, and loading is
@@ -83,44 +107,34 @@ export function usePtDashboard(ptUserId: string | undefined): PtDashboardData {
     }
     // Inlined .then() so every setState stays visible inside this effect body —
     // the same react-hooks/set-state-in-effect constraint useClientList documents.
-    void supabase
-      .from('intake_forms')
-      .select('client_id, state, red_flags')
-      .in('client_id', ids)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        // The error was previously destructured away. A failure left rows empty
-        // and loading false, which reads downstream as "nobody needs attention"
-        // — so a client with three PAR-Q red flags silently vanished from the
-        // PT's safety list with no banner anywhere on the screen.
-        if (error) {
-          setFlags({ settledKey: key, rows: [], error: error.message });
-          return;
-        }
-        setFlags({
-          settledKey: key,
-          rows: (data ?? []).map((row) => ({
-            clientId: row.client_id,
-            state: row.state,
-            flagCount: Array.isArray(row.red_flags) ? row.red_flags.length : 0,
-          })),
-          error: null,
-        });
-      });
+    // The error was previously destructured away. A failure left rows empty and
+    // loading false, which reads downstream as "nobody needs attention" — so a
+    // client with three PAR-Q red flags silently vanished from the PT's safety
+    // list with no banner anywhere on the screen.
+    void cachedFetch({ enabled: offline.effective, online: offline.online }, 'flags:' + (ptUserId ?? ''), () =>
+      fetchIntakeFlags(ids),
+    ).then((result) => {
+      if (!cancelled) setFlags({ settledKey: key, rows: result.rows, error: result.error });
+    });
     return () => {
       cancelled = true;
     };
-  }, [clientIdKey]);
+  }, [clientIdKey, ptUserId, offline.effective, offline.online]);
 
   const activeClients = useMemo(
     () => clients.items.filter((c) => c.state !== 'deactivated'),
     [clients.items],
   );
 
-  const runningProgramCount = useMemo(
-    () => programs.items.filter((p) => p.state === 'active').length,
+  const runningPrograms = useMemo(
+    () => programs.items.filter((p) => p.state === 'active'),
     [programs.items],
   );
+
+  const awaitingIntakeCount = useMemo(() => {
+    const signed = new Set(flags.rows.filter((f) => f.state === 'waiver_signed').map((f) => f.clientId));
+    return activeClients.filter((c) => !signed.has(c.id)).length;
+  }, [activeClients, flags.rows]);
 
   const attention = useMemo(() => {
     const flagByClient = new Map(flags.rows.map((f) => [f.clientId, f]));
@@ -154,7 +168,9 @@ export function usePtDashboard(ptUserId: string | undefined): PtDashboardData {
     loading: clients.loading || programs.loading || flagsLoading,
     error: clients.error ?? programs.error ?? flags.error,
     activeClients,
-    runningProgramCount,
+    runningProgramCount: runningPrograms.length,
+    runningPrograms,
+    awaitingIntakeCount,
     attention,
   };
 }

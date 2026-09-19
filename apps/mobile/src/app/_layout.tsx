@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../lib/i18n';
 import { AuthProvider, useAuth } from '../lib/auth/AuthProvider';
+import { OfflineProvider } from '../lib/offline/OfflineProvider';
 import { subscribeToDeepLinks } from '../lib/deepLinks';
 import { supabase } from '../lib/supabase';
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
@@ -242,7 +243,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <ThemedGate />
+          <OfflineProvider>
+            <ThemedGate />
+          </OfflineProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
