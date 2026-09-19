@@ -4,15 +4,17 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import * as ui from '@/lib/ui/styles';
+import { setOfflineBeta } from './actions';
 
 // Every admin page depends on the caller's live session/role — never
 // statically prerender it.
 export const dynamic = 'force-dynamic';
 
 /**
- * Read-only admin detail view. No mutations here — quarantine tooling is
- * M10. Runs under the admin's own anon-key session (RLS `is_admin()`), same
- * as `/admin`.
+ * Admin detail view. One mutation: the M4b offline-logging beta card, which
+ * goes through admin_set_offline_beta, an `is_admin()`-guarded RPC. Quarantine
+ * tooling is M10. Runs under the admin's own anon-key session (RLS
+ * `is_admin()`), same as `/admin`.
  */
 export default async function AdminUserDetailPage({
   params,
@@ -26,7 +28,7 @@ export default async function AdminUserDetailPage({
   const { data: target, error } = await supabase
     .from('users')
     .select(
-      'id, email, display_name, role, auth_provider, locale, unit_system, timezone, onboarding_completed, consent_analytics, consent_marketing, consent_ai_training, is_quarantined, quarantine_reason, is_deleted, deleted_at, created_at',
+      'id, email, display_name, role, auth_provider, locale, unit_system, timezone, onboarding_completed, consent_analytics, consent_marketing, consent_ai_training, is_quarantined, quarantine_reason, is_deleted, deleted_at, created_at, offline_logging_beta',
     )
     .eq('id', id)
     .maybeSingle();
@@ -250,6 +252,21 @@ export default async function AdminUserDetailPage({
         <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Quarantine</h2>
         <Field label="Quarantined" value={target.is_quarantined ? 'Yes' : 'No'} />
         <Field label="Reason" value={target.quarantine_reason ?? '—'} />
+      </section>
+
+      <section style={ui.card}>
+        <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Offline logging beta</h2>
+        <form action={setOfflineBeta} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
+          <input type="hidden" name="userId" value={target.id} />
+          <input type="hidden" name="enabled" value={target.offline_logging_beta ? 'false' : 'true'} />
+          <span>{target.offline_logging_beta ? 'On' : 'Off'}</span>
+          <button type="submit" style={ui.buttonSecondary}>
+            {target.offline_logging_beta ? 'Turn off' : 'Turn on'}
+          </button>
+        </form>
+        <p style={{ ...ui.muted, margin: 'var(--s-3) 0 0' }}>
+          Only matters while the mode on <Link href="/admin/settings" style={ui.link}>Settings</Link> is Beta.
+        </p>
       </section>
 
       {target.role === 'pt' ? (

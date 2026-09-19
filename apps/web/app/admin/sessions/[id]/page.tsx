@@ -1,4 +1,4 @@
-import type { Database } from '@forge/shared';
+import { ulidTimeMs, type Database } from '@forge/shared';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
@@ -118,6 +118,7 @@ export default async function AdminSessionDetail({ params }: { params: Promise<{
               <th style={ui.th}>Reps</th>
               <th style={ui.th}>RPE</th>
               <th style={ui.th}>Logged by</th>
+              <th style={ui.th}>Device</th>
               <th style={ui.th}>PR</th>
               <th style={ui.th}>Notes</th>
             </tr>
@@ -128,9 +129,16 @@ export default async function AdminSessionDetail({ params }: { params: Promise<{
                 <td style={ui.td}>{exerciseName[s.exercise_id] ?? s.exercise_id}</td>
                 <td style={ui.td}>{s.is_warmup ? 'warm-up' : s.set_number}</td>
                 <td style={ui.td}>{s.weight_kg ?? '—'}</td>
-                <td style={ui.td}>{s.reps ?? '—'}</td>
+                <td style={ui.td}>
+                  {s.reps ?? '—'}
+                  {/* M4b D6: minted on the device after the session was finished. */}
+                  {session.completed_at !== null && ulidTimeMs(s.id) > new Date(session.completed_at).getTime() ? (
+                    <span style={ui.muted}> late</span>
+                  ) : null}
+                </td>
                 <td style={ui.td}>{s.rpe ?? '—'}</td>
                 <td style={ui.td}>{userName[s.logged_by_user_id] ?? s.logged_by_user_id}</td>
+                <td style={ui.td}>{s.device_id ?? '—'}</td>
                 <td style={ui.td}>{prBySet[s.id]?.join(', ') ?? ''}</td>
                 <td style={ui.td}>{s.notes ?? ''}</td>
               </tr>
