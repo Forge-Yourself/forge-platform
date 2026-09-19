@@ -96,6 +96,11 @@ describe('normalize', () => {
   it('splits a glued unit and a times sign', () => {
     expect(normalize('100kg 100x8')).toBe('100 kg 100 x 8');
   });
+  it('keeps an Arabizi numeral that carries a digit in one piece', () => {
+    expect(normalize('wa7ad arba3a 3ashra 5amsta3sh sab3in, 8reps 100كيلو')).toBe(
+      'wa7ad arba3a 3ashra 5amsta3sh sab3in 8 reps 100 كيلو',
+    );
+  });
   it('strips diacritics and folds letter variants', () => {
     expect(normalize('مِئَةٌ أربعة')).toBe('مئه اربعه');
   });

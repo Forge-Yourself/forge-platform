@@ -62,6 +62,25 @@ const AND = new Set(['and', 'و', 'w', 'wa', 'ou']);
 
 const AR_DIACRITICS = /[\u064B-\u065F\u0670\u0640]/g;
 
+/** Lexicon words that carry a digit ("3ashra", "sab3in"); normalize() must never split them. */
+const DIGIT_WORDS = new Set(
+  [UNITS, TEENS, TENS, HUNDREDS].flatMap((m) => Object.keys(m)).filter((w) => /\d/.test(w)),
+);
+
+/** A number glued to a word: "100kg", "8reps", "100\u0643\u064A\u0644\u0648". Only letters follow the number. */
+const GLUED = /^(\d+(?:\.\d+)?)([a-z\u0600-\u06FF]+)$/;
+
+/**
+ * "100kg" \u2192 "100 kg". Only a token that is a whole number then letters is split,
+ * and never a lexicon word, so an Arabizi numeral ("wa7ad", "arba3a", "3ashra")
+ * keeps its digit-letters.
+ */
+function splitGlued(w: string): string {
+  if (DIGIT_WORDS.has(w)) return w;
+  const m = GLUED.exec(w);
+  return m ? `${m[1]} ${m[2]}` : w;
+}
+
 /** Lowercase, strip Arabic diacritics and tatweel, fold letter variants and every digit script to ASCII. */
 export function normalize(text: string): string {
   return text
@@ -76,11 +95,13 @@ export function normalize(text: string): string {
     .replace(/٫/g, '.')
     .replace(/(\d),(\d{3})\b/g, '$1$2') // "1,000"
     .replace(/(\d)\s*[x×*]\s*(?=\d)/g, '$1 x ') // "100x8"
-    .replace(/(\d)(?=[a-z\u0600-\u06FF])/g, '$1 ') // "100kg", "8reps"
     .replace(/(?<!\d)\.|\.(?!\d)/g, ' ') // a full stop, not a decimal point
     .replace(/[,،؛;:!?"“”'‘’()\-–—/@]/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    .split(' ')
+    .map(splitGlued) // last, so punctuation is gone and each token is whole
+    .join(' ');
 }
 
 function lex(w: string): Tok {

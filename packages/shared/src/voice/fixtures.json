@@ -68,5 +68,25 @@
   { "text": "مية for eight RPE تسعة", "unit": "metric", "weightKg": 100, "reps": 8, "rpe": 9 },
   { "text": "sixty كيلو عشر مرات", "unit": "metric", "weightKg": 60, "reps": 10, "rpe": null },
   { "text": "bench مية على 8", "unit": "metric", "weightKg": 100, "reps": 8, "rpe": null },
-  { "text": "ميه ونص for 5", "unit": "metric", "weightKg": 100.5, "reps": 5, "rpe": null }
+  { "text": "ميه ونص for 5", "unit": "metric", "weightKg": 100.5, "reps": 5, "rpe": null },
+
+  { "text": "sab3in for tmene", "unit": "metric", "weightKg": 70, "reps": 8, "rpe": null },
+  { "text": "mit for arba3a", "unit": "metric", "weightKg": 100, "reps": 4, "rpe": null },
+  { "text": "mit for arb3a", "unit": "metric", "weightKg": 100, "reps": 4, "rpe": null },
+  { "text": "arba3a reps", "unit": "metric", "weightKg": null, "reps": 4, "rpe": null },
+  { "text": "wa7ad", "unit": "metric", "weightKg": 1, "reps": null, "rpe": null },
+  { "text": "wa7ad w 3ishrin reps", "unit": "metric", "weightKg": null, "reps": 21, "rpe": null },
+  { "text": "arb3in kilo 5amsta3sh reps", "unit": "metric", "weightKg": 40, "reps": 15, "rpe": null },
+  { "text": "3ashra reps", "unit": "metric", "weightKg": null, "reps": 10, "rpe": null },
+  { "text": "sab3in for 3ashara rpe tes3a", "unit": "metric", "weightKg": 70, "reps": 10, "rpe": 9 },
+  { "text": "arbe3in w khamse for sab3a at tis3a", "unit": "metric", "weightKg": 45, "reps": 7, "rpe": 9 },
+  { "text": "tes3in for wa7ad", "unit": "metric", "weightKg": 90, "reps": 1, "rpe": null },
+  { "text": "3eshrin for 3ashra", "unit": "metric", "weightKg": 20, "reps": 10, "rpe": null },
+  { "text": "rpe tes3a", "unit": "metric", "weightKg": null, "reps": null, "rpe": 9 },
+
+  { "text": "100kg for 8", "unit": "metric", "weightKg": 100, "reps": 8, "rpe": null },
+  { "text": "100kg 8reps", "unit": "imperial", "weightKg": 100, "reps": 8, "rpe": null },
+  { "text": "60kg x 10 rpe 8", "unit": "metric", "weightKg": 60, "reps": 10, "rpe": 8 },
+  { "text": "102.5kg for 5.", "unit": "metric", "weightKg": 102.5, "reps": 5, "rpe": null },
+  { "text": "100كيلو على 8", "unit": "metric", "weightKg": 100, "reps": 8, "rpe": null }
 ]
