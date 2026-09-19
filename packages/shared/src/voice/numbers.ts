@@ -60,7 +60,7 @@ const HALF = new Set(['half', 'نص', 'نصف', 'nos', 'nuss', 'nus']);
 const POINT = new Set(['point', 'dot', 'فاصله', 'نقطه', 'fasle']);
 const AND = new Set(['and', 'و', 'w', 'wa', 'ou']);
 
-const AR_DIACRITICS = /[ً-ٰٟـ]/g;
+const AR_DIACRITICS = /[\u064B-\u065F\u0670\u0640]/g;
 
 /** Lowercase, strip Arabic diacritics and tatweel, fold letter variants and every digit script to ASCII. */
 export function normalize(text: string): string {
@@ -71,12 +71,12 @@ export function normalize(text: string): string {
     .replace(/[أإآ]/g, 'ا')
     .replace(/ى/g, 'ي')
     .replace(/ة/g, 'ه')
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .replace(/٫/g, '.')
     .replace(/(\d),(\d{3})\b/g, '$1$2') // "1,000"
     .replace(/(\d)\s*[x×*]\s*(?=\d)/g, '$1 x ') // "100x8"
-    .replace(/(\d)(?=[a-z؀-ۿ])/g, '$1 ') // "100kg", "8reps"
+    .replace(/(\d)(?=[a-z\u0600-\u06FF])/g, '$1 ') // "100kg", "8reps"
     .replace(/(?<!\d)\.|\.(?!\d)/g, ' ') // a full stop, not a decimal point
     .replace(/[,،؛;:!?"“”'‘’()\-–—/@]/g, ' ')
     .replace(/\s+/g, ' ')
