@@ -2,5 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter web build"
+  "buildCommand": "pnpm --filter web build",
+  "crons": [
+    {
+      "path": "/api/cron/photo-orphans",
+      "schedule": "0 4 * * *"
+    }
+  ]
 }
