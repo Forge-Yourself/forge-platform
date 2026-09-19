@@ -312,6 +312,12 @@ describe('merging server rows', () => {
     expect((await engine.localSets(S))[0]!.weight_kg).toBe(110);
   });
 
+  it('never lets a stale in_progress read regress a completed session', async () => {
+    await store.write([{ table: 'sessions', key: S, value: sessionRow(S, 'completed') }]);
+    expect(await engine.applyServerSession(sessionRow(S))).toBe(false);
+    expect((await engine.localSession(S))?.status).toBe('completed');
+  });
+
   it('prune drops completed sessions with nothing queued', async () => {
     await store.write([
       { table: 'sessions', key: S, value: sessionRow(S, 'completed') },

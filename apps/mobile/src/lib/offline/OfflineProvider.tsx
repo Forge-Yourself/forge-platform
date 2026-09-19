@@ -1,7 +1,7 @@
 import NetInfo from '@react-native-community/netinfo';
 import { parseOfflineMode, resolveOfflineLogging, type OfflineMode, type QueueStatus } from '@forge/shared';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { getStoredValue, setStoredValue } from '../deviceStore';
 import { supabase } from '../supabase';
@@ -16,7 +16,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const signedIn = auth.status === 'signedIn' && auth.user !== null;
   const [mode, setMode] = useState<OfflineMode>('off');
   const [deviceChoice, setChoice] = useState(false);
-  const [online, setOnline] = useState(true);
+  // Web knows synchronously; seeding from it keeps a cold offline boot's first
+  // reads on the cache instead of queueing behind supabase-js's auth retries.
+  const [online, setOnline] = useState(() =>
+    Platform.OS === 'web' && typeof navigator !== 'undefined' ? navigator.onLine : true,
+  );
   const [status, setStatus] = useState<QueueStatus>({ pending: 0, failed: 0 });
   const [authPaused, setAuthPaused] = useState(false);
   const [warmedAt, setWarmedAt] = useState<string | null>(null);
@@ -69,9 +73,21 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [signedIn, online]);
 
   useEffect(() => {
-    return NetInfo.addEventListener((s) => {
+    const unsubscribe = NetInfo.addEventListener((s) => {
       setOnline(s.isConnected !== false && s.isInternetReachable !== false);
     });
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return unsubscribe;
+    // NetInfo's web module listens to navigator.connection 'change' whenever
+    // that API exists (Chrome, Edge), and never to the window online/offline
+    // events, so a browser dropping its connection may not reach it.
+    const sync = () => setOnline(navigator.onLine);
+    window.addEventListener('online', sync);
+    window.addEventListener('offline', sync);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('online', sync);
+      window.removeEventListener('offline', sync);
+    };
   }, []);
 
   useEffect(() => {

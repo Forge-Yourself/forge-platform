@@ -398,6 +398,10 @@ export class SyncEngine {
     return this.exclusive(async () => {
       const pendingComplete = (await this.entries()).some((e) => e.sessionId === row.id && e.op === 'complete');
       if (pendingComplete) return false;
+      // Monotonic: a session is never reopened, so an in_progress row read before
+      // a Finish landed is stale, however late it arrives.
+      const local = await this.store.get<SessionRow>('sessions', row.id);
+      if (local?.status === 'completed' && row.status !== 'completed') return false;
       await this.store.write([{ table: 'sessions', key: row.id, value: row }]);
       return true;
     });

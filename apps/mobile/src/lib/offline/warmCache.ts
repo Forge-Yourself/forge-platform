@@ -3,7 +3,9 @@ import { fetchClientDetail } from '../clients/useClientDetail';
 import { fetchRoster } from '../clients/useClientList';
 import { fetchClientHome } from '../home/fetchClientHome';
 import { fetchInProgress } from '../logging/useInProgressSession';
+import { fetchIntakeFlags } from '../home/usePtDashboard';
 import { loadWeek } from '../logging/loadWeek';
+import { fetchPrograms } from '../programs/useProgramList';
 import { cachedFetch } from './cachedFetch';
 import { engine } from './engine';
 import { fetchLastSets } from './fetchLastSets';
@@ -33,6 +35,11 @@ export async function warmCache(user: UserRow): Promise<string | null> {
   if (user.role === 'pt') {
     const roster = await cachedFetch(ON, 'roster:' + user.id, () => fetchRoster(user.id));
     if (roster.error !== null) return null;
+    const ids = roster.rows.map((r) => r.id);
+    await Promise.all([
+      cachedFetch(ON, 'programs', fetchPrograms),
+      ids.length > 0 ? cachedFetch(ON, 'flags:' + user.id, () => fetchIntakeFlags(ids)) : Promise.resolve(),
+    ]);
     for (const c of roster.rows.filter((r) => r.state === 'active')) {
       await warmClient(c.id, c.displayName, unit);
     }

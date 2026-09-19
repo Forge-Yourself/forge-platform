@@ -64,7 +64,9 @@ export function useInProgressSession(): { session: InProgressSession | null; loa
             .filter((s) => queued.has(s.id))
             .sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? ''))[0];
           if (!local || (result.session && result.session.id === local.id)) return result;
-          return { session: { ...local, clientName: null }, error: null };
+          // The warmed client name (PITFALLS I3: a null name still renders).
+          const name = await engine.getCache<{ name: string | null }>('clientName:' + local.client_id);
+          return { session: { ...local, clientName: name?.value.name ?? null }, error: null };
         })
         .then((result) => {
           if (!cancelled) setState({ session: result.session, loading: false, error: result.error });

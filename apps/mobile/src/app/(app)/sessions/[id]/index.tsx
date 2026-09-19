@@ -44,6 +44,7 @@ import {
 import { newUlid } from '../../../../lib/logging/ulid';
 import { useRestTimer } from '../../../../lib/logging/useRestTimer';
 import { useSession, type BestSet } from '../../../../lib/logging/useSession';
+import { OFFLINE } from '../../../../lib/offline/cachedFetch';
 import { engine } from '../../../../lib/offline/engine';
 import { queueComplete, queueDeleteSet, queueLogSet } from '../../../../lib/offline/loggingRepo';
 import { useOffline } from '../../../../lib/offline/offlineContext';
@@ -137,6 +138,7 @@ export default function SessionScreen() {
       onSession: () => void data.refetch(),
     },
     offline.effective,
+    offline.online,
   );
   useKeepAwake();
 
@@ -528,8 +530,9 @@ export default function SessionScreen() {
         <EmptyState
           icon="alert"
           tone="danger"
-          title={t('logging.session.notFound')}
-          body={t('logging.session.notFoundBody')}
+          // No signal and not on this device: that is not a missing session.
+          title={data.error === OFFLINE ? t('logging.offline.needsConnection') : t('logging.session.notFound')}
+          body={data.error === OFFLINE ? t('logging.offline.needsConnectionBody') : t('logging.session.notFoundBody')}
           actionLabel={t('common.back')}
           actionVariant="ghost"
           onAction={() => router.dismissTo('/')}
@@ -940,9 +943,10 @@ export default function SessionScreen() {
           <EmptyState
             icon="dumbbell"
             title={t('logging.session.noExercises')}
-            body={t('logging.session.noExercisesBody')}
-            actionLabel={t('logging.session.addExercise')}
-            onAction={openPicker}
+            // Offline the library is out of reach: say so rather than offer an
+            // Add that cannot open (PITFALLS N14).
+            body={pickerOff ? t('logging.offline.needsConnection') : t('logging.session.noExercisesBody')}
+            {...(pickerOff ? {} : { actionLabel: t('logging.session.addExercise'), onAction: openPicker })}
           />
         ) : (
           <>

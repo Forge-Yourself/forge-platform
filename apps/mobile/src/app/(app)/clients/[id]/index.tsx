@@ -11,6 +11,7 @@ import { SessionList } from '../../../../lib/logging/SessionList';
 import { StartSessionSheet } from '../../../../lib/logging/StartSessionSheet';
 import { useSessionHistory } from '../../../../lib/logging/useSessionHistory';
 import { OfflineStatusChip } from '../../../../lib/offline/OfflineStatusChip';
+import { useOffline } from '../../../../lib/offline/offlineContext';
 import { useClientActiveProgram } from '../../../../lib/programs/useClientActiveProgram';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import {
@@ -133,6 +134,7 @@ export default function ClientDetail() {
     unitSystem,
   );
   const program = useClientActiveProgram(params.id);
+  const offline = useOffline();
   const { submitting, error: actionError, setError: setActionError, run } = useAsyncSubmit();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [startOpen, setStartOpen] = useState(false);
@@ -298,7 +300,10 @@ export default function ClientDetail() {
         {/* A failed program fetch used to be indistinguishable from "no program
             assigned": the Week tile read "—" and the name vanished, with no
             banner anywhere on the screen to say a request had failed. */}
-        {program.error ? <Banner variant="danger" message={t('clients.offlineError.body')} /> : null}
+        {/* Offline with the switch on, the status chip already says so; the program card is online-only. */}
+        {program.error && !(offline.effective && !offline.online) ? (
+          <Banner variant="danger" message={t('clients.offlineError.body')} />
+        ) : null}
 
         <Row style={{ gap: theme.space[2], alignItems: 'stretch' }}>
           <StatTile label={t('clients.detail.stats.since')} value={shortMonthYear(client.created_at)} />

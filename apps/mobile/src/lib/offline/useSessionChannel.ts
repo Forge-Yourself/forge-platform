@@ -25,8 +25,17 @@ type BroadcastPayload = {
  * With offline logging effective, every row goes through the engine first:
  * a pending local write for the same id wins, and an echo of our own write
  * is dropped. Returns whether the channel is joined (the Live badge).
+ *
+ * Joined only while `online`: with no signal the socket is dead anyway, and
+ * leaving then rejoining means the caller's reload on reconnect catches up
+ * whatever the channel missed.
  */
-export function useSessionChannel(sessionId: string | null, handlers: Handlers, throughEngine: boolean): boolean {
+export function useSessionChannel(
+  sessionId: string | null,
+  handlers: Handlers,
+  throughEngine: boolean,
+  online: boolean,
+): boolean {
   const [joined, setJoined] = useState(false);
   const latest = useRef(handlers);
   useEffect(() => {
@@ -34,7 +43,7 @@ export function useSessionChannel(sessionId: string | null, handlers: Handlers, 
   });
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !online) return;
     let cancelled = false;
 
     const handle = (msg: { payload?: BroadcastPayload }) => {
@@ -79,7 +88,7 @@ export function useSessionChannel(sessionId: string | null, handlers: Handlers, 
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  }, [sessionId, throughEngine]);
+  }, [sessionId, throughEngine, online]);
 
-  return joined;
+  return joined && online;
 }

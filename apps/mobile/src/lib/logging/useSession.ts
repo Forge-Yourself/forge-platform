@@ -1,5 +1,5 @@
 import { isNetworkError, programTreeSchema, type PrType } from '@forge/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { OFFLINE } from '../offline/cachedFetch';
 import { engine } from '../offline/engine';
 import type { LastSets } from '../offline/fetchLastSets';
@@ -202,7 +202,9 @@ async function localLoaded(sessionId: string): Promise<Loaded | null> {
       break;
     }
   }
-  const names: Record<string, ExerciseName> = {};
+  const names: Record<string, ExerciseName> = {
+    ...((await engine.getCache<Record<string, ExerciseName>>('sessionNames:' + session.id))?.value ?? {}),
+  };
   for (const block of day?.blocks ?? []) {
     for (const e of block.exercises) names[e.exercise_id] = { name: e.exercise_name, name_ar: e.exercise_name_ar ?? null };
   }
@@ -222,26 +224,38 @@ async function localLoaded(sessionId: string): Promise<Loaded | null> {
 async function loadSession(sessionId: string, offline: { effective: boolean; online: boolean }): Promise<Loaded> {
   if (!offline.effective) return fetchSession(sessionId);
   const id = await engine.resolveSessionId(sessionId);
+  // Local first: once a Finish replays, prune drops the local copy, and a
+  // server read that started before the Finish landed must still lose to it.
+  const local = await engine.localSession(id);
   const server = offline.online ? await fetchSession(id) : null;
   if (server && server.error === null && server.session) {
-    // A Finish still in the outbox: the device's completed row wins over the
-    // server's in_progress, or the screen would flip back to logging.
-    const local = await engine.localSession(id);
+    // A Finish still in the outbox (or just replayed): the device's completed
+    // row wins over the server's in_progress, or the screen would flip back.
     const session = local?.status === 'completed' && server.session.status === 'in_progress' ? local : server.session;
-    // Keep an in-progress session on the device so a kill plus an offline reopen still has it.
+    // Keep the device's copy current: in progress so a kill plus an offline
+    // reopen still has it, completed so a stale in-progress copy is retired.
+    await engine.applyServerSession(session);
     if (session.status === 'in_progress') {
-      await engine.applyServerSession(session);
       for (const s of server.sets) await engine.applyServerSet(s);
+      // Names of exercises added from the (online-only) library, for an offline reopen.
+      await engine.putCache('sessionNames:' + id, server.names);
+    } else {
+      // The cached Resume banner must not point at a session that has ended.
+      const banner = await engine.getCache<{ session: { id: string } | null }>('inprogress');
+      if (banner?.value.session?.id === id) await engine.putCache('inprogress', { session: null, error: null });
     }
     return { ...server, session, sets: await engine.overlaySets(id, server.sets) };
   }
   // Offline, or a session whose start has not replayed yet (the server says not_found).
-  return (await localLoaded(id)) ?? server ?? { ...EMPTY, error: 'not_found' };
+  return (await localLoaded(id)) ?? server ?? { ...EMPTY, error: OFFLINE };
 }
 
 export function useSession(sessionId: string | undefined): SessionData {
   const offline = useOffline();
   const [state, setState] = useState<Loaded>({ ...EMPTY, loading: true });
+  // Loads overlap (focus, Finish, a broadcast); only the newest may land, or a
+  // slow read taken before a Finish overwrites the summary with the old state.
+  const loadSeq = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,8 +267,9 @@ export function useSession(sessionId: string | undefined): SessionData {
         cancelled = true;
       };
     }
+    const seq = ++loadSeq.current;
     void loadSession(sessionId, { effective: offline.effective, online: offline.online }).then((result) => {
-      if (!cancelled) setState(result);
+      if (!cancelled && seq === loadSeq.current) setState(result);
     });
     return () => {
       cancelled = true;
@@ -266,8 +281,9 @@ export function useSession(sessionId: string | undefined): SessionData {
   // already showing the session.
   const refetch = useCallback(async () => {
     if (!sessionId) return;
+    const seq = ++loadSeq.current;
     const result = await loadSession(sessionId, { effective: offline.effective, online: offline.online });
-    setState(result);
+    if (seq === loadSeq.current) setState(result);
   }, [sessionId, offline.effective, offline.online]);
 
   const applySet = useCallback((set: SetRow) => {
@@ -303,10 +319,18 @@ export function useSession(sessionId: string | undefined): SessionData {
     });
   }, []);
 
-  const ensureNames = useCallback(async (exerciseIds: string[]) => {
-    const fetched = await fetchNames(exerciseIds);
-    setState((prev) => ({ ...prev, names: { ...prev.names, ...fetched } }));
-  }, []);
+  const ensureNames = useCallback(
+    async (exerciseIds: string[]) => {
+      const fetched = await fetchNames(exerciseIds);
+      setState((prev) => ({ ...prev, names: { ...prev.names, ...fetched } }));
+      if (offline.effective && sessionId) {
+        const id = await engine.resolveSessionId(sessionId);
+        const cached = await engine.getCache<Record<string, ExerciseName>>('sessionNames:' + id);
+        await engine.putCache('sessionNames:' + id, { ...cached?.value, ...fetched });
+      }
+    },
+    [offline.effective, sessionId],
+  );
 
   return { ...state, refetch, applySet, removeSet, applyPrs, ensureNames };
 }
