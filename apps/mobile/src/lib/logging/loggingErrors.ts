@@ -1,4 +1,3 @@
-import type { PostgrestError } from '@supabase/supabase-js';
 import type { TFunction } from 'i18next';
 
 /**
@@ -10,7 +9,10 @@ import type { TFunction } from 'i18next';
  * is the only signal. A fetch that never reached Postgres arrives with an
  * empty code and the TypeError text in message.
  */
-export function mapLoggingError(error: PostgrestError | Error | null | undefined, t: TFunction): string {
+export function mapLoggingError(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+  t: TFunction,
+): string {
   if (!error) return t('logging.session.errorGeneric');
   const code = 'code' in error && typeof error.code === 'string' ? error.code : null;
   const message = error.message ?? '';

@@ -1,6 +1,11 @@
-import { programTreeSchema, type PrType } from '@forge/shared';
+import { isNetworkError, programTreeSchema, type PrType } from '@forge/shared';
 import { useCallback, useEffect, useState } from 'react';
+import { OFFLINE } from '../offline/cachedFetch';
+import { engine } from '../offline/engine';
+import type { LastSets } from '../offline/fetchLastSets';
+import { useOffline } from '../offline/offlineContext';
 import { supabase } from '../supabase';
+import type { WeekLoad } from './loadWeek';
 import type { ProgramDay } from './sessionModel';
 import type { SetRow, WorkoutSessionRow } from './sessionRpc';
 
@@ -53,7 +58,7 @@ async function fetchNames(ids: string[]): Promise<Record<string, ExerciseName>> 
 
 async function fetchSession(sessionId: string): Promise<Loaded> {
   const { data: session, error } = await supabase.from('workout_sessions').select('*').eq('id', sessionId).maybeSingle();
-  if (error) return { ...EMPTY, error: error.message };
+  if (error) return { ...EMPTY, error: isNetworkError(error) ? OFFLINE : error.message };
   if (!session) return { ...EMPTY, error: 'not_found' };
 
   const [{ data: sets }, dayRow, { data: clientRow }] = await Promise.all([
@@ -179,7 +184,63 @@ async function fetchSession(sessionId: string): Promise<Loaded> {
   };
 }
 
+/**
+ * A session built only from the device: local rows plus the warmed cache
+ * (spec §5.4). Records are not warmed, so the Best tile and this session's PR
+ * list stay empty until the server answers.
+ */
+async function localLoaded(sessionId: string): Promise<Loaded | null> {
+  const session = await engine.localSession(sessionId);
+  if (!session) return null;
+  const sets = await engine.localSets(session.id);
+  const week = await engine.getCache<WeekLoad>('week:' + session.client_id);
+  let day: ProgramDay | null = null;
+  for (const w of week?.value.program?.weeks ?? []) {
+    const found = w.days.find((d) => d.id === session.program_day_id);
+    if (found) {
+      day = found;
+      break;
+    }
+  }
+  const names: Record<string, ExerciseName> = {};
+  for (const block of day?.blocks ?? []) {
+    for (const e of block.exercises) names[e.exercise_id] = { name: e.exercise_name, name_ar: e.exercise_name_ar ?? null };
+  }
+  const last = await engine.getCache<LastSets>('last:' + session.client_id);
+  const clientName = (await engine.getCache<{ name: string | null }>('clientName:' + session.client_id))?.value.name ?? null;
+  return {
+    ...EMPTY,
+    session,
+    sets,
+    day,
+    clientName,
+    names,
+    lastByExercise: last?.value.last ?? {},
+  };
+}
+
+async function loadSession(sessionId: string, offline: { effective: boolean; online: boolean }): Promise<Loaded> {
+  if (!offline.effective) return fetchSession(sessionId);
+  const id = await engine.resolveSessionId(sessionId);
+  const server = offline.online ? await fetchSession(id) : null;
+  if (server && server.error === null && server.session) {
+    // A Finish still in the outbox: the device's completed row wins over the
+    // server's in_progress, or the screen would flip back to logging.
+    const local = await engine.localSession(id);
+    const session = local?.status === 'completed' && server.session.status === 'in_progress' ? local : server.session;
+    // Keep an in-progress session on the device so a kill plus an offline reopen still has it.
+    if (session.status === 'in_progress') {
+      await engine.applyServerSession(session);
+      for (const s of server.sets) await engine.applyServerSet(s);
+    }
+    return { ...server, session, sets: await engine.overlaySets(id, server.sets) };
+  }
+  // Offline, or a session whose start has not replayed yet (the server says not_found).
+  return (await localLoaded(id)) ?? server ?? { ...EMPTY, error: 'not_found' };
+}
+
 export function useSession(sessionId: string | undefined): SessionData {
+  const offline = useOffline();
   const [state, setState] = useState<Loaded>({ ...EMPTY, loading: true });
 
   useEffect(() => {
@@ -192,22 +253,22 @@ export function useSession(sessionId: string | undefined): SessionData {
         cancelled = true;
       };
     }
-    void fetchSession(sessionId).then((result) => {
+    void loadSession(sessionId, { effective: offline.effective, online: offline.online }).then((result) => {
       if (!cancelled) setState(result);
     });
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, offline.effective, offline.online]);
 
   // Deliberately does not flip loading: the completed-state re-read after
   // Finish (spec §5.3) must not flash a skeleton over a screen that is
   // already showing the session.
   const refetch = useCallback(async () => {
     if (!sessionId) return;
-    const result = await fetchSession(sessionId);
+    const result = await loadSession(sessionId, { effective: offline.effective, online: offline.online });
     setState(result);
-  }, [sessionId]);
+  }, [sessionId, offline.effective, offline.online]);
 
   const applySet = useCallback((set: SetRow) => {
     setState((prev) => {

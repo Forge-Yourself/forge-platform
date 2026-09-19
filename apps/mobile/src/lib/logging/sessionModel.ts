@@ -1,4 +1,4 @@
-import type { ProgramTree } from '@forge/shared';
+import { orderSets, type ProgramTree } from '@forge/shared';
 import { slotFor } from '../programs/draftModel';
 import type { SetRow } from './sessionRpc';
 
@@ -86,9 +86,7 @@ export function buildExerciseList(
 }
 
 export function setsFor(sets: readonly SetRow[], exerciseId: string): SetRow[] {
-  return sets
-    .filter((s) => s.exercise_id === exerciseId)
-    .sort((a, b) => a.set_number - b.set_number || a.created_at.localeCompare(b.created_at));
+  return orderSets(sets.filter((s) => s.exercise_id === exerciseId));
 }
 
 /**

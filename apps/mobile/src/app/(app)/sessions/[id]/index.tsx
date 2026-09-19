@@ -1,5 +1,6 @@
 import {
   completeSessionInputSchema,
+  displayNumbers,
   displayToKg,
   formatElapsed,
   formatWeight,
@@ -9,6 +10,7 @@ import {
   palette,
   sessionVolume,
   unitLabel,
+  type EngineEvent,
   type PrType,
   type UnitSystem,
 } from '@forge/shared';
@@ -16,7 +18,7 @@ import { useAudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { useKeepAwake } from 'expo-keep-awake';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useAuth } from '../../../../lib/auth/AuthProvider';
@@ -42,6 +44,9 @@ import {
 import { newUlid } from '../../../../lib/logging/ulid';
 import { useRestTimer } from '../../../../lib/logging/useRestTimer';
 import { useSession, type BestSet } from '../../../../lib/logging/useSession';
+import { engine } from '../../../../lib/offline/engine';
+import { queueComplete, queueDeleteSet, queueLogSet } from '../../../../lib/offline/loggingRepo';
+import { useOffline } from '../../../../lib/offline/offlineContext';
 import { takePickedExercise } from '../../../../lib/programs/exercisePicker';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import {
@@ -73,7 +78,7 @@ type Draft = {
   isWarmup: boolean;
 };
 type KeypadTarget = 'weight' | 'reps' | 'rpe' | null;
-type PendingSet = { id: string; error: string | null };
+type PendingSet = { id: string; error: string | null; queued?: boolean };
 type PrView = {
   value: string;
   unit: string;
@@ -119,6 +124,7 @@ export default function SessionScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const unit = (auth.user?.unit_system as UnitSystem | undefined) ?? 'metric';
   const data = useSession(params.id);
+  const offline = useOffline();
   useKeepAwake();
 
   const [exerciseIndex, setExerciseIndex] = useState<number | null>(null);
@@ -168,6 +174,11 @@ export default function SessionScreen() {
     () => buildExerciseList(data.day, data.sets, data.names, extraIds),
     [data.day, data.sets, data.names, extraIds],
   );
+  // What the screen prints as the set number (spec D10): client-time order, so
+  // two devices logging "set 3" at once never both show 3.
+  const displayNo = useMemo(() => displayNumbers(data.sets), [data.sets]);
+  // The library picker is online-only; an offline session logs the programmed day.
+  const pickerOff = offline.effective && !offline.online;
 
   // Pick the starting exercise once the list exists (adjust-state-during-render, id-guarded).
   if (exerciseIndex === null && !data.loading && exercises.length > 0) {
@@ -205,7 +216,7 @@ export default function SessionScreen() {
   );
 
   function openPicker() {
-    if (!session) return;
+    if (!session || pickerOff) return;
     setListOpen(false);
     router.push({ pathname: '/(app)/sessions/[id]/pick-exercise', params: { id: session.id } });
   }
@@ -345,6 +356,18 @@ export default function SessionScreen() {
     haptic('light');
     if (!existing) setNoteOpen(false);
 
+    if (offline.effective) {
+      // Always through the outbox with the switch on (plan correction §5.3). The
+      // PR moment arrives with the engine's set_synced event below.
+      await queueLogSet(session.id, exerciseId, setNumber, input.data, optimistic, Platform.OS);
+      setPending((p) => ({ ...p, [id]: { id, error: null, queued: true } }));
+      offline.drainNow();
+      if (!existing && !input.data.is_warmup) {
+        rest.start(current.restSec ?? DEFAULT_REST_SEC, setNumber + 1, current.targetSets);
+      }
+      return;
+    }
+
     const { result, error } = await logSet(session.id, exerciseId, setNumber, input.data, Platform.OS);
     if (error || !result) {
       setPending((p) => ({ ...p, [id]: { id, error: mapLoggingError(error, t) } }));
@@ -372,6 +395,11 @@ export default function SessionScreen() {
 
   async function removeSet(set: SetRow) {
     data.removeSet(set.id);
+    if (offline.effective) {
+      await queueDeleteSet(set);
+      offline.drainNow();
+      return;
+    }
     const { error } = await deleteSet(set.id);
     if (error) {
       data.applySet(set);
@@ -407,6 +435,14 @@ export default function SessionScreen() {
       setFinishError(t('logging.finish.error'));
       return;
     }
+    if (offline.effective) {
+      await queueComplete(session, input.data);
+      offline.drainNow();
+      setFinishOpen(false);
+      rest.clear();
+      await data.refetch();
+      return;
+    }
     setFinishing(true);
     setFinishError(null);
     const { error } = await completeWorkoutSession(session.id, input.data);
@@ -419,6 +455,38 @@ export default function SessionScreen() {
     rest.clear();
     await data.refetch();
   }
+
+  // Engine events (switch on): a queued set reached the server (and maybe set a
+  // record), the session was merged into one another device started, or a
+  // write was refused. The handler reads this render's values through a ref,
+  // so the subscription is made once per switch state, not on every render.
+  const onEngineEvent = useRef<(e: EngineEvent) => void>(() => {});
+  useEffect(() => {
+    onEngineEvent.current = (e: EngineEvent) => {
+      if (e.type === 'set_synced' && e.set.workout_session_id === session?.id) {
+        data.applySet(e.set);
+        setPending((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== e.set.id)));
+        const hits = e.newPrs as PrType[];
+        if (hits.length > 0 && !e.set.is_warmup) {
+          const ex = exercises.find((x) => x.exerciseId === e.set.exercise_id);
+          setPr(buildPrView(e.set, hits, data.bestByExercise[e.set.exercise_id] ?? null, ex ? nameOf(ex) : ''));
+          data.applyPrs(e.set, hits);
+          haptic('success');
+        }
+      }
+      if (e.type === 'session_rewritten' && (e.from === params.id || e.from === session?.id)) {
+        router.replace({ pathname: '/(app)/sessions/[id]', params: { id: e.to } });
+      }
+      if (e.type === 'failed' && e.entry.op === 'log_set' && e.entry.sessionId === session?.id) {
+        const setId = e.entry.args.p_id;
+        setPending((p) => ({ ...p, [setId]: { id: setId, error: mapLoggingError(e.entry.lastError, t) } }));
+      }
+    };
+  });
+  useEffect(() => {
+    if (!offline.effective) return;
+    return engine.subscribe((e) => onEngineEvent.current(e));
+  }, [offline.effective]);
 
   // PITFALLS N1 + N15: the screen owns its Back, and a cold deep link has no
   // frame to pop to.
@@ -778,7 +846,7 @@ export default function SessionScreen() {
     return (
       <View key={s.id} style={{ gap: 4 }}>
         <SetRowView
-          n={s.is_warmup ? t('logging.session.warmupShort') : String(s.set_number)}
+          n={s.is_warmup ? t('logging.session.warmupShort') : String(displayNo[s.id] ?? s.set_number)}
           weight={s.weight_kg === null ? '—' : shownNumber(s.weight_kg, unit)}
           reps={s.reps === null ? '—' : String(s.reps)}
           rpe={s.rpe === null ? '—' : String(s.rpe)}
@@ -786,7 +854,7 @@ export default function SessionScreen() {
           state="done"
           error={!!p?.error}
           coach={!mine && viewerIsClient ? t('logging.session.coachTag') : null}
-          a11yCheck={editable ? t('logging.session.editSetN', { n: s.set_number }) : undefined}
+          a11yCheck={editable ? t('logging.session.editSetN', { n: displayNo[s.id] ?? s.set_number }) : undefined}
           onCheck={editable ? () => setEditing(s) : undefined}
         />
         {p?.error ? (
@@ -808,6 +876,11 @@ export default function SessionScreen() {
               }
             />
           </Row>
+        ) : null}
+        {p?.queued && !p.error ? (
+          <Text variant="caption" tone="muted" style={{ paddingHorizontal: 4 }}>
+            {t('logging.offline.notSynced')}
+          </Text>
         ) : null}
       </View>
     );
@@ -1037,7 +1110,7 @@ export default function SessionScreen() {
             </View>
           ) : (
             <View style={{ flex: 1 }}>
-              <Button label={t('logging.session.addExercise')} size="lg" onPress={openPicker} />
+              <Button label={t('logging.session.addExercise')} size="lg" disabled={pickerOff} onPress={openPicker} />
             </View>
           )}
           <Pressable
@@ -1191,7 +1264,13 @@ export default function SessionScreen() {
                 );
               })}
             </ScrollView>
-            <Button label={t('logging.session.addExercise')} variant="ghost" icon="plus" onPress={openPicker} />
+            <Button
+              label={t('logging.session.addExercise')}
+              variant="ghost"
+              icon="plus"
+              disabled={pickerOff}
+              onPress={openPicker}
+            />
           </View>
         </View>
       </Modal>

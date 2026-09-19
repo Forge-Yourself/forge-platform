@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Banner, Button, ListRow, SectionCard, SectionLabel, Skeleton, Tag, Text, TextLink } from '../../ui';
+import { useAuth } from '../auth/AuthProvider';
 import { cachedFetch } from '../offline/cachedFetch';
+import { queueStart } from '../offline/loggingRepo';
 import { useOffline } from '../offline/offlineContext';
 import { EMPTY_WEEK, loadWeek, type WeekLoad } from './loadWeek';
 import { startWorkoutSession } from './sessionRpc';
@@ -27,6 +29,7 @@ export function StartSessionSheet({ visible, clientId, viewerIsPt, onDismiss }: 
   const { t } = useTranslation();
   const theme = useTheme();
   const offline = useOffline();
+  const auth = useAuth();
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState<WeekLoad>(EMPTY_WEEK);
   const [selected, setSelected] = useState<string | 'freestyle' | null>(null);
@@ -51,6 +54,23 @@ export function StartSessionSheet({ visible, clientId, viewerIsPt, onDismiss }: 
     if (!selected) return;
     setStarting(true);
     setError(null);
+    if (offline.effective) {
+      const day = selected === 'freestyle' ? null : (loaded.days.find((d) => d.id === selected) ?? null);
+      const id = await queueStart({
+        clientId,
+        programDayId: day?.id ?? null,
+        dayLabel: day?.label ?? null,
+        dayNumber: day?.dayNumber ?? null,
+        weekNumber: day ? loaded.week : null,
+        viewerId: auth.user?.id ?? '',
+        isPtLed: viewerIsPt,
+      });
+      offline.drainNow();
+      setStarting(false);
+      onDismiss();
+      router.replace({ pathname: '/(app)/sessions/[id]', params: { id } });
+      return;
+    }
     const { session, error: err } = await startWorkoutSession(clientId, selected === 'freestyle' ? null : selected);
     setStarting(false);
     if (err || !session) {
