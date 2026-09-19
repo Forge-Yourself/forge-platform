@@ -1143,5 +1143,93 @@
       "needsSyncBody_many": "{{count}} تغييرًا بالانتظار",
       "needsSyncBody_other": "{{count}} تغيير بالانتظار"
     }
+  },
+  "body": {
+    "title": "قياسات الجسم",
+    "subtitle": "آخر {{weeks}} أسابيع",
+    "metric": {
+      "weight": "الوزن",
+      "body_fat": "دهون الجسم",
+      "waist": "الخصر",
+      "hips": "الورك",
+      "chest": "الصدر",
+      "arm": "الذراع",
+      "thigh": "الفخذ",
+      "neck": "الرقبة"
+    },
+    "window": "{{weeks}} أ",
+    "weekLabel": "أ {{n}}",
+    "chartLabel": "منحنى {{metric}}",
+    "plateau": "ضمن 0.5% لمدة 4 أسابيع",
+    "logToday": "سجّل اليوم",
+    "firstValue": "القياس الأول",
+    "decrease": "إنقاص",
+    "increase": "زيادة",
+    "save": "حفظ القياس",
+    "history": "السجل",
+    "emptyTitle": "لا قياسات بعد",
+    "emptyBody": "سجّل أول قياس أدناه. يبدأ المنحنى مع القياس الثاني.",
+    "loadError": "تعذّر تحميل القياسات.",
+    "saveError": "تعذّر الحفظ. حاول مرة أخرى.",
+    "needsConnection": "يلزم اتصال للحفظ",
+    "deleteHint": "اضغط مطولاً على قياس سجّلته لحذفه.",
+    "deleteTitle": "حذف هذا القياس؟",
+    "deleteConfirm": "حذف",
+    "cardTitle": "الجسم",
+    "cardEmpty": "لا قياسات بعد",
+    "cardDelta": "{{delta}} خلال 4 أسابيع",
+    "sharedPhotos": "صور مشتركة",
+    "photos": {
+      "title": "صور التقدّم",
+      "take": "التقط صوراً",
+      "compare": "مقارنة",
+      "all": "الكل",
+      "pose": {
+        "front": "أمام",
+        "back": "خلف",
+        "side_left": "جانب يسار",
+        "side_right": "جانب يمين",
+        "custom": "أخرى"
+      },
+      "private": "أنت وحدك ترى هذه الصورة",
+      "emptyTitle": "لا صور بعد",
+      "emptyBody": "الصور بالوضعية والإضاءة نفسها تُظهر التغيّر بوضوح.",
+      "loadError": "تعذّر تحميل الصور.",
+      "unavailable": "الصورة غير متاحة",
+      "capture": {
+        "title": "صورة جديدة",
+        "ghost": "إظهار الصورة السابقة",
+        "shutter": "التقاط",
+        "retake": "إعادة الالتقاط",
+        "use": "استخدم الصورة",
+        "library": "اختر من المعرض",
+        "flip": "تبديل الكاميرا",
+        "share": "شاركها مع مدرّبي",
+        "ptNote": "الصور التي تلتقطها يراها أنت والعميل. يمكن للعميل إخفاؤها عنك.",
+        "needsConnection": "يلزم اتصال للرفع",
+        "uploadError": "فشل الرفع. حاول مرة أخرى.",
+        "permissionTitle": "الوصول إلى الكاميرا متوقف",
+        "permissionBody": "اسمح بالوصول إلى الكاميرا لالتقاط صور التقدّم، أو اختر صورة من المعرض.",
+        "permissionGrant": "السماح بالكاميرا",
+        "openSettings": "فتح الإعدادات"
+      },
+      "detail": {
+        "takenByYou": "التقطتها أنت",
+        "takenByPt": "التقطها مدرّبك",
+        "takenByClient": "التقطها العميل",
+        "share": "شاركها مع مدرّبي",
+        "delete": "حذف الصورة",
+        "deleteTitle": "حذف هذه الصورة؟",
+        "deleteBody": "ستُحذف لديك ولدى مدرّبك.",
+        "error": "تعذّر تحديث الصورة."
+      },
+      "compareScreen": {
+        "title": "مقارنة",
+        "before": "قبل",
+        "after": "بعد",
+        "noWeight": "لا وزن في ذلك الأسبوع",
+        "needTwo": "التقط هذه الوضعية في يومين مختلفين للمقارنة."
+      }
+    }
   }
 }
