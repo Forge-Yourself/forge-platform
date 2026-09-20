@@ -107,7 +107,12 @@ export function useSessionController(sessionId: string) {
   );
   const live = channel.joined;
   const devices = channel.devices;
-  useKeepAwake();
+  // The console rail remounts the controller on every switch (ConsoleBody is
+  // keyed on sessionId). A fast switch-then-Back can unmount before the web
+  // wake lock's activate() resolves, and expo-keep-awake's deactivate then
+  // throws "has not activated yet" as an unhandled rejection. Suppress it —
+  // it is a harmless race, not a real failure to release the lock.
+  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
 
   const [exerciseIndex, setExerciseIndex] = useState<number | null>(null);
   const [extraIds, setExtraIds] = useState<string[]>([]);
