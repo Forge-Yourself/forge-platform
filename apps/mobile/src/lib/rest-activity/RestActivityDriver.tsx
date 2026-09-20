@@ -10,7 +10,7 @@ import { kvStore } from '../offline/kvStore';
 import { restActivity } from './index';
 import { payloadFor } from './payload';
 
-const timerCue = require('../../../assets/sounds/timer-done.wav');
+const timerCue = require('../../../assets/sounds/timer_done.wav');
 const ASKED_KEY = 'rest-permission-asked';
 
 // The web no-op always resolves; Android/iOS can reject. A lock-screen failure

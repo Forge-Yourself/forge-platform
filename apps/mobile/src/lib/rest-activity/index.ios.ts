@@ -45,7 +45,7 @@ export const restActivity: RestActivity = {
     }
     await cancelZero();
     zeroId = await Notifications.scheduleNotificationAsync({
-      content: { title: p.labels.doneTitle, body: p.labels.doneBody, sound: 'timer-done.wav' },
+      content: { title: p.labels.doneTitle, body: p.labels.doneBody, sound: 'timer_done.wav' },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(p.endsAt) },
     }).catch(() => null);
   },

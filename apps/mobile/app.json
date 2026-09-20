@@ -70,7 +70,7 @@
         "expo-notifications",
         {
           "sounds": [
-            "./assets/sounds/timer-done.wav"
+            "./assets/sounds/timer_done.wav"
           ]
         }
       ],

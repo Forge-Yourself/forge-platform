@@ -7,3 +7,7 @@ expo-env.d.ts
 # Local module build caches
 modules/*/android/.gradle/
 modules/*/android/build/
+
+# CNG-generated native projects (expo prebuild)
+/android/
+/ios/
