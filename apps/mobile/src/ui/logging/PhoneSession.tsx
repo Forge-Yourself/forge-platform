@@ -19,6 +19,7 @@ import { Toggle } from '../Toggle';
 import { GhostTile, InfoTile, MicroLabel } from './sessionParts';
 import { SessionSheets } from './SessionSheets';
 import { SetRowView } from './SetRowView';
+import { VoiceSheet } from './VoiceSheet';
 
 /** Prototype `session`, phone layout. */
 export function PhoneSession({ c }: { c: SessionController }) {
@@ -29,7 +30,7 @@ export function PhoneSession({ c }: { c: SessionController }) {
     setExerciseIndex, draft, setDraft, openKeypad, noteOpen, setNoteOpen, pending, setTimerOpen, listOpen,
     setListOpen, setEditing, setFinishOpen, setFinishDraft, rest, openPicker, submitSet, draftNote, goBack,
     title, subtitle, weightLabel, warmups, workingSets, setNo, futureRows, last, best, next, reps, rx, setLine,
-    canLog, logLabel, restCaption,
+    canLog, logLabel, restCaption, voiceOpen, setVoiceOpen, logVoice, session,
   } = c;
 
   const doneRow = (s: SetRow) => {
@@ -192,6 +193,10 @@ export function PhoneSession({ c }: { c: SessionController }) {
                 }}
                 a11yCheck={logLabel}
                 onCheck={canLog ? () => void submitSet(null, draft) : undefined}
+                // The PT is the one at arm's length with chalk on their hands; a
+                // client self-logging types (spec §7.3). Voice needs a live session.
+                onMic={viewerIsClient || !session ? undefined : () => setVoiceOpen(true)}
+                micLabel={t('logging.voice.mic')}
               />
               {Array.from({ length: futureRows }, (_, i) => (
                 <SetRowView
@@ -411,6 +416,18 @@ export function PhoneSession({ c }: { c: SessionController }) {
       </Modal>
 
       <SessionSheets c={c} />
+
+      <VoiceSheet
+        visible={voiceOpen}
+        setNumber={setNo}
+        exerciseName={current ? nameOf(current) : null}
+        unit={unit}
+        language={i18n.language}
+        online={offline.online}
+        queued={offline.effective && !offline.online}
+        onLog={logVoice}
+        onClose={() => setVoiceOpen(false)}
+      />
     </Screen>
   );
 }

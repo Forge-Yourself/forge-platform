@@ -12,7 +12,7 @@ export type CellKey = 'weight' | 'reps' | 'rpe';
  * set, 44pt targets. `done` rows open the edit sheet from the check; the
  * `current` row's cells open the keypad and its check logs the set; `planned`
  * rows show the prescription, muted and inert. The artboard's mic button is
- * voice logging, M4d.
+ * real: M4d wires it to voice logging on the `current` row.
  */
 export function SetRowView({
   n,
@@ -27,6 +27,8 @@ export function SetRowView({
   cellA11y,
   a11yCheck,
   onCheck,
+  onMic,
+  micLabel,
 }: {
   n: string;
   weight: string;
@@ -40,6 +42,8 @@ export function SetRowView({
   cellA11y?: Record<CellKey, string>;
   a11yCheck?: string;
   onCheck?: () => void;
+  onMic?: () => void;
+  micLabel?: string;
 }) {
   const theme = useTheme();
   const isCurrent = state === 'current';
@@ -104,6 +108,24 @@ export function SetRowView({
         );
       })}
       {coach ? <Tag label={coach} tone="neutral" /> : null}
+      {isCurrent && onMic ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={micLabel}
+          onPress={onMic}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 11,
+            borderWidth: 1.5,
+            borderColor: theme.colors.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icon name="mic" size={18} color={theme.colors.textSecondary} />
+        </Pressable>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={a11yCheck}

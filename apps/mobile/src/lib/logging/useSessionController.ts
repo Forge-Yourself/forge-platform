@@ -122,6 +122,7 @@ export function useSessionController(sessionId: string) {
   const [pr, setPr] = useState<PrView | null>(null);
   const [timerOpen, setTimerOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [editing, setEditing] = useState<SetRow | null>(null);
   const [finishOpen, setFinishOpen] = useState(false);
   const [finishDraft, setFinishDraft] = useState('');
@@ -383,6 +384,11 @@ export function useSessionController(sessionId: string) {
     }
   }
 
+  /** Voice → the same submitSet as a tap, so outbox, PR moment and rest behave identically (spec §7.3). */
+  async function logVoice(values: { weightKg: number | null; reps: number | null; rpe: number | null }) {
+    await submitSet(null, { ...draft, weightKg: values.weightKg, reps: values.reps, rpe: values.rpe });
+  }
+
   async function removeSet(set: SetRow) {
     data.removeSet(set.id);
     if (offline.effective) {
@@ -553,6 +559,7 @@ export function useSessionController(sessionId: string) {
     exercises, displayNo, pickerOff, current, currentPos, setExerciseIndex,
     draft, setDraft, keypad, setKeypad, keypadText, setKeypadText, openKeypad, keypadCommit,
     noteOpen, setNoteOpen, pending, pr, setPr, timerOpen, setTimerOpen, listOpen, setListOpen,
+    voiceOpen, setVoiceOpen, logVoice,
     editing, setEditing, finishOpen, setFinishOpen, finishDraft, setFinishDraft, finishing, finishError,
     clock, rest, openPicker, submitSet, removeSet, draftNote, finish, buildPrView, goBack,
     dayTitle, title, weightLabel, elapsed, subtitle, allSets, warmups, workingSets, setNo,

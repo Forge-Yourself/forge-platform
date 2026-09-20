@@ -35,6 +35,7 @@ export type IconName =
   | 'warning'
   | 'sliders'
   | 'play'
+  | 'mic'
   | 'sparkle'
   | 'mail'
   | 'copy'
@@ -87,6 +88,7 @@ const GLYPHS: Record<IconName, Glyph> = {
   },
   sliders: { d: ['M3.5 7.5h7', 'M15.5 7.5h5', 'M3.5 16.5h5', 'M13.5 16.5h7'], circles: [[13, 7.5, 2.4], [10.5, 16.5, 2.4]] },
   play: { d: ['M8.5 5.4 19 12 8.5 18.6z'] },
+  mic: { d: ['M12 15.2a3.4 3.4 0 0 0 3.4-3.4V6.4a3.4 3.4 0 0 0-6.8 0v5.4a3.4 3.4 0 0 0 3.4 3.4z', 'M18.4 11.4a6.4 6.4 0 0 1-12.8 0', 'M12 17.8v3.2'] },
   sparkle: {
     d: [
       'M11.5 3.2 13 8l4.8 1.5L13 11l-1.5 4.8L10 11l-4.8-1.5L10 8z',

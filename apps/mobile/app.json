@@ -54,7 +54,7 @@
         "expo-camera",
         {
           "cameraPermission": "Forge uses the camera to take progress photos.",
-          "microphonePermission": false,
+          "microphonePermission": "Forge listens while you log a set by voice, and only then.",
           "recordAudioAndroid": false
         }
       ],
@@ -66,7 +66,22 @@
         }
       ],
       "expo-widgets",
-      ["expo-notifications", { "sounds": ["./assets/sounds/timer-done.wav"] }]
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/timer-done.wav"
+          ]
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Forge listens while you log a set by voice, and only then.",
+          "speechRecognitionPermission": "Forge turns what you say into the weight, reps and RPE of a set.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox", "com.google.android.as"]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
