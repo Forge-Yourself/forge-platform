@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- Asked for, not assumed: Android 14 denies it by default; the module falls back to an inexact alarm. -->
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+  <!-- Android 16 Live Updates: lets the ongoing rest notification be promoted to the status bar chip. -->
+  <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+  <application>
+    <receiver android:name="app.forge.restactivity.RestActionReceiver" android:exported="false" />
+    <receiver android:name="app.forge.restactivity.RestAlarmReceiver" android:exported="false" />
+  </application>
+</manifest>
