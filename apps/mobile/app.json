@@ -64,7 +64,9 @@
           "photosPermission": "Forge lets you choose a progress photo from your library.",
           "cameraPermission": "Forge uses the camera to take progress photos."
         }
-      ]
+      ],
+      "expo-widgets",
+      ["expo-notifications", { "sounds": ["./assets/sounds/timer-done.wav"] }]
     ],
     "experiments": {
       "typedRoutes": true,
