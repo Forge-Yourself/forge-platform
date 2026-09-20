@@ -2,7 +2,6 @@ import {
   applyNativeActions,
   plus30,
   pruneRests,
-  restPhase,
   startRest,
   togglePause,
   type RestAction,
@@ -81,13 +80,9 @@ export const restStore = {
   togglePause(sessionId: string): void {
     const r = snapshot.rests[sessionId];
     if (!r) return;
-    const now = Date.now();
-    // A rest that already reached zero has nothing to pause: pausing it would
-    // store 0 ms left and the rest would report 'paused' for ever instead of
-    // 'complete'. The full-screen timer swaps Pause for "Back to set" at zero,
-    // so this only guards a caller the UI does not offer.
-    if (restPhase(r, now) === 'complete') return;
-    publish(withRests({ ...snapshot.rests, [sessionId]: togglePause(r, now) }), true);
+    // A finished rest is left alone by the clock itself, so this is a no-op
+    // write in that case — cheap, and the rule stays in one tested place.
+    publish(withRests({ ...snapshot.rests, [sessionId]: togglePause(r, Date.now()) }), true);
   },
   clear(sessionId: string): void {
     if (!snapshot.rests[sessionId]) return;

@@ -48,6 +48,12 @@ describe('the clock', () => {
     const r = rest('a', 60);
     expect(remainingSec(plus30(r, T0 + 120_000), T0 + 120_000)).toBe(30);
   });
+  it('leaves a finished rest alone rather than pausing it at zero', () => {
+    const r = rest('a', 60);
+    const after = togglePause(r, T0 + 120_000);
+    expect(after).toEqual(r);
+    expect(restPhase(after, T0 + 120_000)).toBe('complete');
+  });
 });
 
 describe('soonest', () => {

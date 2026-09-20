@@ -64,7 +64,13 @@ export function plus30(r: RestState, now: number): RestState {
   return { ...r, endsAt: Math.max(r.endsAt, now) + PLUS_MS, totalMs: r.totalMs + PLUS_MS };
 }
 
+/**
+ * Pause or resume. A rest already at zero is left alone: pausing it would
+ * pin it at 0 in the paused phase, where it never reads complete again — and
+ * a lock-screen pause tap replayed after the rest ended lands here.
+ */
 export function togglePause(r: RestState, now: number): RestState {
+  if (restPhase(r, now) === 'complete') return r;
   return r.pausedMs === null
     ? { ...r, pausedMs: Math.max(0, r.endsAt - now) }
     : { ...r, endsAt: now + r.pausedMs, pausedMs: null };
