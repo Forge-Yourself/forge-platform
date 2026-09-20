@@ -1002,6 +1002,7 @@
       "start": "Start",
       "noLive": "No sessions running.",
       "noWeek": "Everyone is done for this week.",
+      "loadError": "Couldn't load the floor.",
       "mirrorOn": "Live mirror · {{n}} connected",
       "mirrorOnNoCount": "Live mirror on",
       "mirrorOff": "Live mirror off",

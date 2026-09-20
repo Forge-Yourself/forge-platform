@@ -1,15 +1,19 @@
-import { formatElapsed, remainingSec, restPhase } from '@forge/shared';
+import { formatElapsed, remainingSec, restPhase, type WeekRow } from '@forge/shared';
 import { router } from 'expo-router';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { memo, useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { StartSessionSheet } from '../../lib/logging/StartSessionSheet';
 import { restStore } from '../../lib/logging/restStore';
-import { usePtFloor, type LiveRow } from '../../lib/logging/usePtFloor';
+import { usePtFloor, type LiveRow, type PtFloor } from '../../lib/logging/usePtFloor';
+import { OFFLINE } from '../../lib/offline/cachedFetch';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Avatar } from '../Avatar';
+import { Banner } from '../Banner';
+import { Button } from '../Button';
 import { Icon } from '../Icon';
 import { formatClock } from '../RestTimer';
+import { Skeleton } from '../Skeleton';
 import { Text } from '../Text';
 
 function Section({ children }: { children: string }) {
@@ -25,27 +29,113 @@ function Section({ children }: { children: string }) {
 }
 
 /**
- * Live, then This week (spec D9). The rail on the console and the body of the
- * phone switcher: one list, two containers. `onPick` swaps the session in
- * place; Start goes through the existing StartSessionSheet.
+ * A live session's row owns its own second-by-second clock, so ticking stays
+ * local to the rows that show one — the rest of the rail (avatars, This week,
+ * the headers) redraws only when the floor data itself changes, not every
+ * second. Memoised so a parent re-render with unchanged row data is a no-op.
  */
-export function FloorList({ currentSessionId, onPick }: { currentSessionId: string | null; onPick: (sessionId: string) => void }) {
+const LiveSessionRow = memo(function LiveSessionRow({ row, selected, onPress }: { row: LiveRow; selected: boolean; onPress: () => void }) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const floor = usePtFloor(true);
   const rests = useSyncExternalStore(restStore.subscribe, restStore.getSnapshot, restStore.getSnapshot);
   const [now, setNow] = useState(() => Date.now());
-  const [starting, setStarting] = useState<string | null>(null);
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  function subline(l: LiveRow): string {
-    const rest = rests.rests[l.sessionId];
-    const clock = Math.max(now, rests.at);
-    if (rest && restPhase(rest, clock) === 'running') return t('logging.console.resting', { time: formatClock(remainingSec(rest, clock)) });
-    return l.startedAt ? formatElapsed(Math.floor((clock - new Date(l.startedAt).getTime()) / 1000)) : '';
+  const rest = rests.rests[row.sessionId];
+  const clock = Math.max(now, rests.at);
+  const subline =
+    rest && restPhase(rest, clock) === 'running'
+      ? t('logging.console.resting', { time: formatClock(remainingSec(rest, clock)) })
+      : row.startedAt
+        ? formatElapsed(Math.floor((clock - new Date(row.startedAt).getTime()) / 1000))
+        : '';
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        minHeight: 60,
+        paddingHorizontal: 14,
+        backgroundColor: selected ? theme.colors.accentSurfaceSoft : 'transparent',
+        borderStartWidth: 3,
+        borderStartColor: selected ? theme.colors.accent : 'transparent',
+      }}
+    >
+      <Avatar name={row.clientName} size={36} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '700' }}>
+          {row.clientName ?? t('logging.console.clientFallback')}
+        </Text>
+        <Text numeric numberOfLines={1} style={{ fontSize: 11.5, color: theme.colors.textMuted }}>
+          {subline}
+        </Text>
+      </View>
+    </Pressable>
+  );
+});
+
+/** A This-week row never ticks, so it only needs to re-render when its own data changes. */
+const WeekClientRow = memo(function WeekClientRow({ row, onStart }: { row: WeekRow; onStart: () => void }) {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingHorizontal: 14 }}>
+      <Avatar name={row.clientName} size={32} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: '600' }}>
+          {row.clientName ?? t('logging.console.clientFallback')}
+        </Text>
+        <Text numeric style={{ fontSize: 11.5, color: theme.colors.textMuted }}>
+          {t('logging.console.weekOpen', { week: row.week, n: row.openDays })}
+        </Text>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onStart}
+        style={{ minHeight: 44, minWidth: 64, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1.5, borderColor: theme.colors.accent, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.accentText }}>{t('logging.console.start')}</Text>
+      </Pressable>
+    </View>
+  );
+});
+
+/**
+ * Live, then This week (spec D9). The rail on the console and the body of the
+ * phone switcher: one list, two containers. `onPick` swaps the session in
+ * place; Start goes through the existing StartSessionSheet. `floor` is owned
+ * by the caller (FloorRail / SwitcherSheet) — this list never calls
+ * `usePtFloor` itself, so mounting it twice never runs the pipeline twice.
+ */
+export function FloorList({ currentSessionId, onPick, floor }: { currentSessionId: string | null; onPick: (sessionId: string) => void; floor: PtFloor }) {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const [starting, setStarting] = useState<string | null>(null);
+
+  if (floor.loading) {
+    return (
+      <View style={{ padding: 14, gap: 10 }}>
+        <Skeleton height={56} />
+        <Skeleton height={56} />
+      </View>
+    );
+  }
+
+  if (floor.error) {
+    return (
+      <View style={{ padding: 14, gap: 10 }}>
+        <Banner variant="danger" message={floor.error === OFFLINE ? t('logging.offline.needsConnection') : t('logging.console.loadError')} />
+        <Button label={t('common.retry')} variant="link" onPress={() => void floor.refetch()} />
+      </View>
+    );
   }
 
   return (
@@ -56,37 +146,9 @@ export function FloorList({ currentSessionId, onPick }: { currentSessionId: stri
           {t('logging.console.noLive')}
         </Text>
       ) : (
-        floor.live.map((l) => {
-          const on = l.sessionId === currentSessionId;
-          return (
-            <Pressable
-              key={l.sessionId}
-              accessibilityRole="button"
-              accessibilityState={{ selected: on }}
-              onPress={() => onPick(l.sessionId)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-                minHeight: 60,
-                paddingHorizontal: 14,
-                backgroundColor: on ? theme.colors.accentSurfaceSoft : 'transparent',
-                borderStartWidth: 3,
-                borderStartColor: on ? theme.colors.accent : 'transparent',
-              }}
-            >
-              <Avatar name={l.clientName} size={36} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '700' }}>
-                  {l.clientName ?? t('logging.console.clientFallback')}
-                </Text>
-                <Text numeric numberOfLines={1} style={{ fontSize: 11.5, color: theme.colors.textMuted }}>
-                  {subline(l)}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })
+        floor.live.map((l) => (
+          <LiveSessionRow key={l.sessionId} row={l} selected={l.sessionId === currentSessionId} onPress={() => onPick(l.sessionId)} />
+        ))
       )}
 
       <Section>{t('logging.console.thisWeek')}</Section>
@@ -95,26 +157,7 @@ export function FloorList({ currentSessionId, onPick }: { currentSessionId: stri
           {t('logging.console.noWeek')}
         </Text>
       ) : (
-        floor.week.map((w) => (
-          <View key={w.clientId} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingHorizontal: 14 }}>
-            <Avatar name={w.clientName} size={32} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: '600' }}>
-                {w.clientName ?? t('logging.console.clientFallback')}
-              </Text>
-              <Text numeric style={{ fontSize: 11.5, color: theme.colors.textMuted }}>
-                {t('logging.console.weekOpen', { week: w.week, n: w.openDays })}
-              </Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setStarting(w.clientId)}
-              style={{ minHeight: 44, minWidth: 64, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1.5, borderColor: theme.colors.accent, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.accentText }}>{t('logging.console.start')}</Text>
-            </Pressable>
-          </View>
-        ))
+        floor.week.map((w) => <WeekClientRow key={w.clientId} row={w} onStart={() => setStarting(w.clientId)} />)
       )}
 
       <Pressable
@@ -143,7 +186,7 @@ export function FloorRail({ currentSessionId, mirror }: { currentSessionId: stri
         {t('logging.console.today', { n: floor.live.length + floor.week.length })}
       </Text>
       <ScrollView>
-        <FloorList currentSessionId={currentSessionId} onPick={(id) => router.setParams({ id })} />
+        <FloorList currentSessionId={currentSessionId} onPick={(id) => router.setParams({ id })} floor={floor} />
       </ScrollView>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: mirror.joined ? theme.colors.successAccent : theme.colors.textMuted }} />

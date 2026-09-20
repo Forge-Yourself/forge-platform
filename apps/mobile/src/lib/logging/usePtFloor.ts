@@ -146,3 +146,8 @@ export function usePtFloor(enabled: boolean) {
 
   return { ...state, refetch: load };
 }
+
+/** One `usePtFloor` call per screen (its own multi-query pipeline) — everyone
+ * downstream (FloorList, the phone switcher badge) takes this shape as a prop
+ * instead of calling the hook again. */
+export type PtFloor = ReturnType<typeof usePtFloor>;

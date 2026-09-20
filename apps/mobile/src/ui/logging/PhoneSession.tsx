@@ -435,7 +435,7 @@ export function PhoneSession({ c }: { c: SessionController }) {
 
       <SessionSheets c={c} />
 
-      <SwitcherSheet visible={switcherOpen} currentSessionId={session?.id ?? ''} onClose={() => setSwitcherOpen(false)} />
+      <SwitcherSheet visible={switcherOpen} currentSessionId={session?.id ?? ''} floor={floor} onClose={() => setSwitcherOpen(false)} />
 
       <VoiceSheet
         visible={voiceOpen}
