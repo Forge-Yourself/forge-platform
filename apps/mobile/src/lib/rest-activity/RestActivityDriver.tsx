@@ -13,6 +13,12 @@ import { payloadFor } from './payload';
 const timerCue = require('../../../assets/sounds/timer-done.wav');
 const ASKED_KEY = 'rest-permission-asked';
 
+// The web no-op always resolves; Android/iOS can reject. A lock-screen failure
+// is never worth crashing the session over.
+const ignore = (e: unknown) => {
+  if (__DEV__) console.warn('[rest-activity]', e);
+};
+
 /**
  * The one owner of "a rest is running somewhere" (M4d spec §6.3, Corrections).
  * In the foreground: plays the zero cue for any live session's rest. In the
@@ -51,7 +57,7 @@ export function RestActivityDriver() {
   useEffect(() => {
     if (!signedOut) return;
     restStore.reset();
-    void restActivity.end();
+    void restActivity.end().catch(ignore);
   }, [signedOut]);
 
   // Wake at the next zero, so the in-app cue is on time.
@@ -85,17 +91,20 @@ export function RestActivityDriver() {
   useEffect(() => {
     if (!restActivity.isAvailable()) return;
     const { top: current, t: translate } = latest.current;
-    if (shownKey === null || !current) void restActivity.end();
-    else void restActivity.show(payloadFor(current, translate));
+    if (shownKey === null || !current) void restActivity.end().catch(ignore);
+    else void restActivity.show(payloadFor(current, translate)).catch(ignore);
   }, [shownKey]);
 
   // Back in the foreground: fold in what was tapped on the lock screen.
   useEffect(() => {
     if (!active) return;
-    void restActivity.drainActions().then((actions) => {
-      restStore.applyActions(actions);
-      setTick(Date.now());
-    });
+    void restActivity
+      .drainActions()
+      .then((actions) => {
+        restStore.applyActions(actions);
+        setTick(Date.now());
+      })
+      .catch(ignore);
   }, [active]);
 
   // The system permission prompt, once ever, the first time a rest exists.
@@ -104,8 +113,15 @@ export function RestActivityDriver() {
     if (!hasRest || !restActivity.isAvailable()) return;
     void kvStore.get<boolean>('meta', ASKED_KEY).then(async (asked) => {
       if (asked) return;
-      await kvStore.write([{ table: 'meta', key: ASKED_KEY, value: true }]);
-      await restActivity.requestPermission();
+      // Flag goes down after the prompt settles, not before — a throw here must
+      // not lock the device out of ever being asked again.
+      try {
+        await restActivity.requestPermission();
+      } catch (e) {
+        ignore(e);
+      } finally {
+        await kvStore.write([{ table: 'meta', key: ASKED_KEY, value: true }]);
+      }
     });
   }, [hasRest]);
 

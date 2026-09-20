@@ -1,7 +1,7 @@
 import { unitLabel } from '@forge/shared';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, View } from 'react-native';
+import { AppState, Modal, Pressable, View } from 'react-native';
 import { FinishSessionSheet } from '../../lib/logging/FinishSessionSheet';
 import { nameOf, shownNumber, type SessionController } from '../../lib/logging/useSessionController';
 import { restActivity, type RestActivityStatus } from '../../lib/rest-activity';
@@ -28,11 +28,20 @@ export function SessionSheets({ c }: { c: SessionController }) {
   useEffect(() => {
     if (!timerOpen) return;
     let live = true;
-    void restActivity.status().then((s) => {
-      if (live) setLockStatus(s);
+    const check = () => {
+      void restActivity.status().then((s) => {
+        if (live) setLockStatus(s);
+      });
+    };
+    check();
+    // The notice's action leaves for system Settings; on return the sheet is
+    // still open, so a fixed permission must not keep showing a stale notice.
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') check();
     });
     return () => {
       live = false;
+      sub.remove();
     };
   }, [timerOpen]);
   const notice =
