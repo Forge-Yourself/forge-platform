@@ -47,15 +47,24 @@ object RestStateStore {
   private const val PREFS = "forge_rest_activity"
   private const val KEY_STATE = "state"
   private const val KEY_ACTIONS = "actions"
+  // Same cap as the JS applied-list (restStore.ts APPLIED_KEEP), so a queue left
+  // to grow while the process is dead can't do it forever.
+  private const val MAX_ACTIONS = 50
 
   private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+  // All five entry points share one monitor (the RestStateStore singleton) so a
+  // receiver on the main thread and an Expo AsyncFunction off-thread can't
+  // interleave — e.g. a stale +30 write resurrecting a session end() just cleared.
+  @Synchronized
   fun load(c: Context): RestState? = prefs(c).getString(KEY_STATE, null)?.let { RestState.fromJson(it) }
 
+  @Synchronized
   fun save(c: Context, s: RestState) {
     prefs(c).edit().putString(KEY_STATE, s.toJson()).commit()
   }
 
+  @Synchronized
   fun clear(c: Context) {
     prefs(c).edit().remove(KEY_STATE).commit()
   }
@@ -64,7 +73,10 @@ object RestStateStore {
   fun appendAction(c: Context, sessionId: String, action: String, at: Long) {
     val queue = JSONArray(prefs(c).getString(KEY_ACTIONS, "[]"))
     queue.put(JSONObject().put("sessionId", sessionId).put("action", action).put("at", at))
-    prefs(c).edit().putString(KEY_ACTIONS, queue.toString()).commit()
+    val start = maxOf(0, queue.length() - MAX_ACTIONS)
+    val capped = JSONArray()
+    for (i in start until queue.length()) capped.put(queue.getJSONObject(i))
+    prefs(c).edit().putString(KEY_ACTIONS, capped.toString()).commit()
   }
 
   @Synchronized

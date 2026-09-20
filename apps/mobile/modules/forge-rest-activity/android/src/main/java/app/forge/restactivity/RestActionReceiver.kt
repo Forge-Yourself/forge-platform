@@ -23,6 +23,14 @@ class RestActionReceiver : BroadcastReceiver() {
         RestNotifier.cancel(context)
         RestStateStore.appendAction(context, s.sessionId, "skip", now)
       }
+      RestNotifier.ACTION_DISMISS -> {
+        // The notification is already gone (that's how we got here), so +30s and
+        // Skip are unreachable — stand the alarm down and end the rest like Skip,
+        // queuing "skip" because that's the only action string JS parses.
+        RestStateStore.clear(context)
+        RestNotifier.cancel(context)
+        RestStateStore.appendAction(context, s.sessionId, "skip", now)
+      }
     }
   }
 }

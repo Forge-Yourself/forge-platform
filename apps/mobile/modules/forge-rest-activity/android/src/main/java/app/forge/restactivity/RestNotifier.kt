@@ -25,6 +25,9 @@ object RestNotifier {
   const val ACTION_PLUS30 = "app.forge.restactivity.PLUS30"
   const val ACTION_SKIP = "app.forge.restactivity.SKIP"
   const val ACTION_ALARM = "app.forge.restactivity.ALARM"
+  // Android 14+ no longer blocks swipe-dismiss on an ongoing notification, so the
+  // delete intent gets its own action: RestActionReceiver treats it like Skip.
+  const val ACTION_DISMISS = "app.forge.restactivity.DISMISS"
 
   private fun sound(c: Context): Uri = Uri.parse("android.resource://${c.packageName}/${R.raw.forge_timer_done}")
 
@@ -93,6 +96,7 @@ object RestNotifier {
       .setShowWhen(true)
       .setWhen(s.endsAt)
       .setContentIntent(openApp(c, s))
+      .setDeleteIntent(broadcast(c, ACTION_DISMISS, 4))
       .addAction(0, s.plus30, broadcast(c, ACTION_PLUS30, 1))
       .addAction(0, s.skip, broadcast(c, ACTION_SKIP, 2))
     // Android 16 Live Update. This is the extra NotificationCompat.setRequestPromotedOngoing
