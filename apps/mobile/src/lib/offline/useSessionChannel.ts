@@ -1,5 +1,7 @@
 import type { SessionRow, SetRow } from '@forge/shared';
 import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
+import { newUlid } from '../logging/ulid';
 import { supabase } from '../supabase';
 import { engine } from './engine';
 
@@ -24,7 +26,9 @@ type BroadcastPayload = {
  *
  * With offline logging effective, every row goes through the engine first:
  * a pending local write for the same id wins, and an echo of our own write
- * is dropped. Returns whether the channel is joined (the Live badge).
+ * is dropped. Returns whether the channel is joined (the Live badge) and how
+ * many devices are tracked on the topic via Realtime Presence (0018:
+ * participants only, never an admin — so `devices` never counts a spectator).
  *
  * Joined only while `online`: with no signal the socket is dead anyway, and
  * leaving then rejoining means the caller's reload on reconnect catches up
@@ -35,8 +39,13 @@ export function useSessionChannel(
   handlers: Handlers,
   throughEngine: boolean,
   online: boolean,
-): boolean {
+): { joined: boolean; devices: number } {
   const [joined, setJoined] = useState(false);
+  const [devices, setDevices] = useState(0);
+  // One key per mounted screen, so two devices of one user count as two.
+  // Lazy initialiser, not useRef().current: the lint's react-hooks/refs rule
+  // (React Compiler's purity rule) rejects reading a ref during render.
+  const [presenceKey] = useState(() => newUlid());
   const latest = useRef(handlers);
   useEffect(() => {
     latest.current = handlers;
@@ -72,15 +81,22 @@ export function useSessionChannel(
     };
 
     const channel = supabase
-      .channel('session:' + sessionId, { config: { private: true } })
+      .channel('session:' + sessionId, { config: { private: true, presence: { key: presenceKey } } })
       .on('broadcast', { event: 'INSERT' }, handle)
       .on('broadcast', { event: 'UPDATE' }, handle)
-      .on('broadcast', { event: 'DELETE' }, handle);
+      .on('broadcast', { event: 'DELETE' }, handle)
+      .on('presence', { event: 'sync' }, () => {
+        if (cancelled) return;
+        // Every tracked device on the topic, this one included (0018: participants only, never an admin).
+        setDevices(Object.values(channel.presenceState()).reduce((n, metas) => n + metas.length, 0));
+      });
 
     void supabase.realtime.setAuth().then(() => {
       if (cancelled) return;
       channel.subscribe((status) => {
-        if (!cancelled) setJoined(status === 'SUBSCRIBED');
+        if (cancelled) return;
+        setJoined(status === 'SUBSCRIBED');
+        if (status === 'SUBSCRIBED') void channel.track({ platform: Platform.OS });
       });
     });
 
@@ -88,7 +104,7 @@ export function useSessionChannel(
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  }, [sessionId, throughEngine, online]);
+  }, [sessionId, throughEngine, online, presenceKey]);
 
-  return joined && online;
+  return { joined: joined && online, devices: joined && online ? devices : 0 };
 }

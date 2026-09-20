@@ -9,6 +9,26 @@ import type { WorkoutSessionRow } from './sessionRpc';
 
 export type InProgressSession = WorkoutSessionRow & { clientName: string | null };
 
+/** Display names for client rows: the claimed user's display_name, else the invite name, else the email. */
+export async function clientNames(clientIds: readonly string[]): Promise<Record<string, string | null>> {
+  if (clientIds.length === 0) return {};
+  const { data: clients } = await supabase
+    .from('clients')
+    .select('id, invite_name, invite_email, client_user_id')
+    .in('id', [...clientIds]);
+  const userIds = (clients ?? []).map((c) => c.client_user_id).filter((id): id is string => id !== null);
+  const { data: users } = userIds.length
+    ? await supabase.from('users').select('id, display_name').in('id', userIds)
+    : { data: [] as { id: string; display_name: string | null }[] };
+  const byUser = new Map((users ?? []).map((u) => [u.id, u.display_name]));
+  return Object.fromEntries(
+    (clients ?? []).map((c) => [
+      c.id,
+      (c.client_user_id ? byUser.get(c.client_user_id) : null) ?? c.invite_name ?? c.invite_email ?? null,
+    ]),
+  );
+}
+
 export async function fetchInProgress(): Promise<{ session: InProgressSession | null; error: string | null }> {
   const { data, error } = await supabase
     .from('workout_sessions')
@@ -19,18 +39,9 @@ export async function fetchInProgress(): Promise<{ session: InProgressSession | 
     .maybeSingle();
   if (error) return { session: null, error: isNetworkError(error) ? OFFLINE : error.message };
   if (!data) return { session: null, error: null };
-  const { data: client } = await supabase
-    .from('clients')
-    .select('invite_name, invite_email, client_user_id')
-    .eq('id', data.client_id)
-    .maybeSingle();
-  let name: string | null = null;
-  if (client?.client_user_id) {
-    const { data: u } = await supabase.from('users').select('display_name').eq('id', client.client_user_id).maybeSingle();
-    name = u?.display_name ?? null;
-  }
+  const names = await clientNames([data.client_id]);
   return {
-    session: { ...data, clientName: name ?? client?.invite_name ?? client?.invite_email ?? null },
+    session: { ...data, clientName: names[data.client_id] ?? null },
     error: null,
   };
 }

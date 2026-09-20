@@ -93,7 +93,7 @@ export function useSessionController(sessionId: string) {
   const data = useSession(sessionId);
   const offline = useOffline();
   // Joined on both states: a late set (D6) must show on a summary the PT is reading.
-  const live = useSessionChannel(
+  const channel = useSessionChannel(
     data.session?.id ?? null,
     {
       onSet: data.applySet,
@@ -103,6 +103,8 @@ export function useSessionController(sessionId: string) {
     offline.effective,
     offline.online,
   );
+  const live = channel.joined;
+  const devices = channel.devices;
   useKeepAwake();
 
   const [exerciseIndex, setExerciseIndex] = useState<number | null>(null);
@@ -555,7 +557,7 @@ export function useSessionController(sessionId: string) {
       : t('logging.session.restCaptionSimple', { n: rest.setNumber });
 
   return {
-    unit, data, offline, live, session, inProgress, viewerId, viewerIsClient,
+    unit, data, offline, live, devices, session, inProgress, viewerId, viewerIsClient,
     exercises, displayNo, pickerOff, current, currentPos, setExerciseIndex,
     draft, setDraft, keypad, setKeypad, keypadText, setKeypadText, openKeypad, keypadCommit,
     noteOpen, setNoteOpen, pending, pr, setPr, timerOpen, setTimerOpen, listOpen, setListOpen,
