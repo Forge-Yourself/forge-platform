@@ -535,6 +535,59 @@ second key (`ai.introNoClient`) instead of passing `''`. When adding keys, inser
 them at the same position in `ar.json` as in `en.json`. The parity test checks
 order, so appending to one file and prepending to the other fails.
 
+## Native modules
+
+### R1. A native-only feature ships a web no-op behind the same interface
+
+M4d's lock-screen rest (`RestActivity`) has three implementations behind one
+interface — `lib/rest-activity/index.ts` (no-op), `index.android.ts` (a local
+Kotlin Expo module), `index.ios.ts` (an `expo-widgets` Live Activity) — picked
+by Metro's platform extensions. `isAvailable()` is `false` on web and in Expo
+Go, and every other call resolves as a no-op there.
+
+**Rule:** the in-app path (the persisted rest store, the visible countdown
+strip and timer) must stand alone and be the whole feature whenever the native
+half is unavailable — not a degraded companion to it. Design the interface so
+a caller never needs to branch on platform; it only needs to keep working when
+`isAvailable()` is false. The web target, Expo Go, and — for iOS specifically
+— every device until an Apple account exists, all exercise this path.
+
+### R2. A zero cue belongs to whatever owns *all* the clocks, not the screen showing one of them
+
+M4a's original `useRestTimer` fired its `onZero` sound and haptic from the
+screen-local hook — fine with one rest, wrong with several. On the iPad
+console a PT can have two or three sessions running rests at once, and only
+one is the session currently on screen; a rest belonging to a client not
+currently shown can still hit zero.
+
+**Rule:** a side effect that must fire exactly once per event, where the event
+can belong to any of several tracked instances, is owned by the code with
+visibility over all of them — not by whichever instance happens to be
+rendered. `RestActivityDriver` subscribes to the whole rest store directly and
+fires the cue for *any* rest crossing zero while the app is foregrounded, once
+per rest; `useRest` no longer takes an `onZero` callback (M4d spec Corrections
+§6.1).
+
+### C1. Two config plugins touching one Info.plist key must agree on a string
+
+`app.json` configures `expo-camera` with `"microphonePermission": false`. For
+Expo's `IOSConfig.Permissions`, `false` on a permission key means *delete
+that key from the plist* — not "no permission needed". `expo-speech-recognition`'s
+plugin separately writes the real `NSMicrophoneUsageDescription` string. Plugins
+run in `app.json`'s array order, so whichever runs later wins; if the camera
+plugin's delete ran after the speech plugin's write, the key vanished and iOS
+kills an app that opens the mic with no usage string — a crash whose plugin
+order dependency is invisible from either plugin's own config.
+
+**Rule:** when two plugins can touch the same Info.plist permission key,
+every plugin that touches it must be given the *same* non-`false` string, not
+left to its own default. `false` is only safe for a key nothing else in the
+app needs.
+
+**Seen in:** M4d Task 11 set the camera plugin's `microphonePermission` to the
+same wording as the voice permission's, so either plugin order now produces
+the correct key.
+
 ## Project configuration
 
 ### P1. Supabase project settings change the shape of what the SDK returns
@@ -736,6 +789,36 @@ are untyped there and this never fails in CI.
 **Rule:** when `tsc` rejects route strings that exist, start the dev server once
 (`CI=1 npx expo start --web --port 8081 --clear`) to regenerate the file, then
 re-run typecheck before touching code.
+
+### V4. Headless Chrome has no speech service — mock the recognizer, not the app
+
+`expo-speech-recognition`'s web wrapper sits on Chrome's `SpeechRecognition`,
+which needs a live speech service Chrome does not provide headless. Running
+the M4d walk's voice steps against the real API would just time out.
+
+**Rule:** the walk script injects a fake `webkitSpeechRecognition` that plays
+back a scripted transcript through the same event shape
+(`ExpoWebSpeechRecognition.web.js`) the library expects, and drives the parser
+and UI for real from there. The app itself is never changed to suit the mock —
+when the mock's event shape didn't match, `walk-m4d.mjs` was fixed, not the
+app (plan Task 14). A real microphone and a real recognizer are a device
+check (Task 15's voice runbook), not something the web walk can stand in for.
+
+### V5. `react-native-web`'s `I18nManager` is a no-op — RTL layout is not verifiable on the web target
+
+`react-native-web` ships `I18nManager.isRTL` hardcoded to `false` and
+`forceRTL()` as a no-op. Setting the app language to Arabic on the web target
+changes every string and numeral formatting rule correctly, but the layout
+never mirrors — `start`/`end` styles resolve exactly as they would in English,
+regardless of language.
+
+**Rule:** a web screen walk can prove Arabic copy is present and correct and
+that numerals render LTR inside RTL text, and nothing more. Never claim RTL
+*layout* (rail on the right, `start`/`end` mirroring per M4d spec §8.1) is
+verified from a web walk — it needs a native device or simulator. This is a
+pre-existing, cross-cutting limitation of every milestone's web-target
+verification, not specific to M4d; M4d's console is the first screen where it
+actually mattered enough to write down.
 
 ## Design
 
