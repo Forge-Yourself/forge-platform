@@ -1,12 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
+import { useAuth } from '../../../../lib/auth/AuthProvider';
 import { useSessionController } from '../../../../lib/logging/useSessionController';
 import { OFFLINE } from '../../../../lib/offline/cachedFetch';
 import { useTheme } from '../../../../theme/ThemeProvider';
 import { Button, EmptyState, NavHeader, Screen, Skeleton } from '../../../../ui';
+import { ConsoleShell } from '../../../../ui/logging/ConsoleSession';
 import { PhoneSession } from '../../../../ui/logging/PhoneSession';
 import { SessionSummary } from '../../../../ui/logging/SessionSummary';
+
+/** Spec D2: the console is a PT's layout on a wide window; a client on a tablet keeps the phone layout. */
+const CONSOLE_MIN_WIDTH = 900;
 
 /**
  * One route, both personas, state-driven (M4a spec §5.3). The body is keyed
@@ -15,7 +20,13 @@ import { SessionSummary } from '../../../../ui/logging/SessionSummary';
  */
 export default function SessionScreen() {
   const params = useLocalSearchParams<{ id: string }>();
-  return <SessionBody key={params.id} sessionId={params.id} />;
+  const { width } = useWindowDimensions();
+  const auth = useAuth();
+  const wide = width >= CONSOLE_MIN_WIDTH;
+  if (wide && auth.user?.role === 'pt') return <ConsoleShell sessionId={params.id} />;
+  const body = <SessionBody key={params.id} sessionId={params.id} />;
+  // A client on a tablet: the phone layout, centred, not stretched (spec D2).
+  return wide ? <View style={{ flex: 1, width: '100%', maxWidth: 600, alignSelf: 'center' }}>{body}</View> : body;
 }
 
 function SessionBody({ sessionId }: { sessionId: string }) {

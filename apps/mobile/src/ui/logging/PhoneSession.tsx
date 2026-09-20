@@ -1,9 +1,11 @@
 import { LOGGING_LIMITS } from '@forge/shared';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { isExerciseDone, workingCount } from '../../lib/logging/sessionModel';
 import type { SetRow } from '../../lib/logging/sessionRpc';
 import { nameOf, shownNumber, type SessionController } from '../../lib/logging/useSessionController';
+import { usePtFloor } from '../../lib/logging/usePtFloor';
 import { OfflineStatusChip } from '../../lib/offline/OfflineStatusChip';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Button } from '../Button';
@@ -19,6 +21,7 @@ import { Toggle } from '../Toggle';
 import { GhostTile, InfoTile, MicroLabel } from './sessionParts';
 import { SessionSheets } from './SessionSheets';
 import { SetRowView } from './SetRowView';
+import { SwitcherSheet } from './SwitcherSheet';
 import { VoiceSheet } from './VoiceSheet';
 
 /** Prototype `session`, phone layout. */
@@ -32,6 +35,8 @@ export function PhoneSession({ c }: { c: SessionController }) {
     title, subtitle, weightLabel, warmups, workingSets, setNo, futureRows, last, best, next, reps, rx, setLine,
     canLog, logLabel, restCaption, voiceOpen, setVoiceOpen, logVoice, session,
   } = c;
+  const floor = usePtFloor(!viewerIsClient);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   const doneRow = (s: SetRow) => {
     const mine = s.logged_by_user_id === viewerId;
@@ -101,6 +106,19 @@ export function PhoneSession({ c }: { c: SessionController }) {
             {subtitle}
           </Text>
         </View>
+        {!viewerIsClient && floor.live.length > 1 ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('logging.console.switcher')}
+            onPress={() => setSwitcherOpen(true)}
+            style={{ minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, justifyContent: 'center' }}
+          >
+            <Icon name="users" size={18} color={theme.colors.textSecondary} />
+            <Text numeric style={{ fontSize: 13, fontWeight: '700', color: theme.colors.textSecondary }}>
+              {floor.live.length}
+            </Text>
+          </Pressable>
+        ) : null}
         {!offline.online ? (
           <LiveBadge state="offline" label={t('logging.offline.notLive')} />
         ) : live ? (
@@ -416,6 +434,8 @@ export function PhoneSession({ c }: { c: SessionController }) {
       </Modal>
 
       <SessionSheets c={c} />
+
+      <SwitcherSheet visible={switcherOpen} currentSessionId={session?.id ?? ''} onClose={() => setSwitcherOpen(false)} />
 
       <VoiceSheet
         visible={voiceOpen}
