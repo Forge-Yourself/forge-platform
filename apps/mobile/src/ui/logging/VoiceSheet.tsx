@@ -1,5 +1,5 @@
 import { kgToDisplay, displayToKg, LOGGING_LIMITS, unitLabel, type UnitSystem } from '@forge/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Modal, Pressable, View } from 'react-native';
 import { useVoiceSet } from '../../lib/voice/useVoiceSet';
@@ -47,6 +47,8 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
   const [typed, setTyped] = useState('');
   const [logged, setLogged] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Bumped on close, so a save that resolves afterwards knows it is stale.
+  const session = useRef(0);
   const { phase, transcript, parse, level } = voice.state;
 
   // Open → listen. Close → stop listening, and forget.
@@ -65,6 +67,8 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
   }
 
   function close() {
+    // A save still in flight must not paint LOGGED over the next set (PITFALLS O1).
+    session.current += 1;
     setLogged(false);
     setEditing(null);
     setValues({ weightKg: null, reps: null, rpe: null });
@@ -84,8 +88,10 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
   }
 
   async function log() {
+    const mine = session.current;
     setSaving(true);
     await onLog(values);
+    if (mine !== session.current) return;
     setSaving(false);
     setLogged(true);
   }
