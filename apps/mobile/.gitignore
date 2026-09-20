@@ -4,3 +4,6 @@
 
 expo-env.d.ts
 # @end expo-cli
+# Local module build caches
+modules/*/android/.gradle/
+modules/*/android/build/
