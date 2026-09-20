@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../lib/i18n';
 import { AuthProvider, useAuth } from '../lib/auth/AuthProvider';
 import { OfflineProvider } from '../lib/offline/OfflineProvider';
+import { RestActivityDriver } from '../lib/rest-activity/RestActivityDriver';
 import { subscribeToDeepLinks } from '../lib/deepLinks';
 import { supabase } from '../lib/supabase';
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
@@ -234,6 +235,9 @@ function ThemedGate() {
           sign-out -> different-user-sign-in remounts Gate and its AAL state resets
           for free, instead of racing a stale value from the previous user. */}
       <Gate key={auth.session?.user.id ?? 'signed-out'} />
+      {/* Mounted once, inside AuthProvider so useAuth() resolves — the one owner
+          of the lock-screen rest and the foreground zero cue (M4d Task 8). */}
+      <RestActivityDriver />
     </>
   );
 }

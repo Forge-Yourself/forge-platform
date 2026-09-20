@@ -1,6 +1,7 @@
 import { colorSchemes } from '@forge/shared';
 import { Pressable, View } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import { Button } from './Button';
 import { ProgressRing } from './ProgressRing';
 import { Text } from './Text';
 
@@ -30,6 +31,8 @@ export type RestTimerProps = {
   onSkip: () => void;
   /** "Back to set" — closes the full-screen view once the rest is over. */
   onDone: () => void;
+  /** One line above Pause/+30s when the lock screen cannot do its job (M4d Corrections §6.4). */
+  notice?: { text: string; actionLabel: string; onAction: () => void } | null;
 };
 
 export function formatClock(seconds: number): string {
@@ -42,7 +45,7 @@ export function formatClock(seconds: number): string {
  * lives in the persisted rest store (useRest), so the inline strip, this view
  * and the lock screen all show one rest.
  */
-export function RestTimer({ phase, remaining, progress, labels, onToggle, onPlus30, onSkip, onDone }: RestTimerProps) {
+export function RestTimer({ phase, remaining, progress, labels, onToggle, onPlus30, onSkip, onDone, notice }: RestTimerProps) {
   const t = useTheme();
   const dark = colorSchemes.dark;
   const fg = phase === 'complete' ? dark.successAccent : phase === 'paused' ? dark.textSecondary : dark.accent;
@@ -89,6 +92,13 @@ export function RestTimer({ phase, remaining, progress, labels, onToggle, onPlus
         </View>
         <Text style={{ color: dark.textMuted, textAlign: 'center', maxWidth: 250, fontSize: 13.5 }}>{labels.hint}</Text>
       </View>
+
+      {notice ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 10 }}>
+          <Text style={{ color: dark.textMuted, fontSize: 12.5 }}>{notice.text}</Text>
+          <Button label={notice.actionLabel} variant="link" onPress={notice.onAction} />
+        </View>
+      ) : null}
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Pressable

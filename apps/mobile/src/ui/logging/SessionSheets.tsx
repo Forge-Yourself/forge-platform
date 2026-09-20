@@ -1,8 +1,10 @@
 import { unitLabel } from '@forge/shared';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, View } from 'react-native';
 import { FinishSessionSheet } from '../../lib/logging/FinishSessionSheet';
 import { nameOf, shownNumber, type SessionController } from '../../lib/logging/useSessionController';
+import { restActivity, type RestActivityStatus } from '../../lib/rest-activity';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Button } from '../Button';
 import { NumericKeypad } from '../NumericKeypad';
@@ -20,6 +22,28 @@ export function SessionSheets({ c }: { c: SessionController }) {
     timerOpen, setTimerOpen, rest, current, canLog, draft, pr, setPr, finishOpen, setFinishOpen, finishing,
     finishError, finishDraft, finish,
   } = c;
+
+  // One line on the full-screen timer when the lock screen cannot do its job (Corrections §6.4).
+  const [lockStatus, setLockStatus] = useState<RestActivityStatus>('ok');
+  useEffect(() => {
+    if (!timerOpen) return;
+    let live = true;
+    void restActivity.status().then((s) => {
+      if (live) setLockStatus(s);
+    });
+    return () => {
+      live = false;
+    };
+  }, [timerOpen]);
+  const notice =
+    lockStatus === 'notifications_off' || lockStatus === 'inexact'
+      ? {
+          text: t(lockStatus === 'inexact' ? 'logging.lock.hintExact' : 'logging.lock.hintNotifications'),
+          actionLabel: t('logging.lock.allow'),
+          onAction: () => restActivity.openSettings(lockStatus),
+        }
+      : null;
+
   return (
     <>
       {/* Keypad sheet */}
@@ -148,6 +172,7 @@ export function SessionSheets({ c }: { c: SessionController }) {
               rest.clear();
               setTimerOpen(false);
             }}
+            notice={notice}
           />
         ) : null}
       </Modal>
