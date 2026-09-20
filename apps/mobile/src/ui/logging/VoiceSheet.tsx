@@ -1,7 +1,8 @@
 import { kgToDisplay, displayToKg, LOGGING_LIMITS, unitLabel, type UnitSystem } from '@forge/shared';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, Modal, Pressable, View } from 'react-native';
+import { AppState, Linking, Modal, Pressable, View } from 'react-native';
+import type { SubmitSetResult } from '../../lib/logging/useSessionController';
 import { useVoiceSet } from '../../lib/voice/useVoiceSet';
 import { Button } from '../Button';
 import { Icon } from '../Icon';
@@ -17,6 +18,8 @@ const FG3 = '#9AA3B1';
 const EMBER = '#FF8A3D';
 const GREEN = '#7BC79A';
 const CHIP = '#1C2230';
+// Same pale-tint value as the app's dark-mode dangerAccent token (semantic.ts).
+const DANGER = '#FADBD8';
 
 type Values = { weightKg: number | null; reps: number | null; rpe: number | null };
 type Field = 'weight' | 'reps' | 'rpe';
@@ -30,7 +33,7 @@ export type VoiceSheetProps = {
   online: boolean;
   /** Offline logging is on and there is no signal: LOGGED says "saved on this device". */
   queued: boolean;
-  onLog: (values: Values) => Promise<void>;
+  onLog: (values: Values) => Promise<SubmitSetResult>;
   onClose: () => void;
 };
 
@@ -47,6 +50,7 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
   const [typed, setTyped] = useState('');
   const [logged, setLogged] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   // Bumped on close, so a save that resolves afterwards knows it is stale.
   const session = useRef(0);
   const { phase, transcript, parse, level } = voice.state;
@@ -59,6 +63,22 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
     return () => abort();
   }, [visible, start, abort]);
 
+  // The mic must not keep listening with no one looking at the screen, and a
+  // PT who leaves for Settings to grant the mic permission needs the blocked
+  // screen rechecked on return — `visible` itself never changes across that
+  // round trip (same AppState pattern as RestActivityDriver).
+  useEffect(() => {
+    if (!visible) return;
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        if (phase === 'unavailable' || phase === 'denied' || phase === 'offline') void start();
+      } else if (phase === 'listening') {
+        abort();
+      }
+    });
+    return () => sub.remove();
+  }, [visible, phase, start, abort]);
+
   // Seed the chips from each new parse (adjust state during render, keyed on the parse object).
   const [seededFrom, setSeededFrom] = useState<typeof parse>(null);
   if (parse && parse !== seededFrom) {
@@ -70,6 +90,7 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
     // A save still in flight must not paint LOGGED over the next set (PITFALLS O1).
     session.current += 1;
     setLogged(false);
+    setSaveError(null);
     setEditing(null);
     setValues({ weightKg: null, reps: null, rpe: null });
     onClose();
@@ -90,10 +111,15 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
   async function log() {
     const mine = session.current;
     setSaving(true);
-    await onLog(values);
+    setSaveError(null);
+    const result = await onLog(values);
     if (mine !== session.current) return;
     setSaving(false);
-    setLogged(true);
+    if (result.ok) {
+      setLogged(true);
+    } else {
+      setSaveError(result.error ?? t('logging.session.errorGeneric'));
+    }
   }
 
   const heard = phase === 'heard' && !logged;
@@ -102,11 +128,13 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
   const blocked = phase === 'unavailable' || phase === 'denied' || phase === 'offline';
   const hint = logged
     ? t(queued ? 'logging.voice.hintLoggedOffline' : 'logging.voice.hintLogged', { n: setNumber })
-    : phase === 'listening'
-      ? t('logging.voice.hintListening')
-      : parse?.confidence === 'none' || (!parse && heard)
-        ? t('logging.voice.hintNothing')
-        : t('logging.voice.hintHeard');
+    : saveError
+      ? saveError
+      : phase === 'listening'
+        ? t('logging.voice.hintListening')
+        : parse?.confidence === 'none' || (!parse && heard)
+          ? t('logging.voice.hintNothing')
+          : t('logging.voice.hintHeard');
   const chips: { key: Field; label: string; value: string }[] = [
     { key: 'weight', label: t('logging.voice.chipWeight', { unit: unitLabel(unit) }), value: values.weightKg === null ? '—' : String(kgToDisplay(values.weightKg, unit)) },
     { key: 'reps', label: t('logging.voice.chipReps'), value: values.reps === null ? '—' : String(values.reps) },
@@ -153,7 +181,10 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
                 {stateLabel}
               </Text>
               <Waveform level={level} active={phase === 'listening'} color={EMBER} />
-              <Text style={{ color: FG, fontSize: 22, fontWeight: '700', lineHeight: 30, textAlign: 'center' }}>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={{ color: FG, fontSize: 22, fontWeight: '700', lineHeight: 30, textAlign: 'center' }}
+              >
                 {transcript === '' ? '…' : `“${transcript}”`}
               </Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -185,7 +216,12 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
                   </Pressable>
                 ))}
               </View>
-              <Text style={{ color: FG2, fontSize: 13.5, textAlign: 'center' }}>{hint}</Text>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={{ color: saveError ? DANGER : FG2, fontSize: 13.5, textAlign: 'center' }}
+              >
+                {hint}
+              </Text>
             </View>
 
             {editing ? (
@@ -211,7 +247,15 @@ export function VoiceSheet({ visible, setNumber, exerciseName, unit, language, o
             ) : (
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Button label={t('logging.voice.tryAgain')} variant="ghost" size="lg" onPress={() => void start()} />
+                  <Button
+                    label={t('logging.voice.tryAgain')}
+                    variant="ghost"
+                    size="lg"
+                    onPress={() => {
+                      setSaveError(null);
+                      void start();
+                    }}
+                  />
                 </View>
                 <View style={{ flex: 1.4 }}>
                   <Button

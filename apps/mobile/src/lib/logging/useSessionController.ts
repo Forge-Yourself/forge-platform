@@ -49,6 +49,8 @@ export type Draft = {
 };
 export type KeypadTarget = 'weight' | 'reps' | 'rpe' | null;
 export type PendingSet = { id: string; error: string | null; queued?: boolean };
+/** `ok: true` covers a queued offline write too — the caller doesn't need to know the difference. */
+export type SubmitSetResult = { ok: boolean; error?: string };
 export type PrView = {
   value: string;
   unit: string;
@@ -281,8 +283,8 @@ export function useSessionController(sessionId: string) {
     return { clientName: viewerIsClient ? null : data.clientName, exerciseName, nextLabel: summary };
   }
 
-  async function submitSet(existing: SetRow | null, values: Draft) {
-    if (!session || !current) return;
+  async function submitSet(existing: SetRow | null, values: Draft): Promise<SubmitSetResult> {
+    if (!session || !current) return { ok: false, error: t('logging.session.errorGeneric') };
     const id = existing?.id ?? newUlid();
     const setNumber =
       existing?.set_number ?? (values.isWarmup ? 0 : nextSetNumber(data.sets, current.exerciseId));
@@ -295,8 +297,9 @@ export function useSessionController(sessionId: string) {
       is_warmup: values.isWarmup,
     });
     if (!input.success) {
-      setPending((p) => ({ ...p, [id]: { id, error: t('logging.session.errorGeneric') } }));
-      return;
+      const error = t('logging.session.errorGeneric');
+      setPending((p) => ({ ...p, [id]: { id, error } }));
+      return { ok: false, error };
     }
     const exerciseId = existing?.exercise_id ?? current.exerciseId;
     const exerciseName = nameOf(exercises.find((e) => e.exerciseId === exerciseId) ?? current);
@@ -353,13 +356,14 @@ export function useSessionController(sessionId: string) {
           restLabels(optimistic, exerciseName),
         );
       }
-      return;
+      return { ok: true };
     }
 
     const { result, error } = await logSet(session.id, exerciseId, setNumber, input.data, Platform.OS);
     if (error || !result) {
-      setPending((p) => ({ ...p, [id]: { id, error: mapLoggingError(error, t) } }));
-      return;
+      const message = mapLoggingError(error, t);
+      setPending((p) => ({ ...p, [id]: { id, error: message } }));
+      return { ok: false, error: message };
     }
     data.applySet(result.set);
     setPending((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== id)));
@@ -384,11 +388,12 @@ export function useSessionController(sessionId: string) {
         );
       }
     }
+    return { ok: true };
   }
 
   /** Voice → the same submitSet as a tap, so outbox, PR moment and rest behave identically (spec §7.3). */
-  async function logVoice(values: { weightKg: number | null; reps: number | null; rpe: number | null }) {
-    await submitSet(null, { ...draft, weightKg: values.weightKg, reps: values.reps, rpe: values.rpe });
+  function logVoice(values: { weightKg: number | null; reps: number | null; rpe: number | null }): Promise<SubmitSetResult> {
+    return submitSet(null, { ...draft, weightKg: values.weightKg, reps: values.reps, rpe: values.rpe });
   }
 
   async function removeSet(set: SetRow) {
