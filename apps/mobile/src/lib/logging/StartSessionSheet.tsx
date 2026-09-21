@@ -16,6 +16,13 @@ export type StartSessionSheetProps = {
   clientId: string;
   /** The PT sees an "assign one" link when no program exists; the client sees a sentence. */
   viewerIsPt: boolean;
+  /**
+   * Where the "assign one" link goes. The default pushes the Programs TAB,
+   * which is right from a tab screen and wrong from a pushed one — pushing a
+   * tabs route from under a pushed screen mounts a second tab navigator
+   * (PITFALLS N9). `/me` passes its own handler for that reason.
+   */
+  onNoProgram?: () => void;
   onDismiss: () => void;
 };
 
@@ -25,7 +32,13 @@ export type StartSessionSheetProps = {
  * first open one, and always offers Freestyle. Start replaces the route (N3);
  * an existing in-progress session is a resume, not an error.
  */
-export function StartSessionSheet({ visible, clientId, viewerIsPt, onDismiss }: StartSessionSheetProps) {
+export function StartSessionSheet({
+  visible,
+  clientId,
+  viewerIsPt,
+  onNoProgram,
+  onDismiss,
+}: StartSessionSheetProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const offline = useOffline();
@@ -129,7 +142,8 @@ export function StartSessionSheet({ visible, clientId, viewerIsPt, onDismiss }: 
                   action={t('logging.start.noProgramPtLink')}
                   onPress={() => {
                     onDismiss();
-                    router.push('/(app)/(tabs)/programs');
+                    if (onNoProgram) onNoProgram();
+                    else router.push('/(app)/(tabs)/programs');
                   }}
                 />
               ) : (

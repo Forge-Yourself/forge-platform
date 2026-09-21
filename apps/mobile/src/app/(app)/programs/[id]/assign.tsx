@@ -66,7 +66,13 @@ export default function AssignProgram() {
    * a freshly-onboarded client invisible on the one screen that exists to give them a
    * program. 'invited' is excluded on purpose: there is no account to assign to yet.
    */
-  const assignable = clients.items.filter((c) => c.state === 'active' || c.state === 'accepted');
+  const assignable = [
+    // The PT's own record is deliberately absent from `items`, so it has to be
+    // put back here: this is the only screen that can give anyone a program,
+    // and a PT who cannot program themselves cannot train themselves.
+    ...(clients.selfItem !== null ? [{ ...clients.selfItem, displayName: t('me.label') }] : []),
+    ...clients.items.filter((c) => c.state === 'active' || c.state === 'accepted'),
+  ];
 
   const [selected, setSelected] = useState<string[]>([]);
   const [startChoice, setStartChoice] = useState<StartChoice>('nextMonday');
@@ -187,7 +193,7 @@ export default function AssignProgram() {
                   chevron={false}
                   leading={<Avatar name={client.displayName} photoUrl={client.avatarUrl} size={38} />}
                   title={client.displayName}
-                  subtitle={t('clients.stateLabels.' + client.state)}
+                  subtitle={client.isSelf ? t('me.assignSubtitle') : t('clients.stateLabels.' + client.state)}
                   trailing={
                     <View
                       accessible

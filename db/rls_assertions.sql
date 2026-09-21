@@ -1197,7 +1197,16 @@ RESET ROLE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Offline-logging switch
+--
+-- The switch is a single live row, and its value drifts: it sits at "beta" on
+-- the real project whenever offline logging is being tested on a device. This
+-- block is about the POLICY — who may read it and who may not write it — so
+-- pin the value inside the transaction rather than asserting against whatever
+-- the switch happens to be set to today. The file ends in ROLLBACK, so the
+-- live value is untouched.
 -- ─────────────────────────────────────────────────────────────────────────────
+UPDATE public.app_config SET value = '"off"'::jsonb WHERE key = 'offline_logging';
+
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(:'pt_a');
 SELECT pg_temp.expect('authenticated reads the offline_logging mode, default off', 1,
@@ -1444,4 +1453,179 @@ SELECT pg_temp.expect('a fresh orphan is not swept inside the grace period', 0,
   format('SELECT count(*) FROM public.progress_photo_orphans(interval ''24 hours'') AS o(name) WHERE o.name LIKE %L',
          :'client_row' || '/' || :'ph_1' || '/%'));
 
+
+-- =============================================================================
+-- 0019 — the self client row: a PT who is their own subject.
+--
+-- pt_user_id = client_user_id, so is_pt_of_client AND is_client_record_owner
+-- are BOTH true for it. That is the whole trick, and it is why M3/M4a/M4b/M4c
+-- needed no new policy. These cases prove each of those RPCs really does
+-- accept it rather than inferring it from the predicates.
+-- =============================================================================
+
+\set bm_self '59100000-0000-4000-8000-000000000011'
+\set ph_self '59100000-0000-4000-8000-0000000000a1'
+
+-- Creation is RPC-only and PT-only. client_b, not client_a: the M1 block
+-- above flips client_a to 'pt' via set_initial_role and never reverts it.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('a client-role account cannot create a self client row',
+  $q$SELECT public.ensure_self_client()$q$);
+SELECT pg_temp.expect_rls_block('a client cannot INSERT a self row directly',
+  format('INSERT INTO public.clients (pt_user_id, client_user_id, state) VALUES (%L, %L, ''active'')',
+         :'client_b', :'client_b'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.ensure_self_client() AS self_row \gset
+SELECT pg_temp.expect('ensure_self_client is idempotent — the replay returns the same row', 1,
+  format('SELECT CASE WHEN public.ensure_self_client() = %L::uuid THEN 1 ELSE 0 END::bigint', :'self_row'));
+RESET ROLE;
+
+SELECT pg_temp.expect('exactly one self row exists for the PT', 1,
+  format('SELECT count(*) FROM public.clients WHERE pt_user_id = %L AND client_user_id = %L',
+         :'pt_a', :'pt_a'));
+SELECT pg_temp.expect('the self row is born active and carries no invite', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND state = ''active''
+            AND invite_email IS NULL AND invite_expires_at IS NULL', :'self_row'));
+SELECT pg_temp.expect('no intake_forms row is created for the self record', 0,
+  format('SELECT count(*) FROM public.intake_forms WHERE client_id = %L', :'self_row'));
+
+-- The partial index is the guarantee, not the RPC's own read-back.
+SELECT pg_temp.expect_raises('a second self row for the same PT is refused by uq_clients_self',
+  format('INSERT INTO public.clients (pt_user_id, client_user_id, state) VALUES (%L, %L, ''active'')',
+         :'pt_a', :'pt_a'));
+SELECT pg_temp.expect('the index is partial — the PT still has an ordinary client too', 1,
+  format('SELECT count(*) FROM public.clients WHERE pt_user_id = %L AND client_user_id = %L',
+         :'pt_a', :'client_a'));
+
+-- Isolation: nobody else has any business with it.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT cannot see the self row', 0,
+  format('SELECT count(*) FROM public.clients WHERE id = %L', :'self_row'));
+SELECT pg_temp.expect_raises('another PT cannot record a metric on the self row',
+  format('SELECT public.record_body_metric(%L::uuid, %L::uuid, NULL, 80, NULL, NULL, NULL)',
+         :'bm_x', :'self_row'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect('an unrelated client cannot see a PT''s self row', 0,
+  format('SELECT count(*) FROM public.clients WHERE id = %L', :'self_row'));
+RESET ROLE;
+
+-- Body metrics: the PT records, reads and deletes their own. The delete is the
+-- interesting one — delete_body_metric is recorder-scoped on the PT branch,
+-- and for a self row the recorder IS the subject.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.record_body_metric(:'bm_self'::uuid, :'self_row'::uuid, NULL, 82.5, NULL, NULL, NULL);
+SELECT pg_temp.expect('the PT records a metric against their own record', 1,
+  format('SELECT count(*) FROM public.body_metrics WHERE id = %L AND client_id = %L AND recorded_by_user_id = %L',
+         :'bm_self', :'self_row', :'pt_a'));
+SELECT pg_temp.expect('the PT can ask for their own plateau', 0,
+  format('SELECT CASE WHEN public.body_plateau(%L::uuid) THEN 1 ELSE 0 END::bigint', :'self_row'));
+SELECT public.delete_body_metric(:'bm_self'::uuid);
+SELECT pg_temp.expect('the PT deletes their own metric', 0,
+  format('SELECT count(*) FROM public.body_metrics WHERE id = %L', :'bm_self'));
+RESET ROLE;
+
+-- Photos: an UNSHARED self photo is still the subject's to see and sign —
+-- is_client_record_owner carries it, not the is_shared_with_pt branch. And
+-- the PT genuinely owns the share flag here, because they are the client.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES
+  ('progress-photos', :'self_row' || '/' || :'ph_self' || '/full.jpg',  :'pt_a'),
+  ('progress-photos', :'self_row' || '/' || :'ph_self' || '/thumb.jpg', :'pt_a');
+SELECT public.record_progress_photo(:'ph_self'::uuid, :'self_row'::uuid, 'front', NULL, FALSE);
+SELECT pg_temp.expect('a self photo honours p_share — the PT is the client, so they choose', 1,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L AND NOT is_shared_with_pt AND taken_by_user_id = %L',
+         :'ph_self', :'pt_a'));
+SELECT pg_temp.expect('the PT sees their own unshared self photo', 1,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L', :'ph_self'));
+SELECT pg_temp.expect('the PT can sign their own unshared self photo object', 1,
+  format('SELECT CASE WHEN public.can_view_progress_photo_object(%L) THEN 1 ELSE 0 END::bigint',
+         :'self_row' || '/' || :'ph_self' || '/full.jpg'));
+SELECT public.set_photo_shared(:'ph_self'::uuid, TRUE);
+SELECT pg_temp.expect('set_photo_shared accepts the PT on their own record', 1,
+  format('SELECT count(*) FROM public.progress_photos WHERE id = %L AND is_shared_with_pt', :'ph_self'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT reads no self photos', 0,
+  format('SELECT count(*) FROM public.progress_photos WHERE client_id = %L', :'self_row'));
+SELECT pg_temp.expect('another PT cannot sign a self photo object', 0,
+  format('SELECT CASE WHEN public.can_view_progress_photo_object(%L) THEN 1 ELSE 0 END::bigint',
+         :'self_row' || '/' || :'ph_self' || '/full.jpg'));
+RESET ROLE;
+
+-- M4c spec D9 still holds for the self record: an admin reads rows but can
+-- never sign an image.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('an admin still cannot sign a self photo object', 0,
+  format('SELECT CASE WHEN public.can_view_progress_photo_object(%L) THEN 1 ELSE 0 END::bigint',
+         :'self_row' || '/' || :'ph_self' || '/full.jpg'));
+RESET ROLE;
+
+-- Logging: v_is_pt is evaluated first, so a self session is pt-led and its
+-- note lands in pt_notes — which is exactly what SessionSummary reads back
+-- for a role='pt' viewer. The app depends on this pairing; assert it.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT (public.start_workout_session(:'self_row'::uuid, NULL)).id AS me_sess \gset
+SELECT pg_temp.expect('a self session is pt-led', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND is_pt_led', :'me_sess'));
+SELECT pg_temp.expect('the PT is a participant of their own session', 1,
+  format('SELECT CASE WHEN public.is_session_participant(%L::uuid) THEN 1 ELSE 0 END::bigint', :'me_sess'));
+SELECT public.complete_workout_session(:'me_sess'::uuid, 4, 'felt strong');
+SELECT pg_temp.expect('the self session note lands in pt_notes, not session_notes', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L
+            AND pt_notes = ''felt strong'' AND session_notes IS NULL', :'me_sess'));
+RESET ROLE;
+
+-- Programming: the PT can write themselves a program and assign it.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.create_program('My Own Block', 4::smallint) AS self_prog \gset
+SELECT public.assign_program(:'self_prog'::uuid, :'self_row'::uuid, CURRENT_DATE);
+SELECT pg_temp.expect('the PT assigns a program to their own record', 1,
+  format('SELECT count(*) FROM public.programs WHERE id = %L AND client_id = %L AND state = ''active''',
+         :'self_prog', :'self_row'));
+RESET ROLE;
+
+-- Lifecycle RPCs refuse the self row. set_client_state is refused because a
+-- paused self row would vanish from the assign picker with no explanation;
+-- the two invite RPCs were already refusing it (state <> 'invited'), which is
+-- asserted here so a future edit cannot quietly open them.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('set_client_state refuses the self row',
+  format('SELECT public.set_client_state(%L::uuid, ''paused'')', :'self_row'));
+SELECT pg_temp.expect_raises('resend_invite refuses the self row',
+  format('SELECT public.resend_invite(%L::uuid, NULL)', :'self_row'));
+SELECT pg_temp.expect_raises('revoke_invite refuses the self row',
+  format('SELECT public.revoke_invite(%L::uuid)', :'self_row'));
+SELECT pg_temp.expect('the self row survives every refused lifecycle call, still active', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND state = ''active''', :'self_row'));
+RESET ROLE;
+
+-- A PT inviting their own address would mint a self row nothing can ever
+-- claim (client_user_id stays NULL, so uq_clients_self cannot see it, and
+-- claim_client_invites only ever runs from the client home screen).
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_raises('a PT cannot invite their own address',
+  $q$SELECT public.invite_client('rls-pt-a@forge-test.local', 'Me', '{}')$q$);
+SELECT pg_temp.expect_raises('the guard is case-insensitive (CITEXT on both sides)',
+  $q$SELECT public.invite_client('RLS-PT-A@Forge-Test.Local', 'Me', '{}')$q$);
+SELECT public.invite_client('rls-someone-else@forge-test.local', 'Someone', '{}') AS other_invite \gset
+SELECT pg_temp.expect('ordinary invites still work — the guard is not a blanket refusal', 1,
+  format('SELECT count(*) FROM public.clients WHERE id = %L AND state = ''invited''', :'other_invite'));
+RESET ROLE;
 ROLLBACK;

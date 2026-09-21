@@ -151,6 +151,21 @@ export function useSessionController(sessionId: string) {
   const viewerId = auth.user?.id ?? '';
   const viewerIsClient = auth.user?.role === 'client';
 
+  /**
+   * Whose session this is, as the screen should say it.
+   *
+   * `data.clientName` resolves the linked user's display_name, which on a PT's
+   * own record IS the PT — so without this a self-training PT reads their own
+   * name back at them in the header, the summary, the rail and, worst, on the
+   * lock screen ("Rami Haddad · Bench press", shown to Rami).
+   *
+   * Deliberately separate from `viewerIsClient`: that flag decides which
+   * AFFORDANCES the screen offers, and a PT training themselves still wants
+   * the PT ones — voice, exercise swap, editable sets. Only the name changes.
+   */
+  const subjectIsSelf = session !== null && session.client_id === auth.selfClientId;
+  const subjectName = subjectIsSelf ? t('me.label') : data.clientName;
+
   const exercises = useMemo(
     () => buildExerciseList(data.day, data.sets, data.names, extraIds),
     [data.day, data.sets, data.names, extraIds],
@@ -285,7 +300,13 @@ export function useSessionController(sessionId: string) {
       set.weight_kg === null
         ? t('logging.session.repsOnly', { reps: set.reps ?? 0 })
         : `${shownNumber(set.weight_kg, unit)} ${unitLabel(unit)} × ${set.reps ?? '—'}`;
-    return { clientName: viewerIsClient ? null : data.clientName, exerciseName, nextLabel: summary };
+    // No name on your own rest notification, whichever role you hold — the
+    // lock screen would otherwise read the PT their own name back.
+    return {
+      clientName: viewerIsClient || subjectIsSelf ? null : data.clientName,
+      exerciseName,
+      nextLabel: summary,
+    };
   }
 
   async function submitSet(existing: SetRow | null, values: Draft): Promise<SubmitSetResult> {
@@ -513,7 +534,7 @@ export function useSessionController(sessionId: string) {
       : session.day_label
         ? t('logging.history.dayLabelNamed', { label: session.day_label, week: session.week_number })
         : t('logging.history.dayLabel', { week: session.week_number, day: session.day_number ?? 1 });
-  const title = viewerIsClient ? dayTitle : (data.clientName ?? dayTitle);
+  const title = viewerIsClient ? dayTitle : (subjectName ?? dayTitle);
   const weightLabel = unitLabel(unit).toUpperCase();
 
   // ── In progress: prototype `session` ─────────────────────────────────────
@@ -567,7 +588,7 @@ export function useSessionController(sessionId: string) {
       : t('logging.session.restCaptionSimple', { n: rest.setNumber });
 
   return {
-    unit, data, offline, live, devices, session, inProgress, viewerId, viewerIsClient,
+    unit, data, offline, live, devices, session, inProgress, viewerId, viewerIsClient, subjectIsSelf, subjectName,
     exercises, displayNo, pickerOff, current, currentPos, setExerciseIndex,
     draft, setDraft, keypad, setKeypad, keypadText, setKeypadText, openKeypad, keypadCommit,
     noteOpen, setNoteOpen, pending, pr, setPr, timerOpen, setTimerOpen, listOpen, setListOpen,

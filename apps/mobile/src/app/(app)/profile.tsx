@@ -116,6 +116,22 @@ export default function Profile() {
           />
         </SectionCard>
 
+        {/*
+          The second way into the PT's own training record. It appears only
+          once the record exists — creating it belongs to the Today screen's
+          card, so there is exactly one place that can mint the row.
+        */}
+        {isPt && auth.selfClientId !== null ? (
+          <SectionCard>
+            <ListRow
+              leading={<Icon name="user" size={19} color={theme.colors.textMuted} />}
+              title={t('me.profileRow')}
+              onPress={() => router.push('/(app)/me')}
+              isLast
+            />
+          </SectionCard>
+        ) : null}
+
         {isPt ? (
           <>
             <View style={{ gap: theme.space[2] }}>

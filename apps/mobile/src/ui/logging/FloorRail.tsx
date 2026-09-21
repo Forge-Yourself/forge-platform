@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { memo, useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useAuth } from '../../lib/auth/AuthProvider';
 import { StartSessionSheet } from '../../lib/logging/StartSessionSheet';
 import { restStore } from '../../lib/logging/restStore';
 import { usePtFloor, type LiveRow, type PtFloor } from '../../lib/logging/usePtFloor';
@@ -15,6 +16,22 @@ import { Icon } from '../Icon';
 import { formatClock } from '../RestTimer';
 import { Skeleton } from '../Skeleton';
 import { Text } from '../Text';
+
+/**
+ * What the rail calls a row.
+ *
+ * A PT's own record resolves to their OWN display name, so without this the
+ * rail reads the PT their name back among their clients. The self session is
+ * deliberately NOT filtered out of the rail: usePtFloor prunes the rest store
+ * to whatever is live, so hiding it there would kill the PT's own rest clock
+ * on every floor load.
+ */
+function useRowName(row: { clientId: string; clientName: string | null }): string {
+  const { t } = useTranslation();
+  const auth = useAuth();
+  if (row.clientId === auth.selfClientId) return t('me.label');
+  return row.clientName ?? t('logging.console.clientFallback');
+}
 
 function Section({ children }: { children: string }) {
   const theme = useTheme();
@@ -37,6 +54,7 @@ function Section({ children }: { children: string }) {
 const LiveSessionRow = memo(function LiveSessionRow({ row, selected, onPress }: { row: LiveRow; selected: boolean; onPress: () => void }) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const rowName = useRowName(row);
   const rests = useSyncExternalStore(restStore.subscribe, restStore.getSnapshot, restStore.getSnapshot);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -69,10 +87,10 @@ const LiveSessionRow = memo(function LiveSessionRow({ row, selected, onPress }: 
         borderStartColor: selected ? theme.colors.accent : 'transparent',
       }}
     >
-      <Avatar name={row.clientName} size={36} />
+      <Avatar name={rowName} size={36} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '700' }}>
-          {row.clientName ?? t('logging.console.clientFallback')}
+          {rowName}
         </Text>
         <Text numeric numberOfLines={1} style={{ fontSize: 11.5, color: theme.colors.textMuted }}>
           {subline}
@@ -86,12 +104,13 @@ const LiveSessionRow = memo(function LiveSessionRow({ row, selected, onPress }: 
 const WeekClientRow = memo(function WeekClientRow({ row, onStart }: { row: WeekRow; onStart: () => void }) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const rowName = useRowName(row);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingHorizontal: 14 }}>
-      <Avatar name={row.clientName} size={32} />
+      <Avatar name={rowName} size={32} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: '600' }}>
-          {row.clientName ?? t('logging.console.clientFallback')}
+          {rowName}
         </Text>
         <Text numeric style={{ fontSize: 11.5, color: theme.colors.textMuted }}>
           {t('logging.console.weekOpen', { week: row.week, n: row.openDays })}

@@ -2,10 +2,11 @@ import { weekCompletion, type Database } from '@forge/shared';
 import type { TFunction } from 'i18next';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useAuth } from '../../../lib/auth/AuthProvider';
+import { ensureSelfClient } from '../../../lib/clients/ensureSelfClient';
 import { fetchClientHome } from '../../../lib/home/fetchClientHome';
 import { usePtDashboard, type AttentionItem } from '../../../lib/home/usePtDashboard';
 import { claimClientInvites } from '../../../lib/intake/claimInvites';
@@ -232,6 +233,78 @@ type NextUp =
   | { kind: 'suggested'; clientId: string; name: string; programName: string; week: number | null };
 
 /**
+ * The PT's way into their own training record, and the only place that can
+ * create it.
+ *
+ * Creation is lazy and opt-in on purpose. A PT who never trains in the app
+ * never gets a `clients` row, so nothing shows up in their roster, their
+ * dashboard counts or the assign picker until they ask for it.
+ *
+ * The new id is handed to /me as a param rather than waited for: the RPC
+ * returns before AuthProvider's USER_UPDATED round trip has repopulated
+ * `auth.selfClientId`, and /me prefers whichever it has.
+ */
+function MyTrainingEntry() {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const auth = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // PtHome is the fallback for every non-client role, so gym and admin
+  // accounts render it too — and ensure_self_client() is PT-only. Offering
+  // them a button that can only fail is worse than not offering it.
+  if (auth.user?.role !== 'pt') return null;
+
+  const section = (inner: ReactNode) => (
+    <View style={{ marginTop: 22, gap: theme.space[2] }}>
+      <SectionLabel>{t('me.cardTitle')}</SectionLabel>
+      {inner}
+    </View>
+  );
+
+  if (auth.selfClientId !== null) {
+    return section(
+      <SectionCard>
+        <ListRow
+          leading={<Icon name="user" size={20} color={theme.colors.textMuted} />}
+          title={t('me.title')}
+          subtitle={t('me.subtitle')}
+          onPress={() => router.push('/(app)/me')}
+          isLast
+        />
+      </SectionCard>,
+    );
+  }
+
+  const enable = async (): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    const result = await ensureSelfClient();
+    setBusy(false);
+    if (result.error !== null || result.clientId === null) {
+      setError(t('me.enableError'));
+      return;
+    }
+    router.push({ pathname: '/(app)/me', params: { clientId: result.clientId } });
+  };
+
+  return section(
+    <Card>
+      <Text tone="secondary" style={{ marginBottom: theme.space[3] }}>
+        {t('me.cardBody')}
+      </Text>
+      {error !== null ? (
+        <View style={{ marginBottom: theme.space[3] }}>
+          <Banner variant="danger" message={error} />
+        </View>
+      ) : null}
+      <Button label={t('me.startCta')} onPress={() => void enable()} loading={busy} />
+    </Card>,
+  );
+}
+
+/**
  * The PT's home — prototype `home`. Three counts, one Next up card, then the
  * things blocking work. The PT needs one decision on open, not a dashboard.
  *
@@ -444,6 +517,8 @@ function PtHome() {
                 ))
               )}
             </View>
+
+            <MyTrainingEntry />
           </>
         )}
       </ScrollView>

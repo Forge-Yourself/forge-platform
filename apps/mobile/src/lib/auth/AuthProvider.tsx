@@ -17,6 +17,16 @@ export type AuthState = {
   user: UserRow | null;
   ptProfile: PtProfileRow | null;
   mfaFactors: MfaFactors;
+  /**
+   * The `clients.id` of this PT's own training record, or null when they have
+   * not opted in (and always null for every other role). Minted lazily by
+   * ensureSelfClient(), never here — this only reads what already exists, so a
+   * PT who never taps "train myself" accumulates no row.
+   *
+   * It is the id every `/me` screen passes where a client id is expected, and
+   * the flag that tells a body or session screen "this subject is the viewer".
+   */
+  selfClientId: string | null;
 };
 
 const initialState: AuthState = {
@@ -25,6 +35,7 @@ const initialState: AuthState = {
   user: null,
   ptProfile: null,
   mfaFactors: null,
+  selfClientId: null,
 };
 
 const AuthContext = createContext<AuthState>(initialState);
@@ -34,9 +45,16 @@ const AuthContext = createContext<AuthState>(initialState);
  * the MFA factor list for the current session. Called on SIGNED_IN and USER_UPDATED —
  * the two events where the underlying rows may have changed since the last fetch.
  */
+type CachedProfile = { user: UserRow; ptProfile: PtProfileRow | null; selfClientId?: string | null };
+
 async function loadProfile(
   userId: string,
-): Promise<{ user: UserRow | null; ptProfile: PtProfileRow | null; mfaFactors: MfaFactors }> {
+): Promise<{
+  user: UserRow | null;
+  ptProfile: PtProfileRow | null;
+  mfaFactors: MfaFactors;
+  selfClientId: string | null;
+}> {
   const [{ data: user, error: userError }, { data: mfaData }] = await Promise.all([
     supabase.from('users').select('*').eq('id', userId).maybeSingle(),
     supabase.auth.mfa.listFactors(),
@@ -47,19 +65,40 @@ async function loadProfile(
   // we saw for this same user id, so the gate can let a basement session in.
   const offlineChoice = (await getStoredValue(OFFLINE_CHOICE_KEY)) === '1';
   if (!user && offlineChoice && isNetworkError(userError)) {
-    const cached = await engine.getCache<{ user: UserRow; ptProfile: PtProfileRow | null }>('profile:' + userId);
-    if (cached) return { user: cached.value.user, ptProfile: cached.value.ptProfile, mfaFactors: mfaData ?? null };
+    const cached = await engine.getCache<CachedProfile>('profile:' + userId);
+    if (cached) {
+      return {
+        user: cached.value.user,
+        ptProfile: cached.value.ptProfile,
+        mfaFactors: mfaData ?? null,
+        // Written since M4e; a payload cached before it is simply "no self row".
+        selfClientId: cached.value.selfClientId ?? null,
+      };
+    }
   }
 
   let ptProfile: PtProfileRow | null = null;
+  let selfClientId: string | null = null;
   if (user?.role === 'pt') {
-    const { data } = await supabase.from('pt_profiles').select('*').eq('user_id', userId).maybeSingle();
-    ptProfile = data ?? null;
+    // Both reads belong to the same role branch, so they go out together.
+    // The self row is the one where the PT is also the subject; uq_clients_self
+    // makes "at most one" a database guarantee, so maybeSingle cannot throw.
+    const [{ data: profile }, { data: selfRow }] = await Promise.all([
+      supabase.from('pt_profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabase
+        .from('clients')
+        .select('id')
+        .eq('pt_user_id', userId)
+        .eq('client_user_id', userId)
+        .maybeSingle(),
+    ]);
+    ptProfile = profile ?? null;
+    selfClientId = selfRow?.id ?? null;
   }
 
-  if (user && offlineChoice) void engine.putCache('profile:' + userId, { user, ptProfile });
+  if (user && offlineChoice) void engine.putCache('profile:' + userId, { user, ptProfile, selfClientId });
 
-  return { user: user ?? null, ptProfile, mfaFactors: mfaData ?? null };
+  return { user: user ?? null, ptProfile, mfaFactors: mfaData ?? null, selfClientId };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -80,13 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (event === 'SIGNED_OUT') {
         requestId += 1;
-        setState({ status: 'signedOut', session: null, user: null, ptProfile: null, mfaFactors: null });
+        setState({ status: 'signedOut', session: null, user: null, ptProfile: null, mfaFactors: null, selfClientId: null });
         return;
       }
 
       if (!session) {
         requestId += 1;
-        setState({ status: 'signedOut', session: null, user: null, ptProfile: null, mfaFactors: null });
+        setState({ status: 'signedOut', session: null, user: null, ptProfile: null, mfaFactors: null, selfClientId: null });
         return;
       }
 
@@ -112,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: prev.user,
         ptProfile: prev.ptProfile,
         mfaFactors: prev.mfaFactors,
+        selfClientId: prev.selfClientId,
       }));
     });
 

@@ -27,7 +27,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useAuth } from '../../../../lib/auth/AuthProvider';
-import { backFromBody } from '../../../../lib/body/bodyBack';
+import { backFromBody, type BodyOrigin } from '../../../../lib/body/bodyBack';
 import { deleteBodyMetric, recordBodyMetric } from '../../../../lib/body/bodyApi';
 import { useBodyMetrics } from '../../../../lib/body/useBodyMetrics';
 import { NeedsConnection } from '../../../../lib/offline/NeedsConnection';
@@ -78,6 +78,9 @@ function BodyMetricsInner() {
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
   const unit: UnitSystem = (auth.user?.unit_system as UnitSystem | undefined) ?? 'metric';
   const viewerIsClient = auth.user?.role === 'client';
+  // Where Back goes. A PT on their OWN record is neither of the two cases this
+  // screen was built for — see bodyBack.ts for why the boolean was not enough.
+  const origin: BodyOrigin = viewerIsClient ? 'home' : clientId === auth.selfClientId ? 'me' : 'client';
   const data = useBodyMetrics(clientId);
 
   const [metric, setMetric] = useState<BodyMetricKey>('weight');
@@ -107,7 +110,9 @@ function BodyMetricsInner() {
   };
 
   const save = async () => {
-    if (toSave === null || !clientId) return;
+    // Guards the Button disables, repeated here because the keyboard's Done key
+    // calls save() directly and knows nothing about the Button's state.
+    if (toSave === null || !clientId || saving || !offline.online) return;
     const input = {
       id: Crypto.randomUUID(),
       client_id: clientId,
@@ -151,11 +156,16 @@ function BodyMetricsInner() {
             label={t('common.back')}
             variant="link"
             icon="chevronBack"
-            onPress={() => clientId && backFromBody(clientId, viewerIsClient)}
+            onPress={() => clientId && backFromBody(clientId, origin)}
           />
         }
       />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: theme.space[6], gap: theme.space[4] }}>
+      <ScrollView
+        // Without this the first tap on Save only dismisses the keyboard, so saving a
+        // typed first measurement took two taps.
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: theme.space[6], gap: theme.space[4] }}
+      >
         <View>
           <Text variant="h2">{t('body.title')}</Text>
           <Text variant="caption" tone="muted">
@@ -233,8 +243,17 @@ function BodyMetricsInner() {
               incrementLabel={t('body.increase')}
             />
           ) : (
-            // Nothing to step from yet: the first value is typed once.
-            <TextField label={t('body.firstValue')} value={typed} onChangeText={setTyped} keyboardType="decimal-pad" />
+            // Nothing to step from yet: the first value is typed once — the unit is in
+            // the label because there is no stepper yet to carry it, and the keyboard's
+            // Done key saves so the first measurement is one gesture, not two.
+            <TextField
+              label={t('body.firstValue', { unit: u })}
+              value={typed}
+              onChangeText={setTyped}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              onSubmitEditing={() => void save()}
+            />
           )}
           {saveError ? <Banner variant="danger" message={saveError} /> : null}
           <Button

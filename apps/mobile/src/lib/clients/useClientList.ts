@@ -1,11 +1,21 @@
-import { isNetworkError, type ClientState, type Database } from '@forge/shared';
+import { isNetworkError, isSelfClientRow, splitRoster, type ClientState, type Database } from '@forge/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
 import { useOffline } from '../offline/offlineContext';
 import { supabase } from '../supabase';
 
 export type ClientRow = Database['public']['Tables']['clients']['Row'];
-export type ClientListItem = ClientRow & { displayName: string; avatarUrl: string | null };
+export type ClientListItem = ClientRow & {
+  displayName: string;
+  avatarUrl: string | null;
+  /**
+   * The PT's own training record (pt_user_id = client_user_id). It is a real
+   * client row and every RPC treats it as one, but it is not somebody the PT
+   * is responsible for — so it is kept out of `items` and out of every count
+   * built from them. See useClientList below for what that protects.
+   */
+  isSelf: boolean;
+};
 
 export type ClientListFilter = 'all' | Extract<ClientState, 'active' | 'paused' | 'invited'>;
 
@@ -58,6 +68,7 @@ export async function fetchRoster(ptUserId: string): Promise<{ rows: ClientListI
       ...c,
       displayName: linked?.display_name ?? c.invite_name ?? c.invite_email ?? 'Unnamed client',
       avatarUrl: linked?.avatar_url ?? null,
+      isSelf: isSelfClientRow(c),
     };
   });
 
@@ -67,7 +78,7 @@ export async function fetchRoster(ptUserId: string): Promise<{ rows: ClientListI
 export type ClientListData = {
   loading: boolean;
   error: string | null;
-  /** After search + state filtering. */
+  /** After search + state filtering. Never contains the self row. */
   items: ClientListItem[];
   /** Roster size before search/state filtering — the "3 of 12 clients" denominator. */
   total: number;
@@ -75,6 +86,13 @@ export type ClientListData = {
   isEmpty: boolean;
   /** Roster has clients, but none match the current search — the no-match state. */
   isNoMatch: boolean;
+  /**
+   * The PT's own training record, handed out separately so callers must decide
+   * about it rather than inherit it. Screens that ask "who am I responsible
+   * for" (the roster list, usePtDashboard) ignore it; screens that ask "whose
+   * record can I act on" (the assign picker, the AI draft picker) put it back.
+   */
+  selfItem: ClientListItem | null;
   refetch: () => Promise<void>;
 };
 
@@ -126,22 +144,33 @@ export function useClientList(
     setRaw({ rows: result.rows, loading: false, error: result.error });
   }, [ptUserId, offline.effective, offline.online]);
 
+  // The self row is split off BEFORE anything counts or filters. Leaving it in
+  // would not just add a stray row: usePtDashboard counts every active client
+  // without a signed waiver as "awaiting intake", and the self record has no
+  // intake by design — so that tile would read 1 forever, and "Needs you"
+  // would carry a row titled with the PT's own name. The empty state matters
+  // too: a PT who only trains themselves must still be told to invite someone.
+  const split = useMemo(() => splitRoster(raw.rows), [raw.rows]);
+  const roster = split.roster;
+  const selfItem = split.self;
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return raw.rows.filter((r) => {
+    return roster.filter((r) => {
       if (stateFilter !== 'all' && r.state !== stateFilter) return false;
       if (q && !r.displayName.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [raw.rows, search, stateFilter]);
+  }, [roster, search, stateFilter]);
 
   return {
     loading: raw.loading,
     error: raw.error,
     items: filtered,
-    total: raw.rows.length,
-    isEmpty: !raw.loading && !raw.error && raw.rows.length === 0,
-    isNoMatch: !raw.loading && !raw.error && raw.rows.length > 0 && filtered.length === 0,
+    total: roster.length,
+    isEmpty: !raw.loading && !raw.error && roster.length === 0,
+    isNoMatch: !raw.loading && !raw.error && roster.length > 0 && filtered.length === 0,
+    selfItem,
     refetch,
   };
 }

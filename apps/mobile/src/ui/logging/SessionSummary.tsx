@@ -17,7 +17,7 @@ import { Kicker, SummaryStat } from './sessionParts';
 export function SessionSummary({ c }: { c: SessionController }) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { session, data, exercises, unit, viewerIsClient, dayTitle, weightLabel, pr, setPr, buildPrView, goBack } = c;
+  const { session, data, exercises, unit, viewerIsClient, subjectIsSelf, subjectName, dayTitle, weightLabel, pr, setPr, buildPrView, goBack } = c;
   if (!session) return null;
 
   const working = data.sets.filter((s) => !s.is_warmup);
@@ -56,7 +56,7 @@ export function SessionSummary({ c }: { c: SessionController }) {
             {t('logging.summary.title')}
           </Text>
           <Text style={{ fontSize: 13.5, color: theme.colors.textSecondary, textAlign: 'center' }}>
-            {viewerIsClient ? dayTitle : `${data.clientName ?? '—'} · ${dayTitle}`}
+            {viewerIsClient ? dayTitle : `${subjectName ?? '—'} · ${dayTitle}`}
           </Text>
           {session.completed_at ? (
             <Text numeric style={{ fontSize: 12, color: theme.colors.textMuted }}>
@@ -207,7 +207,7 @@ export function SessionSummary({ c }: { c: SessionController }) {
         {note || otherNote || session.rating !== null ? (
           <>
             <Kicker>
-              {viewerIsClient || !data.clientName
+              {viewerIsClient || subjectIsSelf || !data.clientName
                 ? t('logging.summary.notes')
                 : t('logging.summary.noteFor', { name: data.clientName.split(' ')[0] })}
             </Kicker>

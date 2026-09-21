@@ -31,12 +31,18 @@ export default function CapturePhoto() {
   const offline = useOffline();
   const { clientId, pose: poseParam } = useLocalSearchParams<{ clientId: string; pose?: string }>();
   const viewerIsClient = auth.user?.role === 'client';
+  // A PT photographing THEMSELVES is a third case, not either of the two this
+  // screen was built for: the camera should face them like a client's does,
+  // but a "share with your trainer" toggle pointed at yourself is nonsense —
+  // record_progress_photo honours p_share here (is_client_record_owner is true
+  // for a self row), so the photo simply stays private and says so.
+  const subjectIsSelf = clientId === auth.selfClientId;
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
 
   const initialPose = GUIDED_POSES.find((p) => p === poseParam) ?? 'front';
   const [pose, setPose] = useState<PhotoPose>(initialPose);
-  const [facing, setFacing] = useState<CameraType>(viewerIsClient ? 'front' : 'back');
+  const [facing, setFacing] = useState<CameraType>(viewerIsClient || subjectIsSelf ? 'front' : 'back');
   const [ghostOn, setGhostOn] = useState(true);
   const [captured, setCaptured] = useState<SourceImage | null>(null);
   const [photoId, setPhotoId] = useState(() => Crypto.randomUUID());
@@ -146,7 +152,7 @@ export default function CapturePhoto() {
               <Toggle label={t('body.photos.capture.share')} value={share} onValueChange={setShare} />
             ) : (
               <Text variant="caption" tone="muted">
-                {t('body.photos.capture.ptNote')}
+                {t(subjectIsSelf ? 'body.photos.capture.selfNote' : 'body.photos.capture.ptNote')}
               </Text>
             )}
             {error ? <Banner variant="danger" message={error} /> : null}

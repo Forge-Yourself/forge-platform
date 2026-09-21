@@ -503,6 +503,33 @@ with the signal.
 state, so going offline (simulated or real) leaves the channel. `useSessionChannel`
 does. `walk-m4b.mjs` in the `forge-screen-walk` skill shows the simulation recipe.
 
+### O3. An outbox that *names* a fact must agree with the RPC that *infers* it
+
+`start_workout_session` does not take `is_pt_led`. It derives it:
+`v_is_pt := is_pt_of_client(p_client_id)`, evaluated before the client check, so
+whoever the caller is the server decides. The outbox has no server to ask, so
+`loggingRepo.queueStart` writes the row itself from whatever the caller passed —
+`StartSessionSheet`'s `viewerIsPt` prop.
+
+Two code paths, two different authorities for one column. They agree by
+coincidence, not by construction, and they stop agreeing the moment a new entry
+point guesses the prop wrong. M4e's `/me` is exactly that case: a PT training
+themselves satisfies `is_pt_of_client` AND `is_client_record_owner`, so the
+server always stamps `is_pt_led = true` — but a screen that reasoned "this
+person is acting as a client here" and passed `viewerIsPt={false}` would queue
+`false`. `complete_workout_session` then routes the finish note by that same
+flag, and `SessionSummary` reads `pt_notes` for a non-client viewer, so the note
+would land in `session_notes` and simply never be displayed. Online: correct.
+Offline: the note vanishes. Nothing in typecheck, lint, the unit suite or an
+online screen walk can see it.
+
+**Rule:** when an RPC infers a column the outbox has to supply, the prop that
+feeds the outbox is not a UI preference — it is a mirror of the server's rule,
+and every call site must be checked against that rule rather than against what
+the screen feels like. Prove it in the walk's offline leg: start the session
+offline, drain, then read the column back with psql. The online leg cannot fail
+this, so it is not evidence.
+
 ---
 
 ## i18n
@@ -567,6 +594,45 @@ rendered. `RestActivityDriver` subscribes to the whole rest store directly and
 fires the cue for *any* rest crossing zero while the app is foregrounded, once
 per rest; `useRest` no longer takes an `onZero` callback (M4d spec Corrections
 §6.1).
+
+### R3. A third-party native module throws at *import* time, and takes the route down with it
+
+Our own native modules are required optionally — `modules/forge-rest-activity`
+ends in `requireOptionalNativeModule('ForgeRestActivity')`, which is `null` in
+Expo Go and on web, so the feature degrades. A third-party one need not be so
+polite: `expo-speech-recognition`'s entry point calls `requireNativeModule`
+at the top level, so merely *importing* it throws
+`Cannot find native module 'ExpoSpeechRecognition'` in any binary without the
+native side — Expo Go, or a development build made before the dependency was
+added.
+
+The throw is not contained to the feature. The import chain is
+`sessions/[id]/index.tsx` → `PhoneSession`/`ConsoleSession` → `VoiceSheet` →
+`useVoiceSet` → the library, so the route module never finishes evaluating and
+its `export default` is never assigned. Expo Router then reports, misleadingly,
+`Route "./(app)/sessions/[id]/index.tsx" is missing the required default
+export` — pointing at a file whose default export is right there on line 21.
+Both lines appear in the same Metro log, ERROR then WARN.
+
+**Rule:** a native dependency the app can run without is resolved
+conditionally, never statically imported:
+
+```ts
+const speech: typeof import('expo-speech-recognition') | null =
+  Platform.OS === 'web' || requireOptionalNativeModule('ExpoSpeechRecognition') !== null
+    ? require('expo-speech-recognition')
+    : null;
+```
+
+Hooks the library exports are aliased once at module scope
+(`const useSpeechEvent = speech?.useSpeechRecognitionEvent ?? (() => {})`), so
+hook order stays constant, and every call site null-checks. And when
+"missing the required default export" names a file that plainly has one, look
+above it in the log for a module that threw — not at the route.
+
+**Seen in:** M4d voice logging. Reproduces in Expo Go only; the web target
+resolves the library's Web Speech implementation, so a screen walk on web
+never sees it (V1 tests the browser, not the device binary).
 
 ### C1. Two config plugins touching one Info.plist key must agree on a string
 

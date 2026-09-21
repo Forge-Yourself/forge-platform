@@ -13,7 +13,18 @@ export type ClientHomeData = {
 };
 
 export async function fetchClientHome(userId: string): Promise<ClientHomeData> {
-  const { data: client, error } = await supabase.from('clients').select('*').eq('client_user_id', userId).maybeSingle();
+  // `.limit(1)` is defensive, not a fix for anything known: maybeSingle THROWS
+  // on more than one row, and nothing stops the same person being invited by
+  // two PTs. Ordering makes the one it picks the oldest rather than arbitrary.
+  // (A PT's own self row can never surface here — this is only ever called on
+  // the non-PT branch — but the query should not depend on that to be safe.)
+  const { data: client, error } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('client_user_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
   if (error) return { client: null, ptInfo: null, intake: null, error: isNetworkError(error) ? OFFLINE : error.message };
   if (!client) return { client: null, ptInfo: null, intake: null, error: null };
   const [{ data: ptInfo }, { data: intake }] = await Promise.all([

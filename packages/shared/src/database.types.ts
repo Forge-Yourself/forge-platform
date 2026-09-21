@@ -7409,6 +7409,7 @@ export type Database = {
         Args: { p_months_ahead?: number }
         Returns: undefined
       }
+      ensure_self_client: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {

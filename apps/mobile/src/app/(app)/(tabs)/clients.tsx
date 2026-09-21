@@ -115,7 +115,7 @@ export default function ClientsIndex() {
   const auth = useAuth();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ClientListFilter>('all');
-  const { loading, error, items, total, isEmpty, isNoMatch, refetch } = useClientList(
+  const { loading, error, items, total, isEmpty, isNoMatch, selfItem, refetch } = useClientList(
     auth.user?.id,
     search,
     filter,
@@ -152,6 +152,34 @@ export default function ClientsIndex() {
         keyboardShouldPersistTaps="handled"
       >
         <OfflineStatusChip />
+
+        {/*
+          The PT's own record sits ABOVE the loading/error/empty/no-match
+          ternary, not inside its list branch. A PT who only trains themselves
+          has an empty roster by definition, so a row rendered in the list
+          branch would be invisible in exactly the state that needs it — and
+          typing any non-matching search would hide it too.
+        */}
+        {selfItem !== null ? (
+          <SectionCard>
+            <ListRow
+              leading={
+                <Avatar
+                  size={36}
+                  name={auth.user?.display_name}
+                  photoUrl={selfItem.avatarUrl}
+                />
+              }
+              title={t('me.label')}
+              subtitle={t('me.subtitle')}
+              trailing={<Tag label={t('me.pinnedTag')} tone="accent" />}
+              minHeight={68}
+              isLast
+              onPress={() => router.push('/(app)/me')}
+            />
+          </SectionCard>
+        ) : null}
+
         {loading ? (
           <SectionCard>
             <SkeletonRow />

@@ -207,8 +207,15 @@ export default function AiDraft() {
   // so resolve it from the roster the PT already has rather than widening
   // program_tree() to carry a name it otherwise has no use for.
   const clients = useClientList(auth.user?.id, '', 'all');
-  const clientName = clients.items.find((c) => c.id === clientId)?.displayName ?? '';
-  const activeClients = clients.items.filter((c) => c.state === 'active');
+  // The self row is held out of `items`, so put it back with its own label —
+  // otherwise a PT arriving here from their own record would see the no-client
+  // copy and no way to pick themselves.
+  const draftable =
+    clients.selfItem !== null
+      ? [{ ...clients.selfItem, displayName: t('me.label') }, ...clients.items]
+      : clients.items;
+  const clientName = draftable.find((c) => c.id === clientId)?.displayName ?? '';
+  const activeClients = draftable.filter((c) => c.state === 'active');
 
   const [phase, setPhase] = useState<Phase>('prompt');
   const [goal, setGoal] = useState<AiGoal>('strength');

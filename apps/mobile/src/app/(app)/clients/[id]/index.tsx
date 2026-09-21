@@ -1,5 +1,5 @@
 import { bodyToDisplay, bodyUnit, formatBody, weekCompletion } from '@forge/shared';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
@@ -125,6 +125,31 @@ function RedFlagCard({ count, onReview }: { count: number; onReview: () => void 
  * screens down.
  */
 export default function ClientDetail() {
+  const auth = useAuth();
+  const params = useLocalSearchParams<{ id: string }>();
+
+  /*
+    The PT's own training record is a real `clients` row and would render here
+    perfectly happily — wrongly. Start would be permanently disabled (it gates
+    on a submitted intake, which the self record deliberately has none of), the
+    Manage block would offer to pause the PT's own training, and the intake and
+    essentials sections would be empty furniture. /me exists for this row, so
+    send deep links and stray dismissTo targets there rather than leaving a
+    subtly wrong screen reachable.
+
+    A plain <Redirect> is safe here and needs no isCurrentRoute guard (N6): the
+    target is a different route file with no `id` param, so the condition that
+    fires this cannot be true there. The rule that DOES apply is the mirror of
+    it — nothing under /me may link back to /(app)/clients/<selfClientId>.
+  */
+  if (auth.selfClientId !== null && params.id === auth.selfClientId) {
+    return <Redirect href="/(app)/me" />;
+  }
+
+  return <ClientDetailInner />;
+}
+
+function ClientDetailInner() {
   const { t } = useTranslation();
   const theme = useTheme();
   const auth = useAuth();
