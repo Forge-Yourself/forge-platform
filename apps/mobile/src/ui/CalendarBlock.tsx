@@ -16,6 +16,8 @@ export type CalendarBlockProps = {
   /** Week grid: block height is the booking length. */
   minHeight?: number;
   selected?: boolean;
+  /** Narrow week-grid column: the state word sits above the name instead of beside it. */
+  compact?: boolean;
 };
 
 /**
@@ -23,7 +25,9 @@ export type CalendarBlockProps = {
  * state word (never colour alone), time · what, and an optional note line.
  * The PT's own training is hatched so it can't be read as a client.
  */
-export function CalendarBlock({ state, stateLabel, title, subtitle, note, noteTone = 'muted', onPress, minHeight, selected }: CalendarBlockProps) {
+export function CalendarBlock({
+  state, stateLabel, title, subtitle, note, noteTone = 'muted', onPress, minHeight, selected, compact = false,
+}: CalendarBlockProps) {
   const t = useTheme();
   const s = stateStyle(state, t.colors);
   return (
@@ -54,17 +58,17 @@ export function CalendarBlock({ state, stateLabel, title, subtitle, note, noteTo
         </Svg>
       ) : null}
       <View style={{ width: 4, backgroundColor: s.bar }} />
-      <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 2 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ flex: 1, paddingHorizontal: compact ? 8 : 12, paddingVertical: compact ? 3 : 10, gap: compact ? 0 : 2 }}>
+        <View style={{ flexDirection: compact ? 'column-reverse' : 'row', alignItems: compact ? 'flex-start' : 'center', gap: compact ? 0 : 8 }}>
           <Text
             numberOfLines={1}
-            style={{ flex: 1, fontWeight: '700', color: s.fg, textDecorationLine: s.strike ? 'line-through' : 'none' }}
+            style={{ flex: compact ? undefined : 1, fontSize: compact ? 13 : undefined, fontWeight: '700', color: s.fg, textDecorationLine: s.strike ? 'line-through' : 'none' }}
           >
             {title}
           </Text>
           <Text style={{ fontSize: 10, fontWeight: '800', letterSpacing: 0.6, color: s.fg }}>{stateLabel}</Text>
         </View>
-        <Text numberOfLines={1} style={{ fontSize: 13, color: s.fg }}>
+        <Text numberOfLines={1} style={{ fontSize: compact ? 12 : 13, color: s.fg }}>
           {subtitle}
         </Text>
         {note ? (

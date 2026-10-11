@@ -13,7 +13,7 @@ import { useSchedule } from './useSchedule';
 
 const FIRST = 6 * 60;
 const LAST = 21 * 60;
-const PX = 1; // 60 pt per hour
+const PX = 1.4; // 84 pt per hour: room for state, name and time in a 60-minute block
 const GUTTER = 48;
 
 function startOfToday(): Date {
@@ -86,9 +86,14 @@ export function IpadWeek() {
                         const start = Math.max(FIRST, minuteOfDay(new Date(item.startsAt)));
                         const end = Math.min(LAST, minuteOfDay(new Date(item.endsAt)) || LAST);
                         return (
-                          <View key={item.id} style={{ position: 'absolute', top: (start - FIRST) * PX, left: 2, right: 2 }}>
+                          // Clipped to its length so a block never runs into the next hour's.
+                          <View
+                            key={item.id}
+                            style={{ position: 'absolute', top: (start - FIRST) * PX, height: Math.max(28, (end - start) * PX), left: 2, right: 2, overflow: 'hidden' }}
+                          >
                             <CalendarBlock
                               {...blockProps(item, t)}
+                              compact
                               minHeight={Math.max(28, (end - start) * PX)}
                               selected={item.id === selected}
                               onPress={() => setSelected(item.id)}
