@@ -2,11 +2,13 @@ import { addDays, dayRows, hhmm, localDayKey, minuteOfDay, type DayRow } from '@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { useAuth } from '../../../lib/auth/AuthProvider';
+import { CONSOLE_MIN_WIDTH } from '../../../lib/consoleWidth';
 import { useOffline } from '../../../lib/offline/offlineContext';
 import { blockProps } from '../../../lib/schedule/blockProps';
 import { dayLabel, dowLabel, timeLabel } from '../../../lib/schedule/format';
+import { IpadWeek } from '../../../lib/schedule/IpadWeek';
 import { OfflineNote } from '../../../lib/schedule/OfflineNote';
 import { stateStyle } from '../../../lib/schedule/stateStyle';
 import { useNow } from '../../../lib/schedule/useNow';
@@ -235,5 +237,6 @@ export function PhoneSchedule() {
 }
 
 export default function ScheduleTab() {
-  return <PhoneSchedule />;
+  const { width } = useWindowDimensions();
+  return width >= CONSOLE_MIN_WIDTH ? <IpadWeek /> : <PhoneSchedule />;
 }
