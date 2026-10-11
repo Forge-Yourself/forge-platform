@@ -1771,7 +1771,8 @@
       "connected": "Google Calendar is connected. Your bookings are being copied.",
       "denied": "Google wasn't connected. Nothing changed.",
       "error": "Google couldn't be connected. Try again.",
-      "notConfigured": "Google Calendar isn't set up on Forge's server yet."
+      "notConfigured": "Google Calendar isn't set up on Forge's server yet.",
+      "scopes": "Forge needs every box ticked on Google’s screen to sync. Connect again and leave them all ticked."
     },
     "exportTitle": "Export .ics",
     "exportBody": "All bookings for the next 4 weeks, for any calendar app",
