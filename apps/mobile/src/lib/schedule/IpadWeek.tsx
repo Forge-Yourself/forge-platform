@@ -110,7 +110,7 @@ export function IpadWeek() {
         </View>
         <View style={{ width: 380, borderStartWidth: 1, borderStartColor: theme.colors.border }}>
           {selected ? (
-            <BookingDetailBody key={selected} id={selected} embedded />
+            <BookingDetailBody key={selected} id={selected} embedded onChanged={data.refetch} />
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
               <Text tone="muted" style={{ textAlign: 'center' }}>

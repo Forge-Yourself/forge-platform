@@ -27,7 +27,16 @@ const REASONS = ['ill', 'clash', 'travel'] as const;
  * Cancel inside the cutoff states time left vs. the policy first, then lets
  * the PT decide whether it counts. Destructive actions sit last.
  */
-export function BookingDetailBody({ id, embedded = false }: { id: string; embedded?: boolean }) {
+export function BookingDetailBody({
+  id,
+  embedded = false,
+  onChanged,
+}: {
+  id: string;
+  embedded?: boolean;
+  /** Called after a cancel or no-show lands, so a host showing the same booking (the iPad grid) refetches too. */
+  onChanged?: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const offline = useOffline();
@@ -115,6 +124,7 @@ export function BookingDetailBody({ id, embedded = false }: { id: string; embedd
     }
     setSheet(null);
     d.refetch();
+    onChanged?.();
   }
 
   async function doNoShow() {
@@ -128,6 +138,7 @@ export function BookingDetailBody({ id, embedded = false }: { id: string; embedd
     }
     setSheet(null);
     d.refetch();
+    onChanged?.();
   }
 
   const actionRow = (label: string, sub: string | null, onPress: () => void, enabled: boolean, danger = false) => (
