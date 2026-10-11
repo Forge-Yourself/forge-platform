@@ -4,7 +4,7 @@
  * is visible without reading times. Fractions are 0–1 of the axis width.
  */
 
-export type Span = { start: string; end: string };
+export type TimeSpan = { start: string; end: string };
 export type Pct = { left: number; width: number };
 
 export type OverlapGeometry = {
@@ -22,7 +22,7 @@ export type OverlapGeometry = {
 
 const HALF_HOUR = 30 * 60_000;
 
-export function overlapGeometry(a: Span, b: Span): OverlapGeometry {
+export function overlapGeometry(a: TimeSpan, b: TimeSpan): OverlapGeometry {
   const as = Date.parse(a.start);
   const ae = Date.parse(a.end);
   const bs = Date.parse(b.start);
