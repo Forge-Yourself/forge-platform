@@ -36,6 +36,7 @@
     "expo-web-browser": "~57.0.2",
     "expo-widgets": "~57.0.20",
     "i18next": "^26.4.2",
+    "qrcode-generator": "1.4.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-i18next": "^17.0.13",

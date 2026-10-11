@@ -9,3 +9,4 @@ export * from './voice/index';
 export * from './floor/index';
 export * from './clients/index';
 export * from './schedule/index';
+export * from './checkin/index';

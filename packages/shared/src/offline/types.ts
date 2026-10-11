@@ -57,7 +57,7 @@ export interface Transport {
   refreshAuth(): Promise<boolean>;
 }
 
-export type KvTable = 'outbox' | 'sessions' | 'sets' | 'aliases' | 'cache' | 'meta';
+export type KvTable = 'outbox' | 'sessions' | 'sets' | 'aliases' | 'cache' | 'meta' | 'pending';
 /** `value: null` deletes the key. */
 export type KvWrite = { table: KvTable; key: string; value: unknown };
 
