@@ -235,6 +235,26 @@ export default async function AdminUserDetailPage({
     }
   }
 
+  type AdminBooking = Pick<
+    Database['public']['Tables']['bookings']['Row'],
+    'id' | 'starts_at' | 'status' | 'length_min' | 'cancel_late' | 'cancel_counted' | 'cancelled_by' | 'recurrence_rule'
+  >;
+  let bookings: AdminBooking[] | null = null;
+  const bookingCols = 'id, starts_at, status, length_min, cancel_late, cancel_counted, cancelled_by, recurrence_rule';
+  if (target.role === 'pt') {
+    const { data } = await supabase.from('bookings').select(bookingCols).eq('pt_user_id', id).order('starts_at', { ascending: false }).limit(50);
+    bookings = data ?? [];
+  } else if (target.role === 'client') {
+    const { data: rows } = await supabase.from('clients').select('id').eq('client_user_id', id);
+    const ids = (rows ?? []).map((r) => r.id);
+    if (ids.length) {
+      const { data } = await supabase.from('bookings').select(bookingCols).in('client_id', ids).order('starts_at', { ascending: false }).limit(50);
+      bookings = data ?? [];
+    } else {
+      bookings = [];
+    }
+  }
+
   return (
     <main style={ui.page}>
       <p style={ui.kicker}>Forge</p>
@@ -476,6 +496,42 @@ export default async function AdminUserDetailPage({
                         : '—'}
                     </td>
                     <td style={ui.td}>{r.recorded_by_user_id === id ? 'client' : 'PT'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      ) : null}
+      {bookings ? (
+        <section style={ui.card}>
+          <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Bookings</h2>
+          <p style={ui.muted}>Latest 50. Times are shown in this browser&apos;s zone; bookings are stored as UTC instants.</p>
+          {bookings.length === 0 ? (
+            <p style={ui.muted}>No bookings.</p>
+          ) : (
+            <table style={ui.table}>
+              <thead>
+                <tr>
+                  <th style={ui.th}>Starts</th>
+                  <th style={ui.th}>Length</th>
+                  <th style={ui.th}>Status</th>
+                  <th style={ui.th}>Late cancel</th>
+                  <th style={ui.th}>Cancelled by</th>
+                  <th style={ui.th}>Series</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((b) => (
+                  <tr key={b.id}>
+                    <td style={ui.td}>{new Date(b.starts_at).toLocaleString()}</td>
+                    <td style={ui.td}>{b.length_min ? `${b.length_min} min` : '—'}</td>
+                    <td style={ui.td}>
+                      <span style={b.status === 'no_show' ? ui.dangerBadge : ui.neutralBadge}>{b.status}</span>
+                    </td>
+                    <td style={ui.td}>{b.cancel_late ? (b.cancel_counted ? 'late · counted' : 'late · waived') : '—'}</td>
+                    <td style={ui.td}>{b.cancelled_by ?? '—'}</td>
+                    <td style={ui.td}>{b.recurrence_rule ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
