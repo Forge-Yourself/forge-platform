@@ -954,6 +954,83 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs_2027_10: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      availability_exceptions: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          on_date: string
+          pt_user_id: string
+          ranges: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          on_date: string
+          pt_user_id: string
+          ranges?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          on_date?: string
+          pt_user_id?: string
+          ranges?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_ax_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badges: {
         Row: {
           category: string
@@ -1053,18 +1130,58 @@ export type Database = {
           },
         ]
       }
+      booking_rules: {
+        Row: {
+          buffer_min: number
+          cutoff_hours: number
+          lengths_min: number[]
+          pt_user_id: string
+          updated_at: string
+          window_weeks: number
+        }
+        Insert: {
+          buffer_min?: number
+          cutoff_hours?: number
+          lengths_min?: number[]
+          pt_user_id: string
+          updated_at?: string
+          window_weeks?: number
+        }
+        Update: {
+          buffer_min?: number
+          cutoff_hours?: number
+          lengths_min?: number[]
+          pt_user_id?: string
+          updated_at?: string
+          window_weeks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_booking_rules_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           class_id: string | null
           client_id: string | null
           created_at: string
+          created_by_user_id: string | null
           ends_at: string
           google_calendar_id: string | null
           gym_id: string | null
           ical_uid: string | null
           id: string
+          length_min: number | null
           location_name: string | null
           no_show_marked_at: string | null
           notes: string | null
@@ -1080,16 +1197,21 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancel_counted?: boolean
+          cancel_late?: boolean
+          cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           class_id?: string | null
           client_id?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           ends_at: string
           google_calendar_id?: string | null
           gym_id?: string | null
           ical_uid?: string | null
           id?: string
+          length_min?: number | null
           location_name?: string | null
           no_show_marked_at?: string | null
           notes?: string | null
@@ -1105,16 +1227,21 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancel_counted?: boolean
+          cancel_late?: boolean
+          cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           class_id?: string | null
           client_id?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           ends_at?: string
           google_calendar_id?: string | null
           gym_id?: string | null
           ical_uid?: string | null
           id?: string
+          length_min?: number | null
           location_name?: string | null
           no_show_marked_at?: string | null
           notes?: string | null
@@ -1142,6 +1269,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bookings_created_by"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -2792,6 +2926,60 @@ export type Database = {
         Relationships: []
       }
       food_logs_2027_09: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs_2027_10: {
         Row: {
           calories: number | null
           carbs_g: number | null
@@ -4507,6 +4695,63 @@ export type Database = {
         Relationships: []
       }
       notifications_2027_09: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications_2027_10: {
         Row: {
           body: string
           category: string
@@ -6525,6 +6770,78 @@ export type Database = {
         }
         Relationships: []
       }
+      sets_2027_10: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          logged_by_user_id: string
+          notes: string | null
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          logged_by_user_id: string
+          notes?: string | null
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          logged_by_user_id?: string
+          notes?: string | null
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
       spatial_ref_sys: {
         Row: {
           auth_name: string | null
@@ -7263,6 +7580,16 @@ export type Database = {
       }
       body_circumferences_valid: { Args: { p: Json }; Returns: boolean }
       body_plateau: { Args: { p_client_id: string }; Returns: boolean }
+      booking_policy: {
+        Args: { p_pt: string }
+        Returns: {
+          buffer_min: number
+          cutoff_hours: number
+          lengths_min: number[]
+          timezone: string
+          window_weeks: number
+        }[]
+      }
       can_delete_progress_photo_object: {
         Args: { p_name: string }
         Returns: boolean
@@ -7270,6 +7597,50 @@ export type Database = {
       can_view_progress_photo_object: {
         Args: { p_name: string }
         Returns: boolean
+      }
+      cancel_booking: {
+        Args: {
+          p_counted?: boolean
+          p_id: string
+          p_reason?: string
+          p_scope?: string
+        }
+        Returns: {
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       claim_client_invites: { Args: never; Returns: number }
       complete_workout_session: {
@@ -7332,6 +7703,53 @@ export type Database = {
         Args: { p_from_week: number; p_program_id: string; p_to_week: number }
         Returns: undefined
       }
+      create_booking: {
+        Args: {
+          p_client_id: string
+          p_count?: number
+          p_every_weeks?: number
+          p_id: string
+          p_length: number
+          p_starts_at: string
+          p_until?: string
+        }
+        Returns: {
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_custom_exercise: {
         Args: {
           p_coaching_cues?: string[]
@@ -7366,6 +7784,13 @@ export type Database = {
         Returns: string
       }
       current_user_role: { Args: never; Returns: string }
+      day_windows: {
+        Args: { p_date: string; p_pt: string; p_tz: string }
+        Returns: {
+          w_end: string
+          w_start: string
+        }[]
+      }
       delete_body_metric: { Args: { p_id: string }; Returns: undefined }
       delete_progress_photo: { Args: { p_id: string }; Returns: undefined }
       delete_set: { Args: { p_id: string }; Returns: undefined }
@@ -7579,6 +8004,58 @@ export type Database = {
         }[]
       }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      mark_no_show: {
+        Args: { p_id: string }
+        Returns: {
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      open_slots: {
+        Args: {
+          p_from: string
+          p_ignore?: string
+          p_length: number
+          p_pt: string
+          p_to: string
+        }
+        Returns: {
+          slot_date: string
+          slot_start: string
+        }[]
+      }
       parq_question_ids: { Args: never; Returns: string[] }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -7620,6 +8097,21 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      preview_series: {
+        Args: {
+          p_count: number
+          p_every_weeks: number
+          p_length: number
+          p_start: string
+          p_until: string
+        }
+        Returns: {
+          after_offset_change: boolean
+          conflict: boolean
+          n: number
+          occ_start: string
+        }[]
+      }
       program_summaries: {
         Args: never
         Returns: {
@@ -7647,6 +8139,15 @@ export type Database = {
         Args: { p_name: string; p_part: number }
         Returns: string
       }
+      pt_day_windows: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          win_date: string
+          win_end: string
+          win_start: string
+        }[]
+      }
+      pt_tz: { Args: { p_pt: string }; Returns: string }
       record_body_metric: {
         Args: {
           p_body_fat_pct?: number
@@ -7708,11 +8209,74 @@ export type Database = {
         Args: { p_generation_id: string; p_reason?: string }
         Returns: undefined
       }
+      reschedule_booking: {
+        Args: { p_id: string; p_new_start: string; p_scope?: string }
+        Returns: {
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       resend_invite: {
         Args: { p_client_id: string; p_email?: string }
         Returns: undefined
       }
       revoke_invite: { Args: { p_client_id: string }; Returns: undefined }
+      rules_for: {
+        Args: { p_pt: string }
+        Returns: {
+          buffer_min: number
+          cutoff_hours: number
+          lengths_min: number[]
+          pt_user_id: string
+          updated_at: string
+          window_weeks: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_availability: {
+        Args: { p_exceptions: Json; p_hours: Json; p_rules: Json }
+        Returns: {
+          out_booking_id: string
+          out_starts_at: string
+        }[]
+      }
       save_program: {
         Args: { p_payload: Json; p_program_id: string }
         Returns: undefined
@@ -7741,6 +8305,20 @@ export type Database = {
           name_ar: string
           slug: string
           total_count: number
+        }[]
+      }
+      series_occurrences: {
+        Args: {
+          p_count: number
+          p_every_weeks: number
+          p_start: string
+          p_tz: string
+          p_until: string
+        }
+        Returns: {
+          after_offset_change: boolean
+          n: number
+          occ_start: string
         }[]
       }
       set_client_state: {
