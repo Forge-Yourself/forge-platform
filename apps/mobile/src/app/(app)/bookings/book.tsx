@@ -1,10 +1,12 @@
-import { addDays, bookingErrorKey, cancelDeadline, localDayKey, slotCountsByDay, type BookingErrorCode } from '@forge/shared';
+import { addDays, bookingErrorKey, buildIcs, cancelDeadline, localDayKey, slotCountsByDay, type BookingErrorCode } from '@forge/shared';
 import * as Crypto from 'expo-crypto';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { useAuth } from '../../../lib/auth/AuthProvider';
+import { nudgeCalendarSync } from '../../../lib/calendar/api';
+import { shareIcs } from '../../../lib/calendar/share';
 import { useOffline } from '../../../lib/offline/offlineContext';
 import { dayLabel, deadlineLabel, dowLabel, timeLabel } from '../../../lib/schedule/format';
 import { OfflineNote } from '../../../lib/schedule/OfflineNote';
@@ -47,6 +49,10 @@ export default function BookSession() {
   const [error, setError] = useState<BookingErrorCode | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<BookingRow | null>(null);
+
+  // M5c: ask the server to refresh the coach's Google busy times, so the
+  // slots this screen loads next reflect their calendar (spec D8, D11).
+  useEffect(() => nudgeCalendarSync(), []);
 
   const policy = data.policy;
   const len = moving?.length_min ?? length ?? (policy ? (policy.lengths.includes(60) ? 60 : (policy.lengths[0] ?? null)) : null);
@@ -113,7 +119,32 @@ export default function BookSession() {
             </Text>
           ) : null}
         </View>
-        <Button label={t('bookings.book.seeMine')} variant="primary" size="lg" onPress={() => router.replace('/(app)/bookings')} />
+        <View style={{ gap: 8 }}>
+          <Button
+            label={t('calendar.addToCalendar')}
+            variant="ghost"
+            size="lg"
+            onPress={() =>
+              void shareIcs(
+                'forge-session.ics',
+                buildIcs(
+                  [
+                    {
+                      uid: done.id,
+                      title: ptName ? t('calendar.clientEventTitle', { name: ptName }) : t('calendar.clientEventTitleNoName'),
+                      start: done.starts_at,
+                      end: done.ends_at,
+                      sequence: Math.floor(Date.parse(done.updated_at) / 1000),
+                    },
+                  ],
+                  new Date(),
+                ),
+                t('calendar.addToCalendar'),
+              )
+            }
+          />
+          <Button label={t('bookings.book.seeMine')} variant="primary" size="lg" onPress={() => router.replace('/(app)/bookings')} />
+        </View>
       </Screen>
     );
   }

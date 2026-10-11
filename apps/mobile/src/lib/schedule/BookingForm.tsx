@@ -12,6 +12,7 @@ import {
   SegmentedPill, SlotGrid, Tag, Text,
 } from '../../ui';
 import { useAuth } from '../auth/AuthProvider';
+import { nudgeCalendarSync } from '../calendar/api';
 import { fetchRoster, type ClientListItem } from '../clients/useClientList';
 import { useOffline } from '../offline/offlineContext';
 import { dayLabel, dowLabel, timeLabel } from './format';
@@ -48,6 +49,8 @@ export function BookingForm(props: BookingFormProps) {
   const edit = props.mode === 'edit' ? props.booking : null;
 
   const [id] = useState(() => Crypto.randomUUID());
+  // M5c: refresh Google busy times so the slots below reflect them (spec D11).
+  useEffect(() => nudgeCalendarSync(), []);
   const [today] = useState(startOfToday);
   const [roster, setRoster] = useState<ClientListItem[] | null>(null);
   const [policy, setPolicy] = useState<BookingPolicy | null>(null);

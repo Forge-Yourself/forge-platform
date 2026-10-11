@@ -1,6 +1,7 @@
 import { addDays, bookingErrorCode, bookingState, localDayKey, type BookingErrorCode, type BookingState } from '@forge/shared';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
+import { fetchOverlaps } from '../calendar/api';
 import { warmCheckinKeys } from '../checkin/keys';
 import { fetchRoster } from '../clients/useClientList';
 import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
@@ -21,6 +22,8 @@ export type ScheduleItem = {
   seriesId: string | null;
   cancelLate: boolean;
   cancelledAt: string | null;
+  /** M5c: the first Google event this booking overlaps, if any (spec D12). */
+  overlap: { title: string | null; start: string } | null;
 };
 
 type Bundle = { items: ScheduleItem[]; windows: DayWindow[]; hasHours: boolean; fetchedAt: string; error: string | null };
@@ -28,17 +31,21 @@ type Bundle = { items: ScheduleItem[]; windows: DayWindow[]; hasHours: boolean; 
 /** One fetch for any visible range: bookings, published windows, names, and whether any hours exist at all. */
 export async function fetchScheduleBundle(ptUserId: string, from: Date, to: Date): Promise<Bundle> {
   const fetchedAt = new Date().toISOString();
-  const [b, w, roster, hours] = await Promise.all([
+  const [b, w, roster, hours, ov] = await Promise.all([
     fetchPtBookings(ptUserId, from.toISOString(), to.toISOString()),
     fetchDayWindows(localDayKey(from), localDayKey(addDays(to, -1))),
     fetchRoster(ptUserId),
     supabase.from('schedules').select('id', { count: 'exact', head: true }).eq('user_id', ptUserId),
+    // Overlaps are a note on a block, never a reason the schedule fails to load.
+    fetchOverlaps(from.toISOString(), to.toISOString()).catch(() => ({ data: null })),
   ]);
   const code: BookingErrorCode | null =
     b.error ?? w.error ?? (roster.error ? bookingErrorCode(roster.error) : null) ?? (hours.error ? bookingErrorCode(hours.error.message) : null);
   if (code) return { items: [], windows: [], hasHours: false, fetchedAt, error: code === 'offline' ? OFFLINE : code };
 
   const byId = Object.fromEntries(roster.rows.map((r) => [r.id, r]));
+  const overlapOf: Record<string, { title: string | null; start: string }> = {};
+  for (const o of ov.data ?? []) overlapOf[o.bookingId] ??= { title: o.title, start: o.busyStart };
   const items: ScheduleItem[] = (b.data ?? []).map((row) => {
     const client = row.client_id ? byId[row.client_id] : undefined;
     const isSelf = client?.isSelf ?? false;
@@ -55,6 +62,7 @@ export async function fetchScheduleBundle(ptUserId: string, from: Date, to: Date
       seriesId: row.parent_booking_id ?? (row.recurrence_rule ? row.id : null),
       cancelLate: row.cancel_late,
       cancelledAt: row.cancelled_at,
+      overlap: overlapOf[row.id] ?? null,
     };
   });
   return { items, windows: w.data ?? [], hasHours: (hours.count ?? 0) > 0, fetchedAt, error: null };

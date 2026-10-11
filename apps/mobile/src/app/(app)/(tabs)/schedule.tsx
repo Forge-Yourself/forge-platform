@@ -179,6 +179,7 @@ export function PhoneSchedule() {
             </Text>
           </View>
           <Button label={t('schedule.hours')} variant="ghost" onPress={() => router.push('/(app)/schedule/availability')} />
+          <Button label={t('calendar.headerButton')} variant="ghost" onPress={() => router.push('/(app)/schedule/calendar')} />
           <IconButton icon="plus" accessibilityLabel={t('schedule.newBooking')} onPress={() => router.push('/(app)/schedule/new')} />
         </View>
 

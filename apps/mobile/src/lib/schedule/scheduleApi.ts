@@ -6,6 +6,7 @@ import {
   type ExceptionInput,
   type HoursRange,
 } from '@forge/shared';
+import { nudgeCalendarSync } from '../calendar/api';
 import { supabase } from '../supabase';
 
 export type BookingRow = Database['public']['Tables']['bookings']['Row'];
@@ -18,7 +19,8 @@ export type Scope = 'one' | 'following';
 
 /**
  * Thin typed wrappers over 0020. Every booking write goes through here, and
- * every error comes back as a BookingErrorCode the screens map to copy.
+ * every error comes back as a BookingErrorCode the screens map to copy. A
+ * successful write nudges Google Calendar sync (M5c spec D8).
  */
 const fail = (e: { message?: string } | null): { data: null; error: BookingErrorCode } => ({
   data: null,
@@ -120,12 +122,14 @@ export async function createBooking(a: {
     ...(a.until ? { p_until: a.until } : {}),
   });
   if (error) return fail(error);
+  nudgeCalendarSync();
   return { data: data ?? [], error: null };
 }
 
 export async function rescheduleBooking(id: string, newStart: string, scope: Scope): Promise<ApiResult<BookingRow[]>> {
   const { data, error } = await supabase.rpc('reschedule_booking', { p_id: id, p_new_start: newStart, p_scope: scope });
   if (error) return fail(error);
+  nudgeCalendarSync();
   return { data: data ?? [], error: null };
 }
 
@@ -142,12 +146,14 @@ export async function cancelBooking(
     ...(reason ? { p_reason: reason } : {}),
   });
   if (error) return fail(error);
+  nudgeCalendarSync();
   return { data: data ?? [], error: null };
 }
 
 export async function markNoShow(id: string): Promise<ApiResult<BookingRow>> {
   const { data, error } = await supabase.rpc('mark_no_show', { p_id: id });
   if (error || !data) return fail(error);
+  nudgeCalendarSync();
   return { data, error: null };
 }
 
