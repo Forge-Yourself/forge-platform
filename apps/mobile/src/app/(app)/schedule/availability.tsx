@@ -1,5 +1,5 @@
 import {
-  ALL_LENGTHS, bookingErrorKey, copyMondayToWeekdays, DEFAULT_RULES, dayRanges, durationLabel, hhmm, localDayKey,
+  ALL_LENGTHS, bookingErrorKey, breakBefore, copyMondayToWeekdays, DEFAULT_RULES, dayRanges, durationLabel, hhmm, localDayKey,
   parseHhmm, stepRule, toggleLength, validateHours, weeklyMinutes,
   type BookingRules, type ExceptionInput, type HoursRange, type RuleKey,
 } from '@forge/shared';
@@ -136,12 +136,10 @@ export default function AvailabilityScreen() {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
                 {ranges.map((r, i) => (
                   <View key={r.start} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    {i > 0 ? (
+                    {breakBefore(ranges, i) ? (
                       <TimeRangePill
                         variant="break"
-                        label={t('schedule.availability.breakLabel', {
-                          length: durationLabel((parseHhmm(r.start) ?? 0) - (parseHhmm(ranges[i - 1]!.end) ?? 0)),
-                        })}
+                        label={t('schedule.availability.breakLabel', { length: durationLabel(breakBefore(ranges, i)!) })}
                       />
                     ) : null}
                     <TimeRangePill label={`${r.start} – ${r.end}`} onPress={() => setEditing({ original: r, draft: r })} />

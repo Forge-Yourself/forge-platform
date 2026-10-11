@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { copyMondayToWeekdays, DEFAULT_RULES, stepRule, toggleLength, validateHours, weeklyMinutes } from './rules';
+import { breakBefore, copyMondayToWeekdays, DEFAULT_RULES, stepRule, toggleLength, validateHours, weeklyMinutes } from './rules';
 
 describe('stepRule', () => {
   it('steps by the bound and clamps', () => {
@@ -51,5 +51,20 @@ describe('weekly hours helpers', () => {
     expect(out.filter((h) => h.dow === 3)).toEqual([{ dow: 3, start: '06:00', end: '12:00' }]);
     expect(out.filter((h) => h.dow === 6)).toEqual([{ dow: 6, start: '09:00', end: '12:00' }]);
     expect(out.length).toBe(6);
+  });
+});
+
+describe('breakBefore — the gap pill between two ranges on one day', () => {
+  const day = [
+    { dow: 1, start: '06:00', end: '12:00' },
+    { dow: 1, start: '15:00', end: '20:00' },
+  ];
+  it('is the minutes between the previous range end and this start', () => {
+    expect(breakBefore(day, 1)).toBe(180);
+  });
+  it('is null for the first range, touching ranges and overlapping ones (walk: "-60m break")', () => {
+    expect(breakBefore(day, 0)).toBeNull();
+    expect(breakBefore([day[0]!, { dow: 1, start: '12:00', end: '14:00' }], 1)).toBeNull();
+    expect(breakBefore([day[0]!, { dow: 1, start: '11:00', end: '20:00' }], 1)).toBeNull();
   });
 });

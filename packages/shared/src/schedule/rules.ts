@@ -62,6 +62,15 @@ export function dayRanges(hours: readonly HoursRange[], dow: number): HoursRange
   return hours.filter((h) => h.dow === dow).sort((a, b) => a.start.localeCompare(b.start));
 }
 
+/** Minutes of break before `ranges[i]` on its day, or null when there is none to draw (first, touching, or overlapping). */
+export function breakBefore(ranges: readonly TimeRange[], i: number): number | null {
+  const prev = ranges[i - 1];
+  const cur = ranges[i];
+  if (!prev || !cur) return null;
+  const gap = (parseHhmm(cur.start) ?? 0) - (parseHhmm(prev.end) ?? 0);
+  return gap > 0 ? gap : null;
+}
+
 /** Tue–Fri become exact copies of Monday; Sunday and Saturday are untouched. */
 export function copyMondayToWeekdays(hours: readonly HoursRange[]): HoursRange[] {
   const monday = dayRanges(hours, 1);
