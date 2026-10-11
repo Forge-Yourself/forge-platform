@@ -6412,4 +6412,16 @@ M5b (QR check-in/out, scan, rating/comment/tip, receipt and session price, remin
 
 ## As built — deviations from this plan
 
-_Filled in at close-out (Task 16, Step 3)._
+Every place the code differs from the steps above, and why.
+
+- **Task 1 — harness read of `audit_logs`.** The block read the `booking_complete` audit row as `authenticated`; `audit_logs` has RLS on and no policies, so that role sees zero rows. The assertion now runs after `RESET ROLE`, as the M4a block's audit checks do (`c11bc97`). Caught by a dry run — migration and harness in one rolled-back transaction — before `db push`, so 0020 needed no follow-up migration.
+- **Task 1 — harness environment.** On 2026-10-11 the harness failed on the *base* commit at the M4b broadcast assertion: `realtime.messages` had no daily partition after 2026-09-23 because the Realtime tenant had been idle, so broadcasts were silently dropped. One anonymous Realtime subscribe woke the tenant and it created partitions to 2026-10-14. No code change; it will recur whenever the project's Realtime sits idle for days.
+- **Task 4 — `monthCells` test.** 1 Oct 2026 is a Thursday, so day 31 sits at index 33 and index 34 is padding; the test asserted `oct[34] === 31`. The test was wrong, not the function.
+- **Tasks 6 and 10 — newest-wins in `useOpenSlots` / `useSeriesPreview`.** A ref bumped in effect cleanup trips `react-hooks/exhaustive-deps`; both use a per-effect `live` flag instead (cleanup runs before the next effect, so the O1 guarantee is the same).
+- **Task 6 — `sessions/[id]`.** The doc comment that sat above the removed `CONSOLE_MIN_WIDTH` const moved to the `wide` line it describes.
+- **Task 7 — gaps doc.** The section is `## Built (M5a)` above `## Outstanding`, matching the file's other milestone sections.
+- **Task 9 — range editor.** `editing` holds `{ original, draft }` rather than re-finding the row by `start === || end ===`, which loses the edit once both ends move (the plan's note allowed this).
+- **Tasks 9 and 10 — `DateField`.** It requires `labels` (and takes `placeholder`, `locale`); both forms pass the `common.datePicker` set, as `programs/[id]/assign.tsx` does.
+- **Walk fixes (Task 15).** `breakBefore()` in `schedule/rules.ts` (vitest) so overlapping ranges draw no "-60m break" pill (`263ce03`); the move form shows only the booking's own length, because disabled `SegmentedPill` items read "Coming soon" (`f1ece18`); `CalendarBlock` gained `compact` (state word above the name), iPad grid blocks are clipped to their length, and the grid scale is 84 pt per hour instead of 60 so a 60-minute block holds state, name and time (`5f1a6b9`).
+- **Walk step 12 could not be done as written.** The create form offers only `open_slots` starts, so a PT cannot book outside published hours from the app, although `create_booking` allows it (the harness proves the server side). The step booked Me inside hours instead. The Risks line "a PT can still book it" is therefore true of the server only. Left for the user to decide (tracker, For you to check).
+- **Day view shows only today.** There is no previous/next day in the phone Day view, so open-gap rows exist only for today. The walk added an extra-hours exception for 11 Oct to have time inside the 12 h cutoff. Left for the user to decide.
