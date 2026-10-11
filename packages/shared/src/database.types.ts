@@ -1130,11 +1130,38 @@ export type Database = {
           },
         ]
       }
+      booking_checkin_keys: {
+        Row: {
+          booking_id: string
+          created_at: string
+          secret: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          secret: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_bck_booking"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_rules: {
         Row: {
           buffer_min: number
           cutoff_hours: number
           lengths_min: number[]
+          price_cents: number | null
           pt_user_id: string
           updated_at: string
           window_weeks: number
@@ -1143,6 +1170,7 @@ export type Database = {
           buffer_min?: number
           cutoff_hours?: number
           lengths_min?: number[]
+          price_cents?: number | null
           pt_user_id: string
           updated_at?: string
           window_weeks?: number
@@ -1151,6 +1179,7 @@ export type Database = {
           buffer_min?: number
           cutoff_hours?: number
           lengths_min?: number[]
+          price_cents?: number | null
           pt_user_id?: string
           updated_at?: string
           window_weeks?: number
@@ -1167,6 +1196,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          amount_cents: number | null
           cancel_counted: boolean
           cancel_late: boolean
           cancel_reason: string | null
@@ -1176,6 +1206,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           created_by_user_id: string | null
+          currency: string
           ends_at: string
           google_calendar_id: string | null
           gym_id: string | null
@@ -1188,6 +1219,10 @@ export type Database = {
           originating_timezone: string
           parent_booking_id: string | null
           pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
           recurrence_rule: string | null
           reminder_1h_sent: boolean
           reminder_24h_sent: boolean
@@ -1197,6 +1232,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amount_cents?: number | null
           cancel_counted?: boolean
           cancel_late?: boolean
           cancel_reason?: string | null
@@ -1206,6 +1242,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          currency?: string
           ends_at: string
           google_calendar_id?: string | null
           gym_id?: string | null
@@ -1218,6 +1255,10 @@ export type Database = {
           originating_timezone?: string
           parent_booking_id?: string | null
           pt_user_id: string
+          rated_at?: string | null
+          rating?: number | null
+          rating_comment?: string | null
+          receipt_no?: number | null
           recurrence_rule?: string | null
           reminder_1h_sent?: boolean
           reminder_24h_sent?: boolean
@@ -1227,6 +1268,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amount_cents?: number | null
           cancel_counted?: boolean
           cancel_late?: boolean
           cancel_reason?: string | null
@@ -1236,6 +1278,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          currency?: string
           ends_at?: string
           google_calendar_id?: string | null
           gym_id?: string | null
@@ -1248,6 +1291,10 @@ export type Database = {
           originating_timezone?: string
           parent_booking_id?: string | null
           pt_user_id?: string
+          rated_at?: string | null
+          rating?: number | null
+          rating_comment?: string | null
+          receipt_no?: number | null
           recurrence_rule?: string | null
           reminder_1h_sent?: boolean
           reminder_24h_sent?: boolean
@@ -5417,6 +5464,47 @@ export type Database = {
           },
         ]
       }
+      reminder_settings: {
+        Row: {
+          client_24h: boolean
+          client_2h: boolean
+          client_change: boolean
+          pt_agenda: boolean
+          pt_book: boolean
+          pt_late: boolean
+          pt_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_24h?: boolean
+          client_2h?: boolean
+          client_change?: boolean
+          pt_agenda?: boolean
+          pt_book?: boolean
+          pt_late?: boolean
+          pt_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_24h?: boolean
+          client_2h?: boolean
+          client_change?: boolean
+          pt_agenda?: boolean
+          pt_book?: boolean
+          pt_late?: boolean
+          pt_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_rs_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedules: {
         Row: {
           created_at: string
@@ -7606,6 +7694,7 @@ export type Database = {
           p_scope?: string
         }
         Returns: {
+          amount_cents: number | null
           cancel_counted: boolean
           cancel_late: boolean
           cancel_reason: string | null
@@ -7615,6 +7704,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           created_by_user_id: string | null
+          currency: string
           ends_at: string
           google_calendar_id: string | null
           gym_id: string | null
@@ -7627,6 +7717,10 @@ export type Database = {
           originating_timezone: string
           parent_booking_id: string | null
           pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
           recurrence_rule: string | null
           reminder_1h_sent: boolean
           reminder_24h_sent: boolean
@@ -7641,6 +7735,77 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      check_in: {
+        Args: {
+          p_at?: string
+          p_booking_id?: string
+          p_code?: string
+          p_window?: number
+        }
+        Returns: {
+          out_booking_id: string
+          out_checked_in_at: string
+          out_checked_out_at: string
+          out_outcome: string
+          out_status: string
+        }[]
+      }
+      check_out: {
+        Args: { p_booking_id: string }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      checkin_code: {
+        Args: { p_booking: string; p_secret: string; p_window: number }
+        Returns: string
+      }
+      checkin_keys: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          out_booking_id: string
+          out_secret_hex: string
+        }[]
       }
       claim_client_invites: { Args: never; Returns: number }
       complete_workout_session: {
@@ -7714,6 +7879,7 @@ export type Database = {
           p_until?: string
         }
         Returns: {
+          amount_cents: number | null
           cancel_counted: boolean
           cancel_late: boolean
           cancel_reason: string | null
@@ -7723,6 +7889,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           created_by_user_id: string | null
+          currency: string
           ends_at: string
           google_calendar_id: string | null
           gym_id: string | null
@@ -7735,6 +7902,10 @@ export type Database = {
           originating_timezone: string
           parent_booking_id: string | null
           pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
           recurrence_rule: string | null
           reminder_1h_sent: boolean
           reminder_24h_sent: boolean
@@ -8007,6 +8178,7 @@ export type Database = {
       mark_no_show: {
         Args: { p_id: string }
         Returns: {
+          amount_cents: number | null
           cancel_counted: boolean
           cancel_late: boolean
           cancel_reason: string | null
@@ -8016,6 +8188,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           created_by_user_id: string | null
+          currency: string
           ends_at: string
           google_calendar_id: string | null
           gym_id: string | null
@@ -8028,6 +8201,10 @@ export type Database = {
           originating_timezone: string
           parent_booking_id: string | null
           pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
           recurrence_rule: string | null
           reminder_1h_sent: boolean
           reminder_24h_sent: boolean
@@ -8148,6 +8325,51 @@ export type Database = {
         }[]
       }
       pt_tz: { Args: { p_pt: string }; Returns: string }
+      rate_booking: {
+        Args: { p_comment?: string; p_id: string; p_rating: number }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       record_body_metric: {
         Args: {
           p_body_fat_pct?: number
@@ -8212,6 +8434,7 @@ export type Database = {
       reschedule_booking: {
         Args: { p_id: string; p_new_start: string; p_scope?: string }
         Returns: {
+          amount_cents: number | null
           cancel_counted: boolean
           cancel_late: boolean
           cancel_reason: string | null
@@ -8221,6 +8444,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           created_by_user_id: string | null
+          currency: string
           ends_at: string
           google_calendar_id: string | null
           gym_id: string | null
@@ -8233,6 +8457,10 @@ export type Database = {
           originating_timezone: string
           parent_booking_id: string | null
           pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
           recurrence_rule: string | null
           reminder_1h_sent: boolean
           reminder_24h_sent: boolean
@@ -8259,6 +8487,7 @@ export type Database = {
           buffer_min: number
           cutoff_hours: number
           lengths_min: number[]
+          price_cents: number | null
           pt_user_id: string
           updated_at: string
           window_weeks: number
@@ -8280,6 +8509,25 @@ export type Database = {
       save_program: {
         Args: { p_payload: Json; p_program_id: string }
         Returns: undefined
+      }
+      save_reminder_settings: {
+        Args: { p: Json }
+        Returns: {
+          client_24h: boolean
+          client_2h: boolean
+          client_change: boolean
+          pt_agenda: boolean
+          pt_book: boolean
+          pt_late: boolean
+          pt_user_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reminder_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_exercises: {
         Args: {
@@ -8320,6 +8568,51 @@ export type Database = {
           n: number
           occ_start: string
         }[]
+      }
+      set_booking_amount: {
+        Args: { p_cents: number; p_id: string }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_client_state: {
         Args: { p_client_id: string; p_state: string }
