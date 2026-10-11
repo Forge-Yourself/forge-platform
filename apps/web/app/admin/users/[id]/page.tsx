@@ -255,6 +255,17 @@ export default async function AdminUserDetailPage({
       bookings = [];
     }
   }
+  // M5c: one line of Google Calendar status (spec D18). Admins read the
+  // connection row; tokens and busy titles are never readable here.
+  let gcal: { google_email: string | null; status: string; last_synced_at: string | null; error_at: string | null } | null | undefined;
+  if (target.role === 'pt') {
+    const { data } = await supabase
+      .from('google_calendar_links')
+      .select('google_email, status, last_synced_at, error_at')
+      .eq('pt_user_id', id)
+      .maybeSingle();
+    gcal = data;
+  }
   // M5b: check-in time per booking, read separately (check_ins has its own RLS).
   const checkedIn: Record<string, string> = {};
   if (bookings && bookings.length) {
@@ -514,6 +525,16 @@ export default async function AdminUserDetailPage({
         <section style={ui.card}>
           <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Bookings</h2>
           <p style={ui.muted}>Latest 50. Times are shown in this browser&apos;s zone; bookings are stored as UTC instants.</p>
+          {gcal !== undefined ? (
+            <p style={ui.muted}>
+              Google Calendar:{' '}
+              {gcal === null
+                ? 'not connected'
+                : gcal.status === 'error'
+                  ? `sync stopped since ${gcal.error_at ? new Date(gcal.error_at).toLocaleString() : '?'} (${gcal.google_email ?? 'unknown account'})`
+                  : `connected as ${gcal.google_email ?? 'unknown account'}, last sync ${gcal.last_synced_at ? new Date(gcal.last_synced_at).toLocaleString() : 'not yet'}`}
+            </p>
+          ) : null}
           {bookings.length === 0 ? (
             <p style={ui.muted}>No bookings.</p>
           ) : (
