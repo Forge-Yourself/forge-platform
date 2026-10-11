@@ -157,6 +157,12 @@ backdrop and that the fill is visible as a shape at all.
 - **Rating targets**: five equal 56 px numbered buttons, accent fill when chosen, "Not great / Excellent" under the ends. Inline in the rate screen.
 - **Icon `qr`** added to `ui/Icon.tsx`.
 
+## Built (M5c)
+
+- **Overlap axis** (`schedule/overlaps.tsx`): one time axis with 30-minute ticks, the booking bar (ember soft, ember edge), the Google bar (hatched like ME, grey edge) and a dashed amber band over the overlap. Geometry is `overlapGeometry()` in `packages/shared/src/calendar` (vitest). The axis always reads left to right, like a clock.
+- **Calendar checklist row**: 22 px rounded checkbox, ember fill and check when on, 56 px row; `role=checkbox` with `aria-checked` (react-native-web ignores `accessibilityState`). Inline in Calendar sync.
+- **Calendar glyph**: 56 px tile with an ember top band and the date. Inline in Calendar sync.
+
 ## Outstanding
 
 - **Conflict resolution** — prototype `conflict` (two timestamped values, tap to pick, "Keep both as a note"). M4b has no field-level conflicts to resolve: sets are keyed by client ULID and a server refusal parks the write in the sync queue. The artboard waits until a write can genuinely collide. The `sync` artboard's "1 change needs your decision" row waits with it.

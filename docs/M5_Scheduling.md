@@ -17,7 +17,7 @@ The v1 spec's M5 line names seven things: availability, bookings, recurring with
 |---|---|---|---|
 | **M5a · Booking core** | Availability (hours, exceptions, rules), bookings + recurring + DST, PT schedule day/week/month, iPad week grid, create/edit booking, booking detail (late cancel, no-show), client Book + My bookings, Start session from a booking, admin booking view | M4e | done |
 | **M5b · Check-in** | QR check-in (rotating signed code, 6-digit fallback, works offline), client scan, after-session sheet (rating, comment, tip placeholder), receipt (PT-recorded amount, no payment), reminder settings (copy only) | M5a | done (unmerged, branched from M5a) |
-| **M5c · Calendar** | Google Calendar connect / sync / conflict / disconnect, conflict line on the schedule, `.ics` export | M5a | not started — needs a Google Cloud project from you |
+| **M5c · Calendar** | Google Calendar connect / sync / conflict / disconnect, conflict line on the schedule, `.ics` export | M5a | built (unmerged, branched from M5b); live Google needs your OAuth client — see "Things only you can do" |
 
 ## Design screen → sub-milestone
 
@@ -41,7 +41,9 @@ The v1 spec's M5 line names seven things: availability, bookings, recurring with
 
 | When | What | Why |
 |---|---|---|
-| Before M5c | Create a Google Cloud project, enable the Calendar API, configure the OAuth consent screen, and start Google's verification for the `calendar.events` scope | Unverified apps are capped at 100 test users and show a warning screen. Verification takes days to weeks, so start it early |
+| To turn M5c on | In Google Cloud: enable the **Google Calendar API**; create an OAuth client of type **Web application** with redirect URI `https://forge-admin-one.vercel.app/api/google/callback`; on the consent screen add the scopes `openid`, `email`, `…/auth/calendar.app.created`, `…/auth/calendar.calendarlist.readonly`, `…/auth/calendar.events.readonly`, and add your test Google accounts as test users | The callback URI must match exactly. The repo-root `.env` has `CLIENT_ID` / `CLIENT_SECRECT` entries that look like this client — if so, check its type and redirect URI |
+| To turn M5c on | On the Vercel project set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_TOKEN_KEY` (32 random bytes, base64 — e.g. `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`), then deploy this branch. `CRON_SECRET` must already be set for the daily sweep | Without them, Connect answers "Google Calendar isn't set up on Forge's server yet" and nothing else changes. Losing `GOOGLE_TOKEN_KEY` means every PT reconnects |
+| Before real users | Start Google's verification for the three calendar scopes (all *sensitive*) | Unverified apps are capped at 100 test users and show a warning screen. Verification takes days to weeks |
 | Before M6 | Decide what a "counted" late cancellation does to money | M5a only records the flag; M6 owns money |
 
 ---
@@ -119,3 +121,37 @@ Planned and built in one pass at your request ("plan m5b and implement it withou
 - The Arabic copy (key coverage only).
 - **Pre-existing, not M5b:** `JetBrains Mono` is never loaded (`useFonts` appears nowhere), so every `numeric` text in the app falls back to a serif on web — visible in every M5 screenshot. One-line fix in the root layout once you confirm the font files to ship.
 - The walk left one completed, rated, receipted booking for client.test and pt.test's default price at $45; reminders for pt.test have 2 h on.
+
+
+### 2026-10-11 · M5c · Calendar — landed
+
+Planned and built in one pass at your request ("plan m5c and implement it without my review"). Spec `docs/superpowers/specs/2026-10-11-m5c-calendar-design.md` (decisions D1–D19 — **review those first**, each is a choice where the design is silent), plan `docs/superpowers/plans/2026-10-11-m5c-calendar.md` with an As-built section. Branch `feature/m5c-calendar`, cut from the unmerged `feature/m5b-check-in` (so it contains M5a and M5b).
+
+**Shipped**
+- Migration `0022_m5c_calendar.sql` (applied live): the Google connection (PT + admin readable), sealed tokens and one-time OAuth states (no app role can touch them), PT-only busy blocks, sync queue and kept overlaps; a trigger that queues booking changes for connected PTs; `open_slots` now skips Google busy time (same signature); `calendar_overlaps`, `set_busy_calendars`, `keep_overlap`; service-only `google_replace_busy` (all-day events become local midnights in SQL), `google_enqueue_all`, `google_queue_batch`.
+- `apps/web`: `/api/google/connect` → Google consent (PKCE, one-time state, `returnTo` allow-listed) → `/api/google/callback` (exchanges, seals tokens with AES-256-GCM, creates "Forge sessions", ticks the main calendar, queues 12 weeks of bookings, first sync); `/api/google/sync` (the app's nudge; syncs the caller's own connection, or a client's PT's); `/api/google/disconnect` (revokes, deletes everything Forge held); `/api/cron/google-sync` daily at 05:00 UTC. The Google client is plain `fetch` (no `googleapis`). Admin: one Google Calendar line on a PT's page.
+- PT: a **Google** button on Schedule (phone and iPad) → **Calendar sync**: Not connected (the three-row explainer), Connected (email, last sync, "N overlaps this week · Review", Check for busy times checklist, Write bookings to Forge sessions, Disconnect Google), Sync stopped (time, waiting count, Reconnect / Disconnect instead), No calendars found (Use another account), Couldn't reach Google, Offline, the disconnect sheet, and **Export .ics** in every state. **Overlap review**: both bars on one time axis with the overlap band, Move <name>'s session (→ move form), Keep both. Schedule blocks carry "Overlaps Google · <title> <time>" in warning text.
+- Client: **Add to my calendar** on "You're booked" (one-event `.ics`).
+- Every booking write (PT or client) nudges sync; Book a session and the PT's booking form nudge a busy-time refresh.
+
+**Verified**
+- SQL harness: **419 pass** (44 new), dry-run in a rolled-back transaction before `db push`, then against live. Covers: nothing Google readable or callable by a client; tokens unreadable even by their PT; a booking queues only once connected, and re-queues (not duplicates) on change; ticks only from Google's own list; a timed busy block closes 16:15 and the next slot starts at 17:00 where it ends; an all-day event closes the whole local day; a client can't book over one either; block ids survive a refresh; overlaps computed, scoped to the PT, cleared by Keep both; event titles "Forge · Client" / "Forge · Me"; admin reads the connection but never tokens or titles.
+- Vitest: **541 pass** — 49 new in `apps/web/lib/google` (now has vitest) against a scripted Google and an in-memory store: token sealing and tamper refusal, consent URL, `invalid_grant` → Sync stopped once (first time kept), reconnect drains the queue, 401 mid-sync, Google 503 and a dead network leave the queue intact, a refused booking parked after its own error, 5-attempt cap, a deleted Forge calendar re-created, the PUT 404 → insert 409 → PUT revival of a deleted event, a booking edited mid-write re-pushed, busy refresh only when stale or forced, free/declined/cancelled events ignored; 20 new in `packages/shared/src/calendar` (RFC 5545 folding incl. Arabic, escaping, overlap geometry, titles). `pnpm typecheck`, `pnpm lint`, `pnpm test`, `next build` pass.
+- Screen walk on the web target, **12 steps, all passing** against the live project, with the connection, busy blocks and queue seeded the way the callback and sync engine write them: overlap note on the week view → Calendar sync connected with "1 overlap this week" → tick a second calendar (persisted) → review with both bars → Move opens the move form → Keep both clears it → Export downloads an `.ics` with the walk booking → Sync stopped with "1 booking made since then…" → disconnect sheet → Not connected → Connect posts to the API → client: the Google-busy 07:15 is gone and 08:15 is offered → client books and Add to my calendar downloads one event. Seeds removed afterwards (live read: zero Google rows, zero walk bookings).
+- The walk found one bug: the checklist's tick wasn't exposed to the DOM (react-native-web ignores `accessibilityState`) — fixed, and written up as PITFALLS V6.
+
+**Not verified — needs you**
+- **The real Google round trip** (consent, token exchange, events appearing in Google, busy times pulled from a real calendar). No OAuth client is configured on the API and consent needs a human Google login, so the fakes stand in. From `localhost:8081` the app's `/api/google/*` calls are refused by production CORS, and this branch isn't deployed, so the walk saw "Couldn't reach Google" — which is that state working, not the feature. See **Things only you can do** above for the three Vercel env vars and the Google Cloud settings.
+
+**Deviations from the design**
+- "Write bookings to" is fixed to the "Forge sessions" calendar Forge creates; there is no picker. Forge's scope (`calendar.app.created`) can only write to calendars it created, which is what lets the screen promise Forge never edits your own events.
+- Not real-time: Google changes reach Forge on the next nudge (any booking write, opening Calendar sync or a booking screen, when the last refresh is over 5 minutes old) or the daily sweep. Google push notifications need a verified domain and a public webhook.
+- Busy times close slots for the PT's own booking form too, because that form only offers open slots.
+- Overlap copy is the design's "A Google event was added after this booking was made" — always true, because busy times are hidden before booking.
+- `.ics` export needs a connection (reads bookings live).
+- The admin line shows status, email and last sync but not the queue size (admins can't read the queue).
+
+**For you to check**
+- On a phone, after the env vars are set and this branch is deployed: Connect, check the Forge sessions calendar fills, add a Google event over a booking, open Calendar sync, see the overlap; revoke Forge at myaccount.google.com/permissions and see Sync stopped; Reconnect.
+- `expo-sharing` is a new native module: Export / Add to my calendar on a device need a rebuilt dev client. An older build falls back to the share sheet with the calendar text.
+- The Arabic copy (key coverage only).

@@ -163,4 +163,14 @@ All four layers (SQL, vitest, typecheck/lint, walk + live read) before claiming 
 
 ## As built — deviations from this plan
 
-_Filled in at close-out._
+- **Harness day.** The M5c block uses `CURRENT_DATE + 12`, not `+ 10`: an M5b fixture (a self booking at `t0700 + 2 days`) sits on day +10 and the exclusion constraint refused the queue-test booking.
+- **`google_replace_busy`** is one data-modifying CTE (delete the rows Google no longer has, upsert the rest) instead of a temp table, so ids stay stable and nothing depends on session state.
+- **`overlapGeometry`** takes no `padMin`; the axis is the two spans rounded out to the half hour plus 30 minutes either side. `Span` is exported as `TimeSpan` (the schedule module already exports a `Span`).
+- **Dequeue is guarded by `queued_at`.** `SyncStore.dequeue` deletes a row only if it hasn't been re-queued since the batch read it, so a booking edited while its Google write is in flight is pushed again (test: "keeps a booking re-queued while its write was in flight").
+- **Unticked scopes.** Google's consent screen lets a user untick calendar boxes; the callback checks the granted scopes, revokes, and returns `?gcal=scopes` with its own copy (`calendar.result.scopes`).
+- **The sync nudge coalesces** writes in a 1.5 s timer rather than dropping repeats, so cancel-then-rebook is one call that sees both.
+- **`apps/web` + vitest:** `@types/node` moved from `^20` to `^22.20.1` so web resolves the same hoisted vitest/vite copy as `packages/shared` (a second peer variant made pnpm's hoisted linker fail on Windows). Config is `vitest.config.mts`.
+- **Admin line** shows email, status and last sync; not the queue size, because admins have no read on `google_sync_queue` (PT-only by design).
+- **Export** reads the PT's bookings live, so it needs a connection (the plan said "from the schedule already on screen").
+- **Walk fix:** the busy-calendar checkbox now sets `aria-checked`; react-native-web ignores `accessibilityState`, so the tick was invisible to the DOM (and to screen readers on web).
+- **Walk** (`.claude/skills/forge-screen-walk/m5c/a.mjs`, gitignored): 12 steps, all passing. The Google connection, busy blocks and queue are seeded as the table owner; the app's calls to `/api/google/*` from `localhost:8081` are refused by production CORS (and the routes aren't deployed from this branch), which the walk records as the "Couldn't reach Google" state.
