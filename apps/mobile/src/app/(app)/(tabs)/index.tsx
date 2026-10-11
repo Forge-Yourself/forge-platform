@@ -19,6 +19,7 @@ import { cachedFetch } from '../../../lib/offline/cachedFetch';
 import { OfflineStatusChip } from '../../../lib/offline/OfflineStatusChip';
 import { useOffline } from '../../../lib/offline/offlineContext';
 import { useProgramList } from '../../../lib/programs/useProgramList';
+import { NextSessionCard } from '../../../lib/schedule/NextSessionCard';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
   Avatar,
@@ -711,6 +712,7 @@ function ClientHome() {
       >
         <OfflineStatusChip />
         <HomeHeader name={auth.user?.display_name ?? ''} />
+        <NextSessionCard />
 
         {waiverError ? <Banner variant="danger" message={waiverError} /> : null}
 
