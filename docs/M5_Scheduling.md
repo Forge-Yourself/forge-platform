@@ -15,7 +15,7 @@ The v1 spec's M5 line names seven things: availability, bookings, recurring with
 
 | Sub-milestone | Scope | Depends on | Status |
 |---|---|---|---|
-| **M5a · Booking core** | Availability (hours, exceptions, rules), bookings + recurring + DST, PT schedule day/week/month, iPad week grid, create/edit booking, booking detail (late cancel, no-show), client Book + My bookings, Start session from a booking, admin booking view | M4e | spec written — awaiting review |
+| **M5a · Booking core** | Availability (hours, exceptions, rules), bookings + recurring + DST, PT schedule day/week/month, iPad week grid, create/edit booking, booking detail (late cancel, no-show), client Book + My bookings, Start session from a booking, admin booking view | M4e | spec + plan written — awaiting review |
 | **M5b · Check-in** | QR check-in (rotating signed code, 6-digit fallback, works offline), client scan, after-session sheet (rating, comment, tip placeholder), receipt (PT-recorded amount, no payment), reminder settings (copy only) | M5a | not started |
 | **M5c · Calendar** | Google Calendar connect / sync / conflict / disconnect, conflict line on the schedule, `.ics` export | M5a | not started — needs a Google Cloud project from you |
 
@@ -54,3 +54,4 @@ _Entries are appended here as each sub-milestone lands. Newest last._
 - Design received: `docs/Forge M5 Scheduling.html`.
 - Split agreed: M5a / M5b / M5c (option A).
 - M5a spec written: `docs/superpowers/specs/2026-10-11-m5a-booking-core-design.md`. **Your review needed** — especially §3 Decisions; each one is a choice I made where the design is silent.
+- M5a plan written: `docs/superpowers/plans/2026-10-11-m5a-booking-core.md` — 16 tasks, harness-first. Its **Corrections** section changes the spec in eight places; the two that matter most: a session links its booking by time on the server, so the offline outbox is untouched (D11), and the client gets no tab bar — booking is reached from a "Next session" card on Today (D13).
