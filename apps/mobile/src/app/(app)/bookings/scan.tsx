@@ -253,7 +253,7 @@ export default function Scan() {
               ) : null}
               <View
                 pointerEvents="none"
-                style={{ position: 'absolute', top: '18%', left: '15%', right: '15%', aspectRatio: 1, borderRadius: 18, borderWidth: 3, borderColor: outcome?.kind === 'in' || outcome?.kind === 'out' ? OK : outcome ? WARN : EMBER }}
+                style={{ position: 'absolute', top: '18%', left: '15%', right: '15%', aspectRatio: 1, borderRadius: 18, borderWidth: 3, borderColor: card ? (card.tone === 'ok' ? OK : WARN) : EMBER }}
               />
               <View style={{ position: 'absolute', left: 0, right: 0, bottom: 18, alignItems: 'center', paddingHorizontal: 16 }}>
                 {resultCard ? null : (

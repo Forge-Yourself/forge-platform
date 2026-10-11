@@ -1,5 +1,6 @@
 import qrcode from 'qrcode-generator';
 import { useMemo } from 'react';
+import { View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 /**
@@ -24,9 +25,12 @@ export function QrCode({ value, size, label }: { value: string; size: number; la
   }, [value]);
 
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} accessibilityLabel={label} accessible={!!label}>
-      <Rect x={0} y={0} width={n} height={n} fill="#FFFFFF" />
-      <Path d={d} fill="#0F131C" />
-    </Svg>
+    // The label sits on a View: react-native-svg on web forwards accessibility props to the DOM as-is.
+    <View accessible={!!label} accessibilityRole="image" accessibilityLabel={label}>
+      <Svg width={size} height={size} viewBox={`0 0 ${n} ${n}`}>
+        <Rect x={0} y={0} width={n} height={n} fill="#FFFFFF" />
+        <Path d={d} fill="#0F131C" />
+      </Svg>
+    </View>
   );
 }
