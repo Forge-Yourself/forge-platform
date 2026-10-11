@@ -3211,6 +3211,237 @@ export type Database = {
           },
         ]
       }
+      google_busy_blocks: {
+        Row: {
+          calendar_id: string
+          ends_at: string
+          event_id: string
+          id: string
+          pt_user_id: string
+          starts_at: string
+          title: string | null
+        }
+        Insert: {
+          calendar_id: string
+          ends_at: string
+          event_id: string
+          id?: string
+          pt_user_id: string
+          starts_at: string
+          title?: string | null
+        }
+        Update: {
+          calendar_id?: string
+          ends_at?: string
+          event_id?: string
+          id?: string
+          pt_user_id?: string
+          starts_at?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gbb_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_calendar_links: {
+        Row: {
+          busy_calendar_ids: string[]
+          busy_refreshed_at: string | null
+          calendars: Json
+          connected_at: string
+          error_at: string | null
+          forge_calendar_id: string | null
+          google_email: string | null
+          last_synced_at: string | null
+          pt_user_id: string
+          status: string
+        }
+        Insert: {
+          busy_calendar_ids?: string[]
+          busy_refreshed_at?: string | null
+          calendars?: Json
+          connected_at?: string
+          error_at?: string | null
+          forge_calendar_id?: string | null
+          google_email?: string | null
+          last_synced_at?: string | null
+          pt_user_id: string
+          status?: string
+        }
+        Update: {
+          busy_calendar_ids?: string[]
+          busy_refreshed_at?: string | null
+          calendars?: Json
+          connected_at?: string
+          error_at?: string | null
+          forge_calendar_id?: string | null
+          google_email?: string | null
+          last_synced_at?: string | null
+          pt_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gcl_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_calendar_tokens: {
+        Row: {
+          access_expires_at: string | null
+          access_token: string | null
+          pt_user_id: string
+          refresh_token: string
+          updated_at: string
+        }
+        Insert: {
+          access_expires_at?: string | null
+          access_token?: string | null
+          pt_user_id: string
+          refresh_token: string
+          updated_at?: string
+        }
+        Update: {
+          access_expires_at?: string | null
+          access_token?: string | null
+          pt_user_id?: string
+          refresh_token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gct_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_oauth_states: {
+        Row: {
+          code_verifier: string
+          created_at: string
+          pt_user_id: string
+          return_to: string
+          state: string
+        }
+        Insert: {
+          code_verifier: string
+          created_at?: string
+          pt_user_id: string
+          return_to: string
+          state: string
+        }
+        Update: {
+          code_verifier?: string
+          created_at?: string
+          pt_user_id?: string
+          return_to?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gos_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_overlap_kept: {
+        Row: {
+          booking_id: string
+          busy_id: string
+          kept_at: string
+          pt_user_id: string
+        }
+        Insert: {
+          booking_id: string
+          busy_id: string
+          kept_at?: string
+          pt_user_id: string
+        }
+        Update: {
+          booking_id?: string
+          busy_id?: string
+          kept_at?: string
+          pt_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gok_booking"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_gok_busy"
+            columns: ["busy_id"]
+            isOneToOne: false
+            referencedRelation: "google_busy_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_gok_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_sync_queue: {
+        Row: {
+          attempts: number
+          booking_id: string
+          last_error: string | null
+          pt_user_id: string
+          queued_at: string
+        }
+        Insert: {
+          attempts?: number
+          booking_id: string
+          last_error?: string | null
+          pt_user_id: string
+          queued_at?: string
+        }
+        Update: {
+          attempts?: number
+          booking_id?: string
+          last_error?: string | null
+          pt_user_id?: string
+          queued_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gsq_booking"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_gsq_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gym_clients: {
         Row: {
           client_name: string
@@ -7678,6 +7909,20 @@ export type Database = {
           window_weeks: number
         }[]
       }
+      calendar_overlaps: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          out_booking_end: string
+          out_booking_id: string
+          out_booking_start: string
+          out_busy_end: string
+          out_busy_id: string
+          out_busy_start: string
+          out_overlap_end: string
+          out_overlap_start: string
+          out_title: string
+        }[]
+      }
       can_delete_progress_photo_object: {
         Args: { p_name: string }
         Returns: boolean
@@ -8106,6 +8351,23 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       gettransactionid: { Args: never; Returns: unknown }
+      google_enqueue_all: { Args: { p_pt: string }; Returns: number }
+      google_queue_batch: {
+        Args: { p_limit: number; p_pt: string }
+        Returns: {
+          out_attempts: number
+          out_booking_id: string
+          out_ends_at: string
+          out_starts_at: string
+          out_status: string
+          out_timezone: string
+          out_title: string
+        }[]
+      }
+      google_replace_busy: {
+        Args: { p_blocks: Json; p_from: string; p_pt: string; p_to: string }
+        Returns: number
+      }
       grant_ai_credits: {
         Args: { p_credits: number; p_reason?: string; p_user_id: string }
         Returns: number
@@ -8152,6 +8414,10 @@ export type Database = {
       }
       jsonb_array_or_empty: { Args: { p_value: Json }; Returns: Json }
       jsonb_object_or_empty: { Args: { p_value: Json }; Returns: Json }
+      keep_overlap: {
+        Args: { p_booking_id: string; p_busy_id: string }
+        Returns: undefined
+      }
       log_account_event: {
         Args: { p_action: string; p_details?: Json }
         Returns: undefined
@@ -8610,6 +8876,27 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_busy_calendars: {
+        Args: { p_ids: string[] }
+        Returns: {
+          busy_calendar_ids: string[]
+          busy_refreshed_at: string | null
+          calendars: Json
+          connected_at: string
+          error_at: string | null
+          forge_calendar_id: string | null
+          google_email: string | null
+          last_synced_at: string | null
+          pt_user_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "google_calendar_links"
           isOneToOne: true
           isSetofReturn: false
         }

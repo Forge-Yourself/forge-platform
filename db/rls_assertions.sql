@@ -2265,4 +2265,221 @@ SELECT pg_temp.expect('another PT reads none of them', 0,
   format('SELECT count(*) FROM public.reminder_settings WHERE pt_user_id = %L', :'pt_a'));
 RESET ROLE;
 
+-- =============================================================================
+-- 0022 — M5c Google Calendar: connection, busy blocks, sync queue, overlaps.
+--
+-- Day E = CURRENT_DATE + 12 (no M5a/M5b fixture lands on it or the two days
+-- after). pt_a's hours are 06:00-12:00 and 15:00-20:00 every day, 60 + 15.
+-- =============================================================================
+
+\set bkq '5c000000-0000-4000-8000-0000000000a1'
+\set bko '5c000000-0000-4000-8000-0000000000a2'
+\set bkm '5c000000-0000-4000-8000-0000000000a3'
+
+SELECT (CURRENT_DATE + 12) AS e, (CURRENT_DATE + 13) AS e1 \gset
+SELECT ((:'e'::date + time '07:15') AT TIME ZONE 'Asia/Beirut') AS e0715,
+       ((:'e'::date + time '15:00') AT TIME ZONE 'Asia/Beirut') AS e1500,
+       ((:'e'::date + time '16:15') AT TIME ZONE 'Asia/Beirut') AS e1615,
+       ((:'e'::date + time '17:00') AT TIME ZONE 'Asia/Beirut') AS e1700,
+       ((:'e'::date + 2 + time '07:00') AT TIME ZONE 'Asia/Beirut') AS f0700,
+       ((:'e'::date + 2 + time '07:30') AT TIME ZONE 'Asia/Beirut') AS f0730,
+       ((:'e'::date + 2 + time '08:00') AT TIME ZONE 'Asia/Beirut') AS f0800,
+       ((:'e'::date + 2 + time '08:30') AT TIME ZONE 'Asia/Beirut') AS f0830 \gset
+
+-- ── Nothing Google is readable or callable by a client (D4, D19) ───────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_rls_block('a client cannot read Google tokens',
+  'SELECT count(*) FROM public.google_calendar_tokens');
+SELECT pg_temp.expect_rls_block('a client cannot read OAuth states',
+  'SELECT count(*) FROM public.google_oauth_states');
+SELECT pg_temp.expect_raises('a client cannot replace busy blocks',
+  format('SELECT public.google_replace_busy(%L::uuid, NOW(), NOW() + interval ''1 day'', ''[]''::jsonb)', :'pt_a'));
+SELECT pg_temp.expect_raises('a client cannot enqueue a sync',
+  format('SELECT public.google_enqueue_all(%L::uuid)', :'pt_a'));
+SELECT pg_temp.expect_raises('a client cannot read the sync batch',
+  format('SELECT count(*) FROM public.google_queue_batch(%L::uuid, 50)', :'pt_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_rls_block('nor can the PT read their own tokens',
+  'SELECT count(*) FROM public.google_calendar_tokens');
+SELECT pg_temp.expect_raises('nor replace their own busy blocks',
+  format('SELECT public.google_replace_busy(%L::uuid, NOW(), NOW() + interval ''1 day'', ''[]''::jsonb)', :'pt_a'));
+SELECT pg_temp.expect_error('ticking calendars needs a connection',
+  'SELECT public.set_busy_calendars(''{primary@x}'')', 'not_connected');
+-- No link yet: a booking queues nothing (D7).
+SELECT count(*) FROM public.create_booking(:'bkq'::uuid, :'cb_row'::uuid, :'e0715'::timestamptz, 60::smallint);
+SELECT pg_temp.expect('without a connection a booking queues nothing', 0,
+  format('SELECT count(*) FROM public.google_sync_queue WHERE booking_id = %L', :'bkq'));
+SELECT count(*) FROM public.cancel_booking(:'bkq'::uuid);
+RESET ROLE;
+
+-- The callback writes the link as the service role.
+SET LOCAL ROLE service_role;
+INSERT INTO public.google_calendar_links (pt_user_id, google_email, status, forge_calendar_id, calendars, busy_calendar_ids)
+VALUES (:'pt_a', 'pa@x', 'connected', 'forgecal@group',
+        '[{"id":"pa@x","summary":"Personal","primary":true},{"id":"team@x","summary":"Team","primary":false}]',
+        '{pa@x}');
+INSERT INTO public.google_calendar_tokens (pt_user_id, refresh_token) VALUES (:'pt_a', 'v1.sealed');
+RESET ROLE;
+
+-- ── Calendars to check (D10) ────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT reads their connection', 1,
+  format('SELECT count(*) FROM public.google_calendar_links WHERE pt_user_id = %L', :'pt_a'));
+SELECT pg_temp.expect('ticking a second calendar keeps both', 2,
+  'SELECT cardinality(busy_calendar_ids)::bigint FROM public.set_busy_calendars(''{pa@x,team@x}'')');
+SELECT pg_temp.expect_error('a calendar Google did not list is refused',
+  'SELECT public.set_busy_calendars(''{nope@x}'')', 'unknown_calendar');
+SELECT pg_temp.expect_rls_block('the PT cannot write the connection directly',
+  format('UPDATE public.google_calendar_links SET status = ''connected'' WHERE pt_user_id = %L', :'pt_a'));
+-- With a link, a booking write queues it once however often it changes.
+SELECT count(*) FROM public.create_booking(:'bkm'::uuid, :'cb_row'::uuid, :'e0715'::timestamptz + interval '75 minutes', 60::smallint);
+SELECT pg_temp.expect('a new booking is queued', 1,
+  format('SELECT count(*) FROM public.google_sync_queue WHERE booking_id = %L', :'bkm'));
+SELECT count(*) FROM public.cancel_booking(:'bkm'::uuid);
+SELECT pg_temp.expect('a cancel re-queues the same row', 1,
+  format('SELECT count(*) FROM public.google_sync_queue WHERE booking_id = %L', :'bkm'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('a client cannot tick calendars',
+  'SELECT public.set_busy_calendars(''{pa@x}'')');
+SELECT pg_temp.expect('a client reads no connection', 0,
+  'SELECT count(*) FROM public.google_calendar_links');
+SELECT pg_temp.expect('a client reads no queue', 0,
+  'SELECT count(*) FROM public.google_sync_queue');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT reads no connection', 0,
+  format('SELECT count(*) FROM public.google_calendar_links WHERE pt_user_id = %L', :'pt_a'));
+RESET ROLE;
+
+-- ── Busy blocks (D9) ────────────────────────────────────────────────────────
+SET LOCAL ROLE service_role;
+SELECT pg_temp.expect('two blocks stored, one timed and one all-day', 2,
+  format($q$SELECT public.google_replace_busy(%L::uuid, %L::date::timestamptz, (%L::date + 3)::timestamptz,
+    jsonb_build_array(
+      jsonb_build_object('calendar_id','pa@x','event_id','e1','title','Dentist','start',%L::timestamptz,'end',%L::timestamptz),
+      jsonb_build_object('calendar_id','team@x','event_id','e2','title','Holiday','start_date',(%L::date + 1)::text,'end_date',(%L::date + 2)::text)))::bigint$q$,
+    :'pt_a', :'e', :'e', :'e1615', :'e1700', :'e', :'e'));
+SELECT id AS busy1 FROM public.google_busy_blocks WHERE pt_user_id = :'pt_a' AND event_id = 'e1' \gset
+SELECT pg_temp.expect('an all-day block starts at local midnight in the PT''s zone', 1,
+  format($q$SELECT count(*) FROM public.google_busy_blocks WHERE event_id = 'e2'
+    AND starts_at = ((%L::date + 1)::timestamp AT TIME ZONE 'Asia/Beirut')
+    AND ends_at   = ((%L::date + 2)::timestamp AT TIME ZONE 'Asia/Beirut')$q$, :'e', :'e'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect('a client reads no busy blocks', 0,
+  'SELECT count(*) FROM public.google_busy_blocks');
+SELECT pg_temp.expect('16:15 is not offered over a Google event', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'e', :'e', :'e1615'));
+SELECT pg_temp.expect('17:00, where the event ends, is', 1,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'e', :'e', :'e1700'));
+SELECT pg_temp.expect('15:00, before it, still is', 1,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'e', :'e', :'e1500'));
+SELECT pg_temp.expect('an all-day event closes the whole day', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint)', :'pt_a', :'e1', :'e1'));
+SELECT pg_temp.expect_error('a client cannot book over a Google event either',
+  format('SELECT count(*) FROM public.create_booking(gen_random_uuid(), %L::uuid, %L::timestamptz, 60::smallint)', :'cb_row', :'e1615'),
+  'outside_hours');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT reads their busy blocks with titles', 1,
+  format('SELECT count(*) FROM public.google_busy_blocks WHERE pt_user_id = %L AND title = ''Dentist''', :'pt_a'));
+SELECT pg_temp.expect('the PT''s own form is not offered 16:15 either', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'e', :'e', :'e1615'));
+RESET ROLE;
+
+-- An overlap: a booking made before the Google event appeared.
+INSERT INTO public.bookings (id, pt_user_id, client_id, status, starts_at, ends_at, length_min, created_by_user_id)
+VALUES (:'bko', :'pt_a', :'cb_row', 'scheduled', :'f0700', :'f0800', 60, :'pt_a');
+
+SET LOCAL ROLE service_role;
+SELECT pg_temp.expect('a refresh keeps the timed block and adds the new one', 2,
+  format($q$SELECT public.google_replace_busy(%L::uuid, %L::date::timestamptz, (%L::date + 3)::timestamptz,
+    jsonb_build_array(
+      jsonb_build_object('calendar_id','pa@x','event_id','e1','title','Dentist','start',%L::timestamptz,'end',%L::timestamptz),
+      jsonb_build_object('calendar_id','pa@x','event_id','e3','title','Physio','start',%L::timestamptz,'end',%L::timestamptz)))::bigint$q$,
+    :'pt_a', :'e', :'e', :'e1615', :'e1700', :'f0730', :'f0830'));
+SELECT pg_temp.expect('the refreshed block keeps its id', 1,
+  format('SELECT count(*) FROM public.google_busy_blocks WHERE id = %L', :'busy1'));
+SELECT pg_temp.expect('the dropped all-day block is gone', 0,
+  'SELECT count(*) FROM public.google_busy_blocks WHERE event_id = ''e2''');
+SELECT id AS busy3 FROM public.google_busy_blocks WHERE pt_user_id = :'pt_a' AND event_id = 'e3' \gset
+RESET ROLE;
+
+-- ── Overlaps (D12) ──────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT sees one overlap', 1,
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')', :'e0715', :'e0715'));
+SELECT pg_temp.expect('it is 07:30-08:00 on the booking', 1,
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')
+           WHERE out_booking_id = %L AND out_title = ''Physio'' AND out_overlap_start = %L AND out_overlap_end = %L',
+         :'e0715', :'e0715', :'bko', :'f0730', :'f0800'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT sees none of it', 0,
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')', :'e0715', :'e0715'));
+SELECT pg_temp.expect_error('nor can they keep it',
+  format('SELECT public.keep_overlap(%L::uuid, %L::uuid)', :'bko', :'busy3'), 'not authorized');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('a client cannot list overlaps',
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')', :'e0715', :'e0715'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.keep_overlap(:'bko'::uuid, :'busy3'::uuid);
+SELECT public.keep_overlap(:'bko'::uuid, :'busy3'::uuid);
+SELECT pg_temp.expect('Keep both clears it, twice is fine', 0,
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')', :'e0715', :'e0715'));
+RESET ROLE;
+
+-- ── The sync worker's reads (D6, D7) ────────────────────────────────────────
+INSERT INTO public.bookings (id, pt_user_id, client_id, status, starts_at, ends_at, length_min, created_by_user_id)
+SELECT gen_random_uuid(), :'pt_a', :'self_row', 'scheduled', :'f0700'::timestamptz + interval '1 day', :'f0800'::timestamptz + interval '1 day', 60, :'pt_a';
+
+SET LOCAL ROLE service_role;
+DELETE FROM public.google_sync_queue;
+SELECT public.google_enqueue_all(:'pt_a') AS enq \gset
+SELECT pg_temp.expect('enqueue_all queues every pt_a booking in the horizon', :'enq',
+  format($q$SELECT count(*) FROM public.bookings WHERE pt_user_id = %L
+    AND starts_at >= NOW() - interval '1 day' AND starts_at < NOW() + interval '12 weeks'$q$, :'pt_a'));
+SELECT pg_temp.expect('the batch titles a client by first name', 1,
+  format('SELECT count(*) FROM public.google_queue_batch(%L::uuid, 500) WHERE out_booking_id = %L AND out_title = ''Forge · Client''', :'pt_a', :'bko'));
+SELECT pg_temp.expect('and the PT''s own training as Me', 1,
+  format('SELECT count(*) FROM public.google_queue_batch(%L::uuid, 500) WHERE out_starts_at = %L::timestamptz + interval ''1 day'' AND out_title = ''Forge · Me''', :'pt_a', :'f0700'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('an admin reads the connection', 1,
+  format('SELECT count(*) FROM public.google_calendar_links WHERE pt_user_id = %L', :'pt_a'));
+SELECT pg_temp.expect_rls_block('but never the tokens',
+  'SELECT count(*) FROM public.google_calendar_tokens');
+SELECT pg_temp.expect('nor the busy titles', 0,
+  format('SELECT count(*) FROM public.google_busy_blocks WHERE pt_user_id = %L', :'pt_a'));
+RESET ROLE;
+
 ROLLBACK;
