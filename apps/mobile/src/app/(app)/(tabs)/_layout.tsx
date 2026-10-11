@@ -5,7 +5,7 @@ import { useTheme } from '../../../theme/ThemeProvider';
 import { Icon } from '../../../ui';
 
 /**
- * The PT's four top-level destinations: Today, Clients, Programs, Library.
+ * The PT's five top-level destinations: Today, Schedule, Clients, Programs, Library.
  * A stack made these a back-button crawl — a PT moves between the roster and
  * the program builder constantly mid-session, and that is what a tab bar is
  * for. This is the first navigation-structure change since M0, which is why
@@ -58,6 +58,16 @@ export default function TabsLayout() {
           title: t('common.tabs.today'),
           tabBarIcon: ({ color, focused }) => (
             <Icon name="flame" size={23} color={color} strokeWidth={focused ? 2.2 : 1.8} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="schedule"
+        options={{
+          title: t('common.tabs.schedule'),
+          href: isClient ? null : undefined,
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name="clock" size={23} color={color} strokeWidth={focused ? 2.2 : 1.8} />
           ),
         }}
       />
