@@ -150,6 +150,13 @@ backdrop and that the fill is visible as a shape at all.
 - **Slot grid** — four-up open times; the nearest ones are outlined after "slot just taken". `apps/mobile/src/ui/SlotGrid.tsx`. (M5a)
 - Booking states use existing colour roles (`lib/schedule/stateStyle.ts`) — no new palette entries; `Toggle` already existed, so the design's 'toggle not in DS' note was stale.
 
+## Built (M5b)
+
+- **QR code** (`lib/checkin/QrCode.tsx`): one SVG path over a white square, ECC M, 4-module quiet zone; always dark-on-white in every theme.
+- **Check-in step strip**: four bars with labels — done green, current ember (green when the last one is current), upcoming hairline. Inline in the QR screen; extract if a second screen needs it.
+- **Rating targets**: five equal 56 px numbered buttons, accent fill when chosen, "Not great / Excellent" under the ends. Inline in the rate screen.
+- **Icon `qr`** added to `ui/Icon.tsx`.
+
 ## Outstanding
 
 - **Conflict resolution** — prototype `conflict` (two timestamped values, tap to pick, "Keep both as a note"). M4b has no field-level conflicts to resolve: sets are keyed by client ULID and a server refusal parks the write in the sync queue. The artboard waits until a write can genuinely collide. The `sync` artboard's "1 change needs your decision" row waits with it.

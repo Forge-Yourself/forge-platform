@@ -16,7 +16,7 @@ The v1 spec's M5 line names seven things: availability, bookings, recurring with
 | Sub-milestone | Scope | Depends on | Status |
 |---|---|---|---|
 | **M5a · Booking core** | Availability (hours, exceptions, rules), bookings + recurring + DST, PT schedule day/week/month, iPad week grid, create/edit booking, booking detail (late cancel, no-show), client Book + My bookings, Start session from a booking, admin booking view | M4e | done |
-| **M5b · Check-in** | QR check-in (rotating signed code, 6-digit fallback, works offline), client scan, after-session sheet (rating, comment, tip placeholder), receipt (PT-recorded amount, no payment), reminder settings (copy only) | M5a | not started |
+| **M5b · Check-in** | QR check-in (rotating signed code, 6-digit fallback, works offline), client scan, after-session sheet (rating, comment, tip placeholder), receipt (PT-recorded amount, no payment), reminder settings (copy only) | M5a | done (unmerged, branched from M5a) |
 | **M5c · Calendar** | Google Calendar connect / sync / conflict / disconnect, conflict line on the schedule, `.ics` export | M5a | not started — needs a Google Cloud project from you |
 
 ## Design screen → sub-milestone
@@ -87,3 +87,35 @@ _Entries are appended here as each sub-milestone lands. Newest last._
 - That a "counted" late cancellation means what you want before M6 puts money on it.
 - Two gaps the walk surfaced that I did not change: **Day view always shows today** (there is no previous/next day), and **a PT cannot book outside published hours from the app** although the server allows it. Say if either should be fixed before M5b.
 - The walk's bookings were left in place for `pt.test` as M5b seed data: 8 bookings (one completed, one cancelled late, a 4-session series, Me on Monday), Mon–Sat hours and one extra-hours exception for 11 Oct.
+
+### 2026-10-11 · M5b · Check-in — landed
+
+Planned and built in one pass at your request ("plan m5b and implement it without my review"). Spec `docs/superpowers/specs/2026-10-11-m5b-check-in-design.md` (decisions D1–D15 — **review those first**, each is a choice where the design is silent), plan `docs/superpowers/plans/2026-10-11-m5b-check-in.md` with an As-built section. Branch `feature/m5b-check-in`, cut from the unmerged `feature/m5a-booking-core`.
+
+**Shipped**
+- Migration `0021_m5b_check_in.sql` (applied live): a server-only secret per booking; `check_in` / `check_out` / `rate_booking` / `set_booking_amount` / `save_reminder_settings` / `checkin_keys`; amount, rating and receipt-number columns on `bookings`; a default session price on `booking_rules`; `reminder_settings`; SELECT RLS on `check_ins`. Sessions now fulfil and check out checked-in bookings.
+- PT: **Show check-in code** on Booking detail → QR screen (white code card, four-step strip, 60 s countdown, the six digits, Check in by hand → Checked in → Start session / Check out → Checked out). The code is computed on the phone from a cached secret, so it keeps working with no signal. **Amount** row on Booking detail; **Session price** and a Reminders link on Availability › Rules; **Reminders** in Settings.
+- Client: **Scan to check in** on the Next session card and in My bookings from 30 min before the start; the scanner (dark camera, ember frame, no tap needed, 6-digit fallback, camera-denied path, offline save); the **after-session sheet** (opens itself once on Today after a completed session; 1–5, comment, tip "Coming soon", thanks); the **receipt** (receipt number, mono figures, amount or "Not recorded", Share); past bookings show Rate / Rated N and Receipt.
+- Web admin: the bookings table gains Checked in, Rating and Amount (with the receipt number).
+
+**Verified**
+- SQL harness: **375 pass** (66 new), dry-run in a rolled-back transaction before `db push`, then against live. Covers the shared HMAC vector, secrets unreadable by every app role, expired/wrong/foreign codes, typed digits, the 10-minute double-scan guard, an offline scan replayed 2.5 h later (twice), manual check-in, a session checking a client out, receipts numbered once, ratings only by the booking's client and only when completed, default and per-booking amounts, reminder patches.
+- Vitest: **472 pass** (43 new: `checkin/*` incl. the same HMAC vector and `PendingQueue`). `pnpm typecheck`, `pnpm lint`, `pnpm test` pass.
+- Screen walk on the web target, 13 steps, all passing against the live project — **including a real QR scan**: headless Chrome's fake camera was fed a generated video frame of the PT's live code, and `expo-camera`'s web scanner read it and checked the client in; the PT's screen flipped on its own. Then wrong digits, "already checked in", a logged session completing and checking out, the rating sheet opening itself, receipt `FRG-2026-00009` with $45.00, Rated 5 on both sides, reminders persisting, the price field.
+- Live-DB read afterwards: booking `completed`, `check_ins` by `qr_scan` with a check-out time, one completed session, `receipt_no` 9, rating 5 with its comment; `check_in`, `booking_complete`, `check_out` audited.
+- The walk found one UI bug (the scanner frame stayed amber over a green "already checked in" result) and one web console warning (the QR's accessibility props leaking onto the SVG element). Both fixed.
+
+**Deviations from the design**
+- "Scanned · confirming" lights together with "Checked in": the server confirms in one round trip, so there is no separate moment to show.
+- The PT's screen learns of a scan by polling every 3 s while open; no Realtime on bookings.
+- **Download PDF is not built** — a native app can't open an authenticated PDF without putting a token in a URL. Share (text) is. The PDF belongs with M6's real invoices.
+- Reminders offline: toggles lock with a banner rather than "save later" (same call as M5a's Availability).
+- Receipt numbers have gaps: the harness's rolled-back runs consume sequence values. Sequential-without-gaps would need a counter table; say if invoices will need that in M6.
+- The design writes "only he sees it"; the copy says "only they see it".
+
+**For you to check**
+- On a phone: the PT's QR at full brightness in gym light, scanned by a second phone (web proved the decode, not a real camera); airplane-mode on the PT's phone (code keeps rotating) and on the client's (scan saved, confirmed on reconnect).
+- That a typed code being valid for the current and three previous minutes is loose enough for slow typists and tight enough for you.
+- The Arabic copy (key coverage only).
+- **Pre-existing, not M5b:** `JetBrains Mono` is never loaded (`useFonts` appears nowhere), so every `numeric` text in the app falls back to a serif on web — visible in every M5 screenshot. One-line fix in the root layout once you confirm the font files to ship.
+- The walk left one completed, rated, receipted booking for client.test and pt.test's default price at $45; reminders for pt.test have 2 h on.
