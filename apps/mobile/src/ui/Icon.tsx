@@ -42,6 +42,7 @@ export type IconName =
   | 'share'
   | 'trash'
   | 'clock'
+  | 'qr'
   | 'user'
   | 'shield'
   | 'document'
@@ -100,6 +101,7 @@ const GLYPHS: Record<IconName, Glyph> = {
   share: { d: ['M12 15.5V3.6', 'm8 7.4 4-3.9 4 3.9', 'M5 13v6a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-6'] },
   trash: { d: ['M4 6.8h16', 'M9.5 6.8v-2h5v2', 'm6.6 6.8 1 12.2h8.8l1-12.2'] },
   clock: { d: ['M12 7v5.3l3.4 2'], circles: [[12, 12, 8.6]] },
+  qr: { d: ['M4 4h6v6H4z', 'M14 4h6v6h-6z', 'M4 14h6v6H4z', 'M14 14h2.5v2.5H14z', 'M17.5 17.5H20V20h-2.5z', 'M14 20h.01', 'M20 14h.01'] },
   user: { d: ['M4.6 20.2a7.4 7.4 0 0 1 14.8 0'], circles: [[12, 8, 4]] },
   shield: { d: ['M12 3 19.4 5.9v5.9c0 4.4-3 7.4-7.4 8.9-4.4-1.5-7.4-4.5-7.4-8.9V5.9z', 'm9 12 2.2 2.2L15.4 10'] },
   document: { d: ['M6.5 3h6.6L18 7.9V21H6.5z', 'M13 3v5h5'] },

@@ -153,25 +153,28 @@ export async function markNoShow(id: string): Promise<ApiResult<BookingRow>> {
 
 export async function fetchAvailability(
   ptUserId: string,
-): Promise<ApiResult<{ hours: HoursRange[]; exceptions: ExceptionInput[] }>> {
+): Promise<ApiResult<{ hours: HoursRange[]; exceptions: ExceptionInput[]; priceCents: number | null }>> {
   const today = new Date();
   const todayKey =
     today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-  const [h, x] = await Promise.all([
+  const [h, x, r] = await Promise.all([
     supabase.from('schedules').select('day_of_week, start_time, end_time').eq('user_id', ptUserId).eq('is_active', true),
     supabase.from('availability_exceptions').select('on_date, kind, ranges').eq('pt_user_id', ptUserId).gte('on_date', todayKey).order('on_date'),
+    supabase.from('booking_rules').select('price_cents').eq('pt_user_id', ptUserId).maybeSingle(),
   ]);
   if (h.error) return fail(h.error);
   if (x.error) return fail(x.error);
+  if (r.error) return fail(r.error);
   return {
     data: {
       // Postgres TIME comes back as HH:MM:SS.
       hours: (h.data ?? []).map((r) => ({ dow: r.day_of_week, start: r.start_time.slice(0, 5), end: r.end_time.slice(0, 5) })),
-      exceptions: (x.data ?? []).map((r) => ({
-        date: r.on_date,
-        kind: r.kind === 'extra' ? 'extra' : 'off',
-        ranges: Array.isArray(r.ranges) ? (r.ranges as { start: string; end: string }[]) : null,
+      exceptions: (x.data ?? []).map((e) => ({
+        date: e.on_date,
+        kind: e.kind === 'extra' ? 'extra' : 'off',
+        ranges: Array.isArray(e.ranges) ? (e.ranges as { start: string; end: string }[]) : null,
       })),
+      priceCents: r.data?.price_cents ?? null,
     },
     error: null,
   };
@@ -181,11 +184,19 @@ export async function saveAvailability(
   hours: HoursRange[],
   exceptions: ExceptionInput[],
   rules: BookingRules,
+  /** M5b: cents, or null to clear. Omitted keeps whatever is saved. */
+  priceCents?: number | null,
 ): Promise<ApiResult<{ bookingId: string; startsAt: string }[]>> {
   const { data, error } = await supabase.rpc('save_availability', {
     p_hours: hours,
     p_exceptions: exceptions,
-    p_rules: { lengths: rules.lengths, buffer: rules.bufferMin, window: rules.windowWeeks, cutoff: rules.cutoffHours },
+    p_rules: {
+      lengths: rules.lengths,
+      buffer: rules.bufferMin,
+      window: rules.windowWeeks,
+      cutoff: rules.cutoffHours,
+      ...(priceCents !== undefined ? { price: priceCents } : {}),
+    },
   });
   if (error) return fail(error);
   return { data: (data ?? []).map((r) => ({ bookingId: r.out_booking_id, startsAt: r.out_starts_at })), error: null };

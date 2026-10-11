@@ -12,12 +12,14 @@ export type AvailabilityData = {
   exceptions: ExceptionInput[];
   rules: BookingRules;
   timezone: string;
+  /** M5b: the default session price in cents (spec D8). */
+  priceCents: number | null;
   refetch: () => void;
 };
 
 export function useAvailability(ptUserId: string | undefined): AvailabilityData {
   const [state, setState] = useState<Omit<AvailabilityData, 'refetch'>>({
-    loading: true, error: null, version: 0, hours: [], exceptions: [], rules: DEFAULT_RULES, timezone: 'Asia/Beirut',
+    loading: true, error: null, version: 0, hours: [], exceptions: [], rules: DEFAULT_RULES, timezone: 'Asia/Beirut', priceCents: null,
   });
   const seq = useRef(0);
 
@@ -38,6 +40,7 @@ export function useAvailability(ptUserId: string | undefined): AvailabilityData 
         exceptions: a.data.exceptions,
         rules: { lengths: p.data.lengths, bufferMin: p.data.bufferMin, windowWeeks: p.data.windowWeeks, cutoffHours: p.data.cutoffHours },
         timezone: p.data.timezone,
+        priceCents: a.data.priceCents,
       }));
     });
     return () => {

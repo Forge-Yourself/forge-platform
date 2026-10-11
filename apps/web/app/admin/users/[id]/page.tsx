@@ -238,9 +238,10 @@ export default async function AdminUserDetailPage({
   type AdminBooking = Pick<
     Database['public']['Tables']['bookings']['Row'],
     'id' | 'starts_at' | 'status' | 'length_min' | 'cancel_late' | 'cancel_counted' | 'cancelled_by' | 'recurrence_rule'
+    | 'amount_cents' | 'rating' | 'receipt_no'
   >;
   let bookings: AdminBooking[] | null = null;
-  const bookingCols = 'id, starts_at, status, length_min, cancel_late, cancel_counted, cancelled_by, recurrence_rule';
+  const bookingCols = 'id, starts_at, status, length_min, cancel_late, cancel_counted, cancelled_by, recurrence_rule, amount_cents, rating, receipt_no';
   if (target.role === 'pt') {
     const { data } = await supabase.from('bookings').select(bookingCols).eq('pt_user_id', id).order('starts_at', { ascending: false }).limit(50);
     bookings = data ?? [];
@@ -253,6 +254,12 @@ export default async function AdminUserDetailPage({
     } else {
       bookings = [];
     }
+  }
+  // M5b: check-in time per booking, read separately (check_ins has its own RLS).
+  const checkedIn: Record<string, string> = {};
+  if (bookings && bookings.length) {
+    const { data } = await supabase.from('check_ins').select('booking_id, checked_in_at').in('booking_id', bookings.map((b) => b.id));
+    for (const c of data ?? []) checkedIn[c.booking_id] = c.checked_in_at;
   }
 
   return (
@@ -519,6 +526,9 @@ export default async function AdminUserDetailPage({
                   <th style={ui.th}>Late cancel</th>
                   <th style={ui.th}>Cancelled by</th>
                   <th style={ui.th}>Series</th>
+                  <th style={ui.th}>Checked in</th>
+                  <th style={ui.th}>Rating</th>
+                  <th style={ui.th}>Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -532,6 +542,12 @@ export default async function AdminUserDetailPage({
                     <td style={ui.td}>{b.cancel_late ? (b.cancel_counted ? 'late · counted' : 'late · waived') : '—'}</td>
                     <td style={ui.td}>{b.cancelled_by ?? '—'}</td>
                     <td style={ui.td}>{b.recurrence_rule ?? '—'}</td>
+                    <td style={ui.td}>{checkedIn[b.id] ? new Date(checkedIn[b.id]!).toLocaleTimeString() : '—'}</td>
+                    <td style={ui.td}>{b.rating ? `${b.rating}/5` : '—'}</td>
+                    <td style={ui.td}>
+                      {b.amount_cents === null ? '—' : `$${(b.amount_cents / 100).toFixed(2)}`}
+                      {b.receipt_no !== null ? <span style={ui.muted}> · #{b.receipt_no}</span> : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

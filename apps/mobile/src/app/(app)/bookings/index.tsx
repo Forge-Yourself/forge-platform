@@ -1,4 +1,4 @@
-import { bookingErrorKey, bookingState, canClientChange, cancelDeadline, type BookingErrorCode } from '@forge/shared';
+import { bookingErrorKey, bookingState, canClientChange, cancelDeadline, isCheckInOpen, type BookingErrorCode } from '@forge/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,7 +62,8 @@ export default function MyBookings() {
         />
       );
     }
-    const ok = canClientChange(next.starts_at, cutoff, now);
+    const ok = next.status === 'scheduled' && canClientChange(next.starts_at, cutoff, now);
+    const canScan = isCheckInOpen(next.starts_at, next.ends_at, now);
     const deadline = cancelDeadline(next.starts_at, cutoff);
     const can = ok && offline.online && !busy;
     return (
@@ -74,7 +75,8 @@ export default function MyBookings() {
             {timeLabel(next.starts_at)} – {timeLabel(next.ends_at)}
           </Text>
           <Text tone="muted">{withPt(next)}</Text>
-          {ok ? (
+          {canScan ? <Button label={t('scan.button')} icon="qr" size="lg" onPress={() => router.push('/(app)/bookings/scan')} /> : null}
+          {next.status === 'checked_in' ? null : ok ? (
             <Text variant="caption" tone="muted">
               {t('bookings.freeUntil', { deadline: deadlineLabel(deadline, locale) })}
             </Text>
@@ -129,6 +131,29 @@ export default function MyBookings() {
           <Text variant="caption" tone="muted">
             {pastLabel(b)}
           </Text>
+          {b.status === 'completed' && b.client_id !== null ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 8 }}>
+              {b.rating ? (
+                <Text variant="caption" tone="secondary">
+                  {t('bookings.rated', { rating: b.rating })}
+                </Text>
+              ) : (
+                <Button
+                  label={t('bookings.rate')}
+                  variant="link"
+                  tone="accent"
+                  onPress={() => router.push({ pathname: '/(app)/bookings/[id]/rate', params: { id: b.id } })}
+                />
+              )}
+              {b.receipt_no !== null ? (
+                <Button
+                  label={t('bookings.receipt')}
+                  variant="link"
+                  onPress={() => router.push({ pathname: '/(app)/bookings/[id]/receipt', params: { id: b.id } })}
+                />
+              ) : null}
+            </View>
+          ) : null}
         </View>
       ))}
     </View>

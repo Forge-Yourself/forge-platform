@@ -1,5 +1,5 @@
 import {
-  ALL_LENGTHS, bookingErrorKey, breakBefore, copyMondayToWeekdays, DEFAULT_RULES, dayRanges, durationLabel, hhmm, localDayKey,
+  ALL_LENGTHS, amountInput, bookingErrorKey, parseAmount, breakBefore, copyMondayToWeekdays, DEFAULT_RULES, dayRanges, durationLabel, hhmm, localDayKey,
   parseHhmm, stepRule, toggleLength, validateHours, weeklyMinutes,
   type BookingRules, type ExceptionInput, type HoursRange, type RuleKey,
 } from '@forge/shared';
@@ -16,7 +16,7 @@ import { useAvailability } from '../../../lib/schedule/useAvailability';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
   Banner, BottomSheet, Button, DateField, EmptyState, MeasureStepper, MonthGrid, NavHeader, Screen, SegmentedPill,
-  Skeleton, Tag, Text, TimeRangePill, Toggle,
+  ListRow, Skeleton, Tag, Text, TextField, TimeRangePill, Toggle,
 } from '../../../ui';
 
 type Tab = 'hours' | 'exceptions' | 'rules';
@@ -42,12 +42,14 @@ export default function AvailabilityScreen() {
   const [hours, setHours] = useState<HoursRange[]>([]);
   const [exceptions, setExceptions] = useState<ExceptionInput[]>([]);
   const [rules, setRules] = useState<BookingRules>(DEFAULT_RULES);
+  const [priceText, setPriceText] = useState('');
   // Seed the draft from each successful load during render, behind a version guard (never from an effect).
   if (data.version > 0 && data.version !== seeded) {
     setSeeded(data.version);
     setHours(data.hours);
     setExceptions(data.exceptions);
     setRules(data.rules);
+    setPriceText(amountInput(data.priceCents));
   }
 
   // The range editor keeps the row it opened from, so Done/Remove find it however far both ends moved.
@@ -89,8 +91,14 @@ export default function AvailabilityScreen() {
       setNotice({ variant: 'danger', message: t(bookingErrorKey(check.code)) });
       return;
     }
+    const price = parseAmount(priceText);
+    if (price === 'invalid') {
+      setTab('rules');
+      setNotice({ variant: 'danger', message: t('schedule.availability.priceInvalid') });
+      return;
+    }
     setSaving(true);
-    const r = await saveAvailability(hours, exceptions, rules);
+    const r = await saveAvailability(hours, exceptions, rules, price);
     setSaving(false);
     if (r.error) {
       setNotice({ variant: 'danger', message: t(bookingErrorKey(r.error)) });
@@ -292,6 +300,19 @@ export default function AvailabilityScreen() {
         t('schedule.availability.cutoffValue', { hours: rules.cutoffHours }),
         rules.cutoffHours ? t('schedule.availability.cutoffHelp', { hours: rules.cutoffHours }) : t('schedule.availability.cutoffHelpZero'),
       )}
+      <View style={{ gap: 8 }}>
+        <Text style={{ fontWeight: '600' }}>{t('schedule.availability.price')}</Text>
+        <TextField
+          label={t('schedule.availability.priceLabel')}
+          value={priceText}
+          onChangeText={setPriceText}
+          keyboardType="decimal-pad"
+          placeholder="45"
+          error={parseAmount(priceText) === 'invalid' ? t('schedule.availability.priceInvalid') : undefined}
+          helperText={t('schedule.availability.priceHelp')}
+        />
+      </View>
+      <ListRow title={t('schedule.availability.reminders')} onPress={() => router.push('/(app)/settings/reminders')} isLast />
     </View>
   );
 

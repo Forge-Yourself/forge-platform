@@ -1,6 +1,6 @@
 import {
-  bookingErrorKey, bookingState, canClientChange, canMarkNoShow, noShowUnlocksAt, seriesProgress,
-  type BookingErrorCode,
+  amountInput, bookingErrorKey, bookingState, canClientChange, canMarkNoShow, checkInOpensAt, checkinErrorKey, formatAmount,
+  noShowUnlocksAt, parseAmount, seriesProgress, type BookingErrorCode, type CheckinErrorCode,
 } from '@forge/shared';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
@@ -8,8 +8,9 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import {
-  Avatar, Banner, BottomSheet, Button, ChipRow, EmptyState, NavHeader, Screen, SegmentedPill, Skeleton, Tag, Text,
+  Avatar, Banner, BottomSheet, Button, ChipRow, EmptyState, NavHeader, Screen, SegmentedPill, Skeleton, Tag, Text, TextField,
 } from '../../ui';
+import { setBookingAmount } from '../checkin/api';
 import { StartSessionSheet } from '../logging/StartSessionSheet';
 import { useOffline } from '../offline/offlineContext';
 import { dayLabel, timeLabel, untilLabel } from './format';
@@ -18,7 +19,7 @@ import { cancelBooking, markNoShow, type Scope } from './scheduleApi';
 import { useBookingDetail } from './useBookingDetail';
 import { useNow } from './useNow';
 
-type Sheet = 'late' | 'cancel' | 'noshow' | null;
+type Sheet = 'late' | 'cancel' | 'noshow' | 'amount' | null;
 const REASONS = ['ill', 'clash', 'travel'] as const;
 
 /**
@@ -51,6 +52,8 @@ export function BookingDetailBody({
   const [starting, setStarting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<BookingErrorCode | null>(null);
+  const [amountText, setAmountText] = useState('');
+  const [amountError, setAmountError] = useState<CheckinErrorCode | 'invalid' | null>(null);
 
   const back = () => router.dismissTo('/(app)/(tabs)/schedule');
   const wrap = (children: ReactNode) =>
@@ -109,6 +112,10 @@ export function BookingDetailBody({
   const late = !canClientChange(b.starts_at, cutoff, now);
   const noShowOk = canMarkNoShow(b.starts_at, now);
   const scheduled = b.status === 'scheduled';
+  const checkedIn = b.status === 'checked_in';
+  // M5b: the code is offered from 30 min before the start (the QR screen says when it opens before that).
+  const codeSoon = (scheduled || checkedIn) && !d.isSelf && now >= checkInOpensAt(b.starts_at).getTime() - 30 * 60_000 && now <= Date.parse(b.ends_at);
+  const amount = formatAmount(b.amount_cents);
   const progress = d.series.length ? seriesProgress(d.series, b.starts_at) : null;
   const every = b.recurrence_rule?.includes('INTERVAL=2') ? 2 : 1;
   const writable = scheduled && offline.online && !busy;
@@ -120,6 +127,30 @@ export function BookingDetailBody({
     setBusy(false);
     if (r.error) {
       setError(r.error);
+      return;
+    }
+    setSheet(null);
+    d.refetch();
+    onChanged?.();
+  }
+
+  function openAmount() {
+    setAmountText(amountInput(b.amount_cents));
+    setAmountError(null);
+    setSheet('amount');
+  }
+
+  async function doAmount(clear: boolean) {
+    const cents = clear ? null : parseAmount(amountText);
+    if (cents === 'invalid') {
+      setAmountError('invalid');
+      return;
+    }
+    setBusy(true);
+    const r = await setBookingAmount(b.id, cents);
+    setBusy(false);
+    if (r.error) {
+      setAmountError(r.error);
       return;
     }
     setSheet(null);
@@ -196,8 +227,46 @@ export function BookingDetailBody({
             <Text style={{ fontWeight: '700' }}>{d.programName}</Text>
           </Pressable>
         ) : null}
-        {scheduled && b.client_id ? (
+        {checkedIn && d.checkedInAt ? (
+          <Text tone="secondary">{t('schedule.detail.checkedInAt', { time: timeLabel(d.checkedInAt) })}</Text>
+        ) : null}
+        {b.rating ? (
+          <View style={{ gap: 2 }}>
+            <Text style={{ fontWeight: '700' }}>{t('schedule.detail.rated', { rating: b.rating })}</Text>
+            {b.rating_comment ? <Text tone="secondary">{b.rating_comment}</Text> : null}
+          </View>
+        ) : null}
+        {(scheduled || checkedIn) && b.client_id ? (
           <Button label={t('schedule.detail.startSession')} variant="primary" size="lg" onPress={() => setStarting(true)} />
+        ) : null}
+        {codeSoon ? (
+          <Button
+            label={t('checkin.showCode')}
+            variant="ghost"
+            icon="qr"
+            onPress={() => router.push({ pathname: '/(app)/schedule/[id]/check-in', params: { id } })}
+          />
+        ) : null}
+        {!d.isSelf && b.client_id && b.status !== 'cancelled' ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('schedule.detail.amount') + ', ' + (amount ?? t('schedule.detail.amountNotSet'))}
+            disabled={!offline.online}
+            onPress={openAmount}
+            style={{ flexDirection: 'row', alignItems: 'center', minHeight: 52, borderBottomWidth: 1, borderBottomColor: theme.colors.border }}
+          >
+            <Text style={{ flex: 1, fontWeight: '600' }}>{t('schedule.detail.amount')}</Text>
+            <Text numeric tone={amount ? 'primary' : 'muted'}>
+              {amount ?? t('schedule.detail.amountNotSet')}
+            </Text>
+          </Pressable>
+        ) : null}
+        {b.status === 'completed' && b.receipt_no !== null && !d.isSelf ? (
+          <Button
+            label={t('schedule.detail.receipt')}
+            variant="link"
+            onPress={() => router.push({ pathname: '/(app)/bookings/[id]/receipt', params: { id } })}
+          />
         ) : null}
         {scheduled ? (
           <View>
@@ -279,6 +348,29 @@ export function BookingDetailBody({
         />
         <Button label={t('schedule.detail.cancel')} variant="ghost" tone="danger" loading={busy} onPress={() => void doCancel()} />
         <Button label={t('schedule.detail.keep')} variant="link" onPress={() => setSheet(null)} />
+      </BottomSheet>
+
+      <BottomSheet visible={sheet === 'amount'} onDismiss={() => setSheet(null)} dismissLabel={t('common.cancel')}>
+        <Text variant="h3">{t('schedule.detail.amountTitle')}</Text>
+        <Text tone="muted">{t('schedule.detail.amountBody')}</Text>
+        <TextField
+          label={t('schedule.detail.amountLabel')}
+          value={amountText}
+          onChangeText={setAmountText}
+          keyboardType="decimal-pad"
+          placeholder="45"
+          error={
+            amountError === 'invalid'
+              ? t('schedule.availability.priceInvalid')
+              : amountError
+                ? t(checkinErrorKey(amountError))
+                : undefined
+          }
+        />
+        <Button label={t('schedule.detail.amountSave')} loading={busy} onPress={() => void doAmount(false)} />
+        {b.amount_cents !== null ? (
+          <Button label={t('schedule.detail.amountClear')} variant="link" tone="danger" onPress={() => void doAmount(true)} />
+        ) : null}
       </BottomSheet>
 
       <BottomSheet visible={sheet === 'noshow'} onDismiss={() => setSheet(null)} dismissLabel={t('schedule.detail.notYet')}>

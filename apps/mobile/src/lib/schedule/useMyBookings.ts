@@ -40,11 +40,13 @@ export async function fetchMyBookings(userId: string): Promise<Bundle> {
 
   const now = Date.now();
   const all = b.data ?? [];
+  // M5b: a checked-in booking is still the session in front of you until it ends.
+  const live = (r: BookingRow) => (r.status === 'scheduled' || r.status === 'checked_in') && Date.parse(r.ends_at) > now;
   return {
     coach: active ? { clientId: active.id, ptUserId: active.pt_user_id, ptName } : null,
     policy: policy && !policy.error ? policy.data : null,
-    upcoming: all.filter((r) => r.status === 'scheduled' && Date.parse(r.ends_at) > now),
-    past: all.filter((r) => !(r.status === 'scheduled' && Date.parse(r.ends_at) > now)).reverse(),
+    upcoming: all.filter(live),
+    past: all.filter((r) => !live(r)).reverse(),
     fetchedAt,
     error: null,
   };
