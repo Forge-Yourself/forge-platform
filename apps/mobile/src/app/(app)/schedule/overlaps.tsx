@@ -85,8 +85,8 @@ export default function Overlaps() {
   }
 
   const header = (
+    // No title: the h2 below says what this is, and Back already names Calendar sync.
     <NavHeader
-      title={t('calendar.title')}
       leading={<Button label={t('calendar.title')} variant="link" icon="chevronBack" onPress={() => router.dismissTo('/(app)/schedule/calendar')} />}
     />
   );

@@ -316,6 +316,8 @@ export default function CalendarSync() {
                     key={c.id}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: on, disabled: locked }}
+                    // react-native-web drops accessibilityState; aria-checked reaches the DOM.
+                    aria-checked={on}
                     accessibilityLabel={c.summary}
                     disabled={locked}
                     onPress={() => void toggleCalendar(c.id)}
