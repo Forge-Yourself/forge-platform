@@ -1,6 +1,7 @@
 import { addDays, bookingErrorCode, bookingState, localDayKey, type BookingErrorCode, type BookingState } from '@forge/shared';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
+import { warmCheckinKeys } from '../checkin/keys';
 import { fetchRoster } from '../clients/useClientList';
 import { cachedFetch, OFFLINE } from '../offline/cachedFetch';
 import { useOffline } from '../offline/offlineContext';
@@ -83,6 +84,9 @@ export function useSchedule(ptUserId: string | undefined, from: Date, to: Date):
     ).then((r) => {
       if (mine !== seq.current) return;
       setState({ ...r, loading: false, error: r.error ? bookingErrorCode(r.error) : null });
+      // M5b: while there's signal, keep today's check-in secrets on the phone so
+      // the QR still renders if the gym has none (spec D2).
+      if (!r.error && offline.online) void warmCheckinKeys().catch(() => undefined);
     });
     return () => {
       seq.current++;
