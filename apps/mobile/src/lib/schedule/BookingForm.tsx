@@ -218,11 +218,11 @@ export function BookingForm(props: BookingFormProps) {
             <Text variant="caption" tone="muted">
               {t('schedule.form.length')}
             </Text>
+            {/* A move keeps its length, so edit shows only that one (a disabled pill would read "Coming soon"). */}
             <SegmentedPill
-              items={policy.lengths.map((l) => ({
+              items={(edit?.length_min ? [edit.length_min] : policy.lengths).map((l) => ({
                 label: `${l} ${t('schedule.form.min')}`,
                 value: String(l),
-                disabled: props.mode === 'edit' && l !== edit?.length_min,
               }))}
               selected={String(effectiveLength)}
               onChange={(v) => {
