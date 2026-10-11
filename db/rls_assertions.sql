@@ -1970,9 +1970,10 @@ SELECT pg_temp.expect_error('a booking with a session cannot be marked no-show',
 SELECT public.complete_workout_session(:'bk_sess'::uuid, NULL, NULL);
 SELECT pg_temp.expect('completing the session completes the booking', 1,
   format('SELECT count(*) FROM public.bookings WHERE id = %L AND status = ''completed''', :'bknow'));
+RESET ROLE;
+-- audit_logs has RLS on and no policies: read it as the table owner.
 SELECT pg_temp.expect('booking_complete is audited', 1,
   format('SELECT count(*) FROM public.audit_logs WHERE action = ''booking_complete'' AND entity_id = %L', :'bknow'));
-RESET ROLE;
 
 -- ── A paused client cannot book (Review Focus 5) ────────────────────────────
 UPDATE public.clients SET state = 'paused' WHERE id = :'cb_row';
