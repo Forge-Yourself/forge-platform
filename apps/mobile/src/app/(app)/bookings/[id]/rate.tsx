@@ -21,7 +21,7 @@ const TIPS = ['$5', '$10', '$15'];
  * kept on this phone and sent on reconnect (spec D10).
  */
 export default function RateSession() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { t } = useTranslation();
   const theme = useTheme();
   const offline = useOffline();
@@ -32,7 +32,8 @@ export default function RateSession() {
   const [queued, setQueued] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const close = () => router.dismissTo('/');
+  // Opened from My bookings (or a scan started there), Close goes back there.
+  const close = () => (from === 'mine' ? router.dismissTo('/(app)/bookings') : router.dismissTo('/'));
   const header = (
     <NavHeader
       title={t('rate.title')}

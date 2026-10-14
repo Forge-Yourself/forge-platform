@@ -182,7 +182,7 @@ export default function Overlaps() {
           variant="primary"
           size="lg"
           disabled={!offline.online}
-          onPress={() => router.push({ pathname: '/(app)/schedule/[id]/edit', params: { id: r.bookingId } })}
+          onPress={() => router.push({ pathname: '/(app)/schedule/[id]/edit', params: { id: r.bookingId, from: 'overlaps' } })}
         />
         <Button label={t('calendar.keep')} variant="ghost" size="lg" disabled={!offline.online} onPress={() => void keep(r)} />
         <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>

@@ -155,3 +155,39 @@ Planned and built in one pass at your request ("plan m5c and implement it withou
 - On a phone, after the env vars are set and this branch is deployed: Connect, check the Forge sessions calendar fills, add a Google event over a booking, open Calendar sync, see the overlap; revoke Forge at myaccount.google.com/permissions and see Sync stopped; Reconnect.
 - `expo-sharing` is a new native module: Export / Add to my calendar on a device need a rebuilt dev client. An older build falls back to the share sheet with the calendar text.
 - The Arabic copy (key coverage only).
+
+### 2026-10-11 · M5 review — code review + security review, fixed
+
+A code review of `main...feature/m5c-calendar` and a security review of the same range. Fixed without a stop for review, at your request.
+
+**Security**
+- **Google connect was not bound to the PT who finishes it.** The callback redeemed whatever code arrived and saved the tokens on the PT named by the state, so a PT could send their consent link to someone else and get that person's calendar list and event titles. The callback no longer redeems anything: it sends `gcal=finish&gcal_code&gcal_state` back to the app, and the new `POST /api/google/finish` redeems the code only under the bearer token of the PT the state names (403 otherwise, without using up the state). Spec D1's "callback exchanges the code" is superseded by this.
+- Nothing else confirmed: every new SECURITY DEFINER function pins `search_path`, revokes PUBLIC/anon, and checks ownership; secrets tables have no app-role privilege.
+
+**Correctness**
+- Offline check-in then check-out of one booking replaced each other in PendingQueue (same key) — keys are now scan time + booking.
+- With no signal and the offline beta off, Scan showed "no session now" instead of queuing — it now keeps the scanner up when the booking list couldn't load for lack of signal.
+- Sync wrote back stale `busyCalendarIds`, undoing a tick made mid-sync — now written only when a vanished calendar is pruned.
+- `queueBatch` read `queued_at` after the batch, so a booking re-queued in between was dequeued with the old version sent — read before.
+- A 401 on a cached access token was taken as a revoked grant — now refreshes and retries once.
+- Google's 403 rate limits counted against a booking's 5 attempts — now transient.
+- The "N bookings made since then" count included bookings parked after 5 failures — excluded.
+- `.ics` titles used the roster's display name (falling back to the invite email) — now the SQL title rule.
+- `save_availability` cut exceptions at the UTC date, deleting yesterday's exception for a PT east of UTC saving after local midnight — **migration `0023` uses the PT's local date** (applied; harness 419 pass).
+
+**Verified:** web vitest 50 pass (2 new/changed), shared vitest 492 pass, `tsc` and eslint clean on web and mobile. Not walked on the web target; the new connect round trip needs the real Google client like the rest of M5c.
+
+### 2026-10-13 — second review: page flow, DB integrity, privacy
+
+- Close on Scan and on the rating sheet always went to Today, even when they were opened from My bookings (PITFALLS N13). They now take a `from: 'mine'` param, the way Book already did, and Scan passes it on to the rating sheet.
+- Move from the overlap review landed on the booking's detail, and Cancel did the same. Both now return to the review (`from: 'overlaps'`), which refetches on focus.
+- Finishing Google from a deep link left `gcal_code` and `gcal_state` in the route. A reload then redeemed a spent state into an error banner, and the code stayed in history. The params are now cleared once finishing starts.
+- Live checks, read-only:
+  - no overlapping live bookings;
+  - no completed booking without a receipt;
+  - no rating on an unrated status;
+  - no Google queue, busy or token rows without a link.
+- Privacy re-checked. Busy titles and overlaps are PT-only. `open_slots` needs an active client link and returns start times only.
+- One finding left open: `anon`/`authenticated` still hold TRUNCATE on every public table. That is the Supabase default and PostgREST cannot issue it, so it is a schema-wide change and not part of M5.
+
+**Verified:** `tsc` and eslint clean on mobile, `tsc` clean on web, web vitest 50 pass. Not walked.

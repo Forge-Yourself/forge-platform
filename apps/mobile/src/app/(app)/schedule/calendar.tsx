@@ -1,13 +1,14 @@
 import { addDays, buildIcs, eventTitle } from '@forge/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { useAuth } from '../../../lib/auth/AuthProvider';
 import {
   connectGoogle,
   disconnectGoogle,
   fetchLink,
+  finishGoogle,
   fetchOverlaps,
   fetchQueueCount,
   parseGcalResult,
@@ -54,18 +55,19 @@ export default function CalendarSync() {
   const theme = useTheme();
   const auth = useAuth();
   const offline = useOffline();
-  const params = useLocalSearchParams<{ gcal?: string }>();
+  const params = useLocalSearchParams<{ gcal?: string; gcal_code?: string; gcal_state?: string }>();
   const userId = auth.user?.id;
 
   const [data, setData] = useState<Loaded | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [unreachable, setUnreachable] = useState(false);
   const [result, setResult] = useState<GcalResult | null>(() => parseGcalResult(`?gcal=${params.gcal ?? ''}`));
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(() => params.gcal === 'finish');
   const [sheet, setSheet] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [exportState, setExportState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const seq = useRef(0);
+  const finished = useRef<string | null>(null);
 
   const read = useCallback(async (): Promise<Loaded | null> => {
     if (!userId) return null;
@@ -110,6 +112,24 @@ export default function CalendarSync() {
       };
     }, [load]),
   );
+
+  // Google's callback hands the code back to the app (a deep link straight
+  // into this screen on some devices); finishing it is this PT's own call.
+  // A web popup leaves that to the window that opened it.
+  useEffect(() => {
+    if (params.gcal !== 'finish' || !params.gcal_state || finished.current === params.gcal_state) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.opener) return;
+    finished.current = params.gcal_state;
+    const link = `?gcal=finish&gcal_code=${encodeURIComponent(params.gcal_code ?? '')}&gcal_state=${encodeURIComponent(params.gcal_state)}`;
+    // The code is single-use: out of the URL, so a reload or Back doesn't
+    // redeem a spent state into an error banner (or leave it in history).
+    router.setParams({ gcal: undefined, gcal_code: undefined, gcal_state: undefined });
+    void finishGoogle(link).then(async (r) => {
+      setBusy(false);
+      setResult(r);
+      await load();
+    });
+  }, [params.gcal, params.gcal_code, params.gcal_state, load]);
 
   async function connect(selectAccount = false) {
     setBusy(true);
@@ -163,9 +183,13 @@ export default function CalendarSync() {
       .filter((row) => row.status !== 'cancelled')
       .map((row) => {
         const c = row.client_id ? byId[row.client_id] : undefined;
+        // The roster's displayName falls back to the invite email and then
+        // "Unnamed client"; the title rule (google_queue_batch) stops at the
+        // invite name, so an exported file never carries an email address.
+        const name = c && (c.displayName === c.invite_email || c.displayName === 'Unnamed client') ? c.invite_name : c?.displayName;
         return {
           uid: row.id,
-          title: eventTitle(c?.displayName, c?.isSelf ?? false),
+          title: eventTitle(name, c?.isSelf ?? false),
           start: row.starts_at,
           end: row.ends_at,
           sequence: Math.floor(Date.parse(row.updated_at) / 1000),

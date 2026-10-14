@@ -75,7 +75,7 @@ export default function MyBookings() {
             {timeLabel(next.starts_at)} – {timeLabel(next.ends_at)}
           </Text>
           <Text tone="muted">{withPt(next)}</Text>
-          {canScan ? <Button label={t('scan.button')} icon="qr" size="lg" onPress={() => router.push('/(app)/bookings/scan')} /> : null}
+          {canScan ? <Button label={t('scan.button')} icon="qr" size="lg" onPress={() => router.push({ pathname: '/(app)/bookings/scan', params: { from: 'mine' } })} /> : null}
           {next.status === 'checked_in' ? null : ok ? (
             <Text variant="caption" tone="muted">
               {t('bookings.freeUntil', { deadline: deadlineLabel(deadline, locale) })}
@@ -142,7 +142,7 @@ export default function MyBookings() {
                   label={t('bookings.rate')}
                   variant="link"
                   tone="accent"
-                  onPress={() => router.push({ pathname: '/(app)/bookings/[id]/rate', params: { id: b.id } })}
+                  onPress={() => router.push({ pathname: '/(app)/bookings/[id]/rate', params: { id: b.id, from: 'mine' } })}
                 />
               )}
               {b.receipt_no !== null ? (

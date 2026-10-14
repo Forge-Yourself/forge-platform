@@ -6,7 +6,7 @@ import { useBookingDetail } from '../../../../lib/schedule/useBookingDetail';
 import { Button, EmptyState, NavHeader, Screen, Skeleton } from '../../../../ui';
 
 export default function EditBooking() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { t } = useTranslation();
   const d = useBookingDetail(id);
   if (d.loading) {
@@ -20,12 +20,12 @@ export default function EditBooking() {
     return (
       <Screen>
         <NavHeader
-          leading={<Button label={t('schedule.detail.back')} variant="link" icon="chevronBack" onPress={() => router.dismissTo('/(app)/(tabs)/schedule')} />}
+          leading={<Button label={t('schedule.detail.back')} variant="link" icon="chevronBack" onPress={() => (from === 'overlaps' ? router.dismissTo('/(app)/schedule/overlaps') : router.dismissTo('/(app)/(tabs)/schedule'))} />}
         />
         <EmptyState icon="calendar" title={t('schedule.detail.removedTitle')} body={t('schedule.detail.removedBody')} />
       </Screen>
     );
   }
   const { left } = seriesProgress(d.series, d.booking.starts_at);
-  return <BookingForm mode="edit" booking={d.booking} clientName={d.clientName} isSelf={d.isSelf} seriesLeft={left} />;
+  return <BookingForm mode="edit" booking={d.booking} clientName={d.clientName} isSelf={d.isSelf} seriesLeft={left} fromOverlaps={from === 'overlaps'} />;
 }

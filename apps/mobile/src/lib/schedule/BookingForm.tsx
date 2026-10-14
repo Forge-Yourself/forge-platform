@@ -23,7 +23,7 @@ import { useSeriesPreview } from './useSeriesPreview';
 
 export type BookingFormProps =
   | { mode: 'new'; initialClientId?: string; initialDate?: string; initialTime?: string }
-  | { mode: 'edit'; booking: BookingRow; clientName: string | null; isSelf: boolean; seriesLeft: number };
+  | { mode: 'edit'; booking: BookingRow; clientName: string | null; isSelf: boolean; seriesLeft: number; fromOverlaps?: boolean };
 
 type Repeat = 'none' | '1' | '2';
 const WEEK = 7 * 86_400_000;
@@ -167,7 +167,9 @@ export function BookingForm(props: BookingFormProps) {
       }
       return;
     }
-    router.replace({ pathname: '/(app)/schedule/[id]', params: { id: edit.id } });
+    // Moved out of the overlap review: back to the review, which refetches on focus.
+    if (props.mode === 'edit' && props.fromOverlaps) router.dismissTo('/(app)/schedule/overlaps');
+    else router.replace({ pathname: '/(app)/schedule/[id]', params: { id: edit.id } });
   }
 
   const onCta = () => {
@@ -177,7 +179,11 @@ export function BookingForm(props: BookingFormProps) {
   };
 
   const leave = () =>
-    edit ? router.dismissTo({ pathname: '/(app)/schedule/[id]', params: { id: edit.id } }) : router.dismissTo('/(app)/(tabs)/schedule');
+    props.mode === 'edit' && props.fromOverlaps
+      ? router.dismissTo('/(app)/schedule/overlaps')
+      : edit
+        ? router.dismissTo({ pathname: '/(app)/schedule/[id]', params: { id: edit.id } })
+        : router.dismissTo('/(app)/(tabs)/schedule');
 
   if (props.mode === 'new' && roster && roster.length === 0) {
     return (

@@ -2,7 +2,7 @@ import {
   checkinErrorKey, isCheckInOpen, parseCheckinPayload, type CheckinErrorCode, type PendingCheckInArgs,
 } from '@forge/shared';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, ScrollView, View } from 'react-native';
@@ -40,6 +40,9 @@ export default function Scan() {
   const theme = useTheme();
   const auth = useAuth();
   const offline = useOffline();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  // Two entry points (Today's card, My bookings): Close returns to the one used.
+  const close = () => (from === 'mine' ? router.dismissTo('/(app)/bookings') : router.dismissTo('/'));
   const now = useNow(15_000);
   const data = useMyBookings(auth.user?.id);
   const [permission, requestPermission] = useCameraPermissions();
@@ -61,19 +64,24 @@ export default function Scan() {
   const denied = !!permission && !permission.granted && !permission.canAskAgain;
   const showCode = mode === 'code' || denied;
 
+  // Each scan is its own entry, keyed by scan time first: the door scan and
+  // the check-out scan of one booking must both survive, and drain (which
+  // walks keys in order) must send them in the order they were made.
+  const pendingKey = (args: PendingCheckInArgs) => args.p_at + ':' + (args.p_booking_id ?? 'code:' + args.p_code);
+
   async function submit(args: PendingCheckInArgs) {
     if (inflight.current) return;
     inflight.current = true;
     setBusy(true);
     try {
       if (!offline.online) {
-        await pendingQueue.enqueue({ kind: 'check_in', key: args.p_booking_id ?? 'code:' + args.p_code, args });
+        await pendingQueue.enqueue({ kind: 'check_in', key: pendingKey(args), args });
         setOutcome({ kind: 'saved' });
         return;
       }
       const r = await checkIn(args);
       if (r.error === 'offline') {
-        await pendingQueue.enqueue({ kind: 'check_in', key: args.p_booking_id ?? 'code:' + args.p_code, args });
+        await pendingQueue.enqueue({ kind: 'check_in', key: pendingKey(args), args });
         setOutcome({ kind: 'saved' });
       } else if (r.error) {
         setOutcome({ kind: 'error', code: r.error });
@@ -115,7 +123,7 @@ export default function Scan() {
   const header = (
     <NavHeader
       title={t('scan.title')}
-      leading={<Button label={t('scan.close')} variant="link" icon="close" onPress={() => router.dismissTo('/')} />}
+      leading={<Button label={t('scan.close')} variant="link" icon="close" onPress={() => close()} />}
     />
   );
 
@@ -130,7 +138,10 @@ export default function Scan() {
     );
   }
 
-  if (!open && !outcome) {
+  // With no signal and no cached list (the offline beta off) the booking can't
+  // be checked here, so the scanner stays up: a scan queues in PendingQueue
+  // and the server decides on reconnect.
+  if (!open && !outcome && data.error !== 'offline') {
     return (
       <Screen padded={false}>
         {header}
@@ -162,12 +173,12 @@ export default function Scan() {
       title: t('scan.checkedOutTitle', { time: timeLabel(outcome.at) }),
       body: t('scan.checkedOutBody'),
       action: t('scan.rateNow'),
-      onAction: () => router.replace({ pathname: '/(app)/bookings/[id]/rate', params: { id: bookingId } }),
+      onAction: () => router.replace({ pathname: '/(app)/bookings/[id]/rate', params: { id: bookingId, ...(from ? { from } : {}) } }),
     };
   } else if (outcome?.kind === 'already') {
     card = { tone: 'ok', title: t('scan.alreadyTitle'), body: '', action: t('scan.openWorkout'), onAction: () => setStarting(true) };
   } else if (outcome?.kind === 'saved') {
-    card = { tone: 'warn', title: t('scan.savedTitle'), body: nn('scan.offlineBody'), action: t('scan.close'), onAction: () => router.dismissTo('/') };
+    card = { tone: 'warn', title: t('scan.savedTitle'), body: nn('scan.offlineBody'), action: t('scan.close'), onAction: () => close() };
   } else if (outcome?.kind === 'error') {
     const c = outcome.code;
     const title =
