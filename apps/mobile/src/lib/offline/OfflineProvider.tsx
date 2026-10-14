@@ -3,6 +3,7 @@ import { parseOfflineMode, resolveOfflineLogging, type OfflineMode, type QueueSt
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
+import { pendingQueue } from '../checkin/pending';
 import { getStoredValue, setStoredValue } from '../deviceStore';
 import { supabase } from '../supabase';
 import { engine, OFFLINE_CHOICE_KEY, OFFLINE_MODE_KEY } from './engine';
@@ -104,6 +105,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       clearTimeout(retryTimer.current);
       retryTimer.current = null;
     }
+    // M5b: a client's offline check-in scans and ratings ride the same triggers.
+    void pendingQueue.drain();
     void engine.drain().then((outcome) => {
       setAuthPaused(outcome.kind === 'auth');
       if (outcome.kind === 'transient') {

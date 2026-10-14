@@ -235,6 +235,44 @@ export default async function AdminUserDetailPage({
     }
   }
 
+  type AdminBooking = Pick<
+    Database['public']['Tables']['bookings']['Row'],
+    'id' | 'starts_at' | 'status' | 'length_min' | 'cancel_late' | 'cancel_counted' | 'cancelled_by' | 'recurrence_rule'
+    | 'amount_cents' | 'rating' | 'receipt_no'
+  >;
+  let bookings: AdminBooking[] | null = null;
+  const bookingCols = 'id, starts_at, status, length_min, cancel_late, cancel_counted, cancelled_by, recurrence_rule, amount_cents, rating, receipt_no';
+  if (target.role === 'pt') {
+    const { data } = await supabase.from('bookings').select(bookingCols).eq('pt_user_id', id).order('starts_at', { ascending: false }).limit(50);
+    bookings = data ?? [];
+  } else if (target.role === 'client') {
+    const { data: rows } = await supabase.from('clients').select('id').eq('client_user_id', id);
+    const ids = (rows ?? []).map((r) => r.id);
+    if (ids.length) {
+      const { data } = await supabase.from('bookings').select(bookingCols).in('client_id', ids).order('starts_at', { ascending: false }).limit(50);
+      bookings = data ?? [];
+    } else {
+      bookings = [];
+    }
+  }
+  // M5c: one line of Google Calendar status (spec D18). Admins read the
+  // connection row; tokens and busy titles are never readable here.
+  let gcal: { google_email: string | null; status: string; last_synced_at: string | null; error_at: string | null } | null | undefined;
+  if (target.role === 'pt') {
+    const { data } = await supabase
+      .from('google_calendar_links')
+      .select('google_email, status, last_synced_at, error_at')
+      .eq('pt_user_id', id)
+      .maybeSingle();
+    gcal = data;
+  }
+  // M5b: check-in time per booking, read separately (check_ins has its own RLS).
+  const checkedIn: Record<string, string> = {};
+  if (bookings && bookings.length) {
+    const { data } = await supabase.from('check_ins').select('booking_id, checked_in_at').in('booking_id', bookings.map((b) => b.id));
+    for (const c of data ?? []) checkedIn[c.booking_id] = c.checked_in_at;
+  }
+
   return (
     <main style={ui.page}>
       <p style={ui.kicker}>Forge</p>
@@ -476,6 +514,61 @@ export default async function AdminUserDetailPage({
                         : '—'}
                     </td>
                     <td style={ui.td}>{r.recorded_by_user_id === id ? 'client' : 'PT'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      ) : null}
+      {bookings ? (
+        <section style={ui.card}>
+          <h2 style={{ ...ui.h2, marginBottom: 'var(--s-3)' }}>Bookings</h2>
+          <p style={ui.muted}>Latest 50. Times are shown in this browser&apos;s zone; bookings are stored as UTC instants.</p>
+          {gcal !== undefined ? (
+            <p style={ui.muted}>
+              Google Calendar:{' '}
+              {gcal === null
+                ? 'not connected'
+                : gcal.status === 'error'
+                  ? `sync stopped since ${gcal.error_at ? new Date(gcal.error_at).toLocaleString() : '?'} (${gcal.google_email ?? 'unknown account'})`
+                  : `connected as ${gcal.google_email ?? 'unknown account'}, last sync ${gcal.last_synced_at ? new Date(gcal.last_synced_at).toLocaleString() : 'not yet'}`}
+            </p>
+          ) : null}
+          {bookings.length === 0 ? (
+            <p style={ui.muted}>No bookings.</p>
+          ) : (
+            <table style={ui.table}>
+              <thead>
+                <tr>
+                  <th style={ui.th}>Starts</th>
+                  <th style={ui.th}>Length</th>
+                  <th style={ui.th}>Status</th>
+                  <th style={ui.th}>Late cancel</th>
+                  <th style={ui.th}>Cancelled by</th>
+                  <th style={ui.th}>Series</th>
+                  <th style={ui.th}>Checked in</th>
+                  <th style={ui.th}>Rating</th>
+                  <th style={ui.th}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((b) => (
+                  <tr key={b.id}>
+                    <td style={ui.td}>{new Date(b.starts_at).toLocaleString()}</td>
+                    <td style={ui.td}>{b.length_min ? `${b.length_min} min` : '—'}</td>
+                    <td style={ui.td}>
+                      <span style={b.status === 'no_show' ? ui.dangerBadge : ui.neutralBadge}>{b.status}</span>
+                    </td>
+                    <td style={ui.td}>{b.cancel_late ? (b.cancel_counted ? 'late · counted' : 'late · waived') : '—'}</td>
+                    <td style={ui.td}>{b.cancelled_by ?? '—'}</td>
+                    <td style={ui.td}>{b.recurrence_rule ?? '—'}</td>
+                    <td style={ui.td}>{checkedIn[b.id] ? new Date(checkedIn[b.id]!).toLocaleTimeString() : '—'}</td>
+                    <td style={ui.td}>{b.rating ? `${b.rating}/5` : '—'}</td>
+                    <td style={ui.td}>
+                      {b.amount_cents === null ? '—' : `$${(b.amount_cents / 100).toFixed(2)}`}
+                      {b.receipt_no !== null ? <span style={ui.muted}> · #{b.receipt_no}</span> : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

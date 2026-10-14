@@ -18,6 +18,7 @@
     "tokens:css": "tsx scripts/tokens-to-css.ts"
   },
   "dependencies": {
+    "@noble/hashes": "1.8.0",
     "zod": "^4.6.1"
   },
   "devDependencies": {

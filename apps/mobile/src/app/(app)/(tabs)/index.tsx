@@ -19,6 +19,8 @@ import { cachedFetch } from '../../../lib/offline/cachedFetch';
 import { OfflineStatusChip } from '../../../lib/offline/OfflineStatusChip';
 import { useOffline } from '../../../lib/offline/offlineContext';
 import { useProgramList } from '../../../lib/programs/useProgramList';
+import { NextSessionCard } from '../../../lib/schedule/NextSessionCard';
+import { useAutoRate } from '../../../lib/checkin/useAutoRate';
 import { useTheme } from '../../../theme/ThemeProvider';
 import {
   Avatar,
@@ -568,6 +570,8 @@ function ClientHome() {
   const [startOpen, setStartOpen] = useState(false);
   const live = useInProgressSession();
   const liveSession = live.session;
+  // M5b: a just-finished session asks for its rating once (spec D12).
+  useAutoRate(auth.user?.role === 'client');
   // No client id: RLS already scopes this to the signed-in client's own rows.
   const recent = useSessionHistory(undefined, 3);
 
@@ -711,6 +715,7 @@ function ClientHome() {
       >
         <OfflineStatusChip />
         <HomeHeader name={auth.user?.display_name ?? ''} />
+        <NextSessionCard />
 
         {waiverError ? <Banner variant="danger" message={waiverError} /> : null}
 

@@ -954,6 +954,83 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs_2027_10: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown
+          reason_code: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown
+          reason_code?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      availability_exceptions: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          on_date: string
+          pt_user_id: string
+          ranges: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          on_date: string
+          pt_user_id: string
+          ranges?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          on_date?: string
+          pt_user_id?: string
+          ranges?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_ax_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badges: {
         Row: {
           category: string
@@ -1053,24 +1130,99 @@ export type Database = {
           },
         ]
       }
+      booking_checkin_keys: {
+        Row: {
+          booking_id: string
+          created_at: string
+          secret: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          secret: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_bck_booking"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_rules: {
+        Row: {
+          buffer_min: number
+          cutoff_hours: number
+          lengths_min: number[]
+          price_cents: number | null
+          pt_user_id: string
+          updated_at: string
+          window_weeks: number
+        }
+        Insert: {
+          buffer_min?: number
+          cutoff_hours?: number
+          lengths_min?: number[]
+          price_cents?: number | null
+          pt_user_id: string
+          updated_at?: string
+          window_weeks?: number
+        }
+        Update: {
+          buffer_min?: number
+          cutoff_hours?: number
+          lengths_min?: number[]
+          price_cents?: number | null
+          pt_user_id?: string
+          updated_at?: string
+          window_weeks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_booking_rules_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           class_id: string | null
           client_id: string | null
           created_at: string
+          created_by_user_id: string | null
+          currency: string
           ends_at: string
           google_calendar_id: string | null
           gym_id: string | null
           ical_uid: string | null
           id: string
+          length_min: number | null
           location_name: string | null
           no_show_marked_at: string | null
           notes: string | null
           originating_timezone: string
           parent_booking_id: string | null
           pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
           recurrence_rule: string | null
           reminder_1h_sent: boolean
           reminder_24h_sent: boolean
@@ -1080,22 +1232,33 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amount_cents?: number | null
+          cancel_counted?: boolean
+          cancel_late?: boolean
+          cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           class_id?: string | null
           client_id?: string | null
           created_at?: string
+          created_by_user_id?: string | null
+          currency?: string
           ends_at: string
           google_calendar_id?: string | null
           gym_id?: string | null
           ical_uid?: string | null
           id?: string
+          length_min?: number | null
           location_name?: string | null
           no_show_marked_at?: string | null
           notes?: string | null
           originating_timezone?: string
           parent_booking_id?: string | null
           pt_user_id: string
+          rated_at?: string | null
+          rating?: number | null
+          rating_comment?: string | null
+          receipt_no?: number | null
           recurrence_rule?: string | null
           reminder_1h_sent?: boolean
           reminder_24h_sent?: boolean
@@ -1105,22 +1268,33 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amount_cents?: number | null
+          cancel_counted?: boolean
+          cancel_late?: boolean
+          cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           class_id?: string | null
           client_id?: string | null
           created_at?: string
+          created_by_user_id?: string | null
+          currency?: string
           ends_at?: string
           google_calendar_id?: string | null
           gym_id?: string | null
           ical_uid?: string | null
           id?: string
+          length_min?: number | null
           location_name?: string | null
           no_show_marked_at?: string | null
           notes?: string | null
           originating_timezone?: string
           parent_booking_id?: string | null
           pt_user_id?: string
+          rated_at?: string | null
+          rating?: number | null
+          rating_comment?: string | null
+          receipt_no?: number | null
           recurrence_rule?: string | null
           reminder_1h_sent?: boolean
           reminder_24h_sent?: boolean
@@ -1142,6 +1316,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bookings_created_by"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -2845,6 +3026,60 @@ export type Database = {
         }
         Relationships: []
       }
+      food_logs_2027_10: {
+        Row: {
+          calories: number | null
+          carbs_g: number | null
+          client_id: string
+          created_at: string
+          custom_name: string | null
+          fat_g: number | null
+          food_item_id: string | null
+          id: string
+          logged_date: string
+          meal_plan_id: string | null
+          meal_type: string
+          protein_g: number | null
+          servings: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          calories?: number | null
+          carbs_g?: number | null
+          client_id?: string
+          created_at?: string
+          custom_name?: string | null
+          fat_g?: number | null
+          food_item_id?: string | null
+          id?: string
+          logged_date?: string
+          meal_plan_id?: string | null
+          meal_type?: string
+          protein_g?: number | null
+          servings?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       form_check_comments: {
         Row: {
           author_user_id: string
@@ -2970,6 +3205,237 @@ export type Database = {
           {
             foreignKeyName: "fk_fcu_reviewer"
             columns: ["reviewed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_busy_blocks: {
+        Row: {
+          calendar_id: string
+          ends_at: string
+          event_id: string
+          id: string
+          pt_user_id: string
+          starts_at: string
+          title: string | null
+        }
+        Insert: {
+          calendar_id: string
+          ends_at: string
+          event_id: string
+          id?: string
+          pt_user_id: string
+          starts_at: string
+          title?: string | null
+        }
+        Update: {
+          calendar_id?: string
+          ends_at?: string
+          event_id?: string
+          id?: string
+          pt_user_id?: string
+          starts_at?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gbb_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_calendar_links: {
+        Row: {
+          busy_calendar_ids: string[]
+          busy_refreshed_at: string | null
+          calendars: Json
+          connected_at: string
+          error_at: string | null
+          forge_calendar_id: string | null
+          google_email: string | null
+          last_synced_at: string | null
+          pt_user_id: string
+          status: string
+        }
+        Insert: {
+          busy_calendar_ids?: string[]
+          busy_refreshed_at?: string | null
+          calendars?: Json
+          connected_at?: string
+          error_at?: string | null
+          forge_calendar_id?: string | null
+          google_email?: string | null
+          last_synced_at?: string | null
+          pt_user_id: string
+          status?: string
+        }
+        Update: {
+          busy_calendar_ids?: string[]
+          busy_refreshed_at?: string | null
+          calendars?: Json
+          connected_at?: string
+          error_at?: string | null
+          forge_calendar_id?: string | null
+          google_email?: string | null
+          last_synced_at?: string | null
+          pt_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gcl_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_calendar_tokens: {
+        Row: {
+          access_expires_at: string | null
+          access_token: string | null
+          pt_user_id: string
+          refresh_token: string
+          updated_at: string
+        }
+        Insert: {
+          access_expires_at?: string | null
+          access_token?: string | null
+          pt_user_id: string
+          refresh_token: string
+          updated_at?: string
+        }
+        Update: {
+          access_expires_at?: string | null
+          access_token?: string | null
+          pt_user_id?: string
+          refresh_token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gct_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_oauth_states: {
+        Row: {
+          code_verifier: string
+          created_at: string
+          pt_user_id: string
+          return_to: string
+          state: string
+        }
+        Insert: {
+          code_verifier: string
+          created_at?: string
+          pt_user_id: string
+          return_to: string
+          state: string
+        }
+        Update: {
+          code_verifier?: string
+          created_at?: string
+          pt_user_id?: string
+          return_to?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gos_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_overlap_kept: {
+        Row: {
+          booking_id: string
+          busy_id: string
+          kept_at: string
+          pt_user_id: string
+        }
+        Insert: {
+          booking_id: string
+          busy_id: string
+          kept_at?: string
+          pt_user_id: string
+        }
+        Update: {
+          booking_id?: string
+          busy_id?: string
+          kept_at?: string
+          pt_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gok_booking"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_gok_busy"
+            columns: ["busy_id"]
+            isOneToOne: false
+            referencedRelation: "google_busy_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_gok_pt"
+            columns: ["pt_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_sync_queue: {
+        Row: {
+          attempts: number
+          booking_id: string
+          last_error: string | null
+          pt_user_id: string
+          queued_at: string
+        }
+        Insert: {
+          attempts?: number
+          booking_id: string
+          last_error?: string | null
+          pt_user_id: string
+          queued_at?: string
+        }
+        Update: {
+          attempts?: number
+          booking_id?: string
+          last_error?: string | null
+          pt_user_id?: string
+          queued_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gsq_booking"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_gsq_pt"
+            columns: ["pt_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -4563,6 +5029,63 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications_2027_10: {
+        Row: {
+          body: string
+          category: string
+          channel: string
+          created_at: string
+          deep_link: string | null
+          delivered_at: string | null
+          delivery_error: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_delivered: boolean
+          is_read: boolean
+          is_suppressed: boolean
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category: string
+          channel: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channel?: string
+          created_at?: string
+          deep_link?: string | null
+          delivered_at?: string | null
+          delivery_error?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_delivered?: boolean
+          is_read?: boolean
+          is_suppressed?: boolean
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           charge_id: string | null
@@ -5166,6 +5689,47 @@ export type Database = {
           {
             foreignKeyName: "fk_pt_profiles_user"
             columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminder_settings: {
+        Row: {
+          client_24h: boolean
+          client_2h: boolean
+          client_change: boolean
+          pt_agenda: boolean
+          pt_book: boolean
+          pt_late: boolean
+          pt_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_24h?: boolean
+          client_2h?: boolean
+          client_change?: boolean
+          pt_agenda?: boolean
+          pt_book?: boolean
+          pt_late?: boolean
+          pt_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_24h?: boolean
+          client_2h?: boolean
+          client_change?: boolean
+          pt_agenda?: boolean
+          pt_book?: boolean
+          pt_late?: boolean
+          pt_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_rs_pt"
+            columns: ["pt_user_id"]
             isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -6525,6 +7089,78 @@ export type Database = {
         }
         Relationships: []
       }
+      sets_2027_10: {
+        Row: {
+          conflict_resolved: boolean
+          created_at: string
+          device_id: string | null
+          distance_m: number | null
+          duration_sec: number | null
+          exercise_id: string
+          id: string
+          is_drop_set: boolean
+          is_failure: boolean
+          is_synced: boolean
+          is_warmup: boolean
+          logged_by_user_id: string
+          notes: string | null
+          reps: number | null
+          rpe: number | null
+          set_number: number
+          synced_at: string | null
+          tempo_actual: string | null
+          updated_at: string
+          weight_kg: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id: string
+          id: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          logged_by_user_id: string
+          notes?: string | null
+          reps?: number | null
+          rpe?: number | null
+          set_number: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          conflict_resolved?: boolean
+          created_at?: string
+          device_id?: string | null
+          distance_m?: number | null
+          duration_sec?: number | null
+          exercise_id?: string
+          id?: string
+          is_drop_set?: boolean
+          is_failure?: boolean
+          is_synced?: boolean
+          is_warmup?: boolean
+          logged_by_user_id?: string
+          notes?: string | null
+          reps?: number | null
+          rpe?: number | null
+          set_number?: number
+          synced_at?: string | null
+          tempo_actual?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          workout_session_id?: string
+        }
+        Relationships: []
+      }
       spatial_ref_sys: {
         Row: {
           auth_name: string | null
@@ -7263,6 +7899,30 @@ export type Database = {
       }
       body_circumferences_valid: { Args: { p: Json }; Returns: boolean }
       body_plateau: { Args: { p_client_id: string }; Returns: boolean }
+      booking_policy: {
+        Args: { p_pt: string }
+        Returns: {
+          buffer_min: number
+          cutoff_hours: number
+          lengths_min: number[]
+          timezone: string
+          window_weeks: number
+        }[]
+      }
+      calendar_overlaps: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          out_booking_end: string
+          out_booking_id: string
+          out_booking_start: string
+          out_busy_end: string
+          out_busy_id: string
+          out_busy_start: string
+          out_overlap_end: string
+          out_overlap_start: string
+          out_title: string
+        }[]
+      }
       can_delete_progress_photo_object: {
         Args: { p_name: string }
         Returns: boolean
@@ -7270,6 +7930,127 @@ export type Database = {
       can_view_progress_photo_object: {
         Args: { p_name: string }
         Returns: boolean
+      }
+      cancel_booking: {
+        Args: {
+          p_counted?: boolean
+          p_id: string
+          p_reason?: string
+          p_scope?: string
+        }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      check_in: {
+        Args: {
+          p_at?: string
+          p_booking_id?: string
+          p_code?: string
+          p_window?: number
+        }
+        Returns: {
+          out_booking_id: string
+          out_checked_in_at: string
+          out_checked_out_at: string
+          out_outcome: string
+          out_status: string
+        }[]
+      }
+      check_out: {
+        Args: { p_booking_id: string }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      checkin_code: {
+        Args: { p_booking: string; p_secret: string; p_window: number }
+        Returns: string
+      }
+      checkin_keys: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          out_booking_id: string
+          out_secret_hex: string
+        }[]
       }
       claim_client_invites: { Args: never; Returns: number }
       complete_workout_session: {
@@ -7332,6 +8113,59 @@ export type Database = {
         Args: { p_from_week: number; p_program_id: string; p_to_week: number }
         Returns: undefined
       }
+      create_booking: {
+        Args: {
+          p_client_id: string
+          p_count?: number
+          p_every_weeks?: number
+          p_id: string
+          p_length: number
+          p_starts_at: string
+          p_until?: string
+        }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_custom_exercise: {
         Args: {
           p_coaching_cues?: string[]
@@ -7366,6 +8200,13 @@ export type Database = {
         Returns: string
       }
       current_user_role: { Args: never; Returns: string }
+      day_windows: {
+        Args: { p_date: string; p_pt: string; p_tz: string }
+        Returns: {
+          w_end: string
+          w_start: string
+        }[]
+      }
       delete_body_metric: { Args: { p_id: string }; Returns: undefined }
       delete_progress_photo: { Args: { p_id: string }; Returns: undefined }
       delete_set: { Args: { p_id: string }; Returns: undefined }
@@ -7510,6 +8351,23 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       gettransactionid: { Args: never; Returns: unknown }
+      google_enqueue_all: { Args: { p_pt: string }; Returns: number }
+      google_queue_batch: {
+        Args: { p_limit: number; p_pt: string }
+        Returns: {
+          out_attempts: number
+          out_booking_id: string
+          out_ends_at: string
+          out_starts_at: string
+          out_status: string
+          out_timezone: string
+          out_title: string
+        }[]
+      }
+      google_replace_busy: {
+        Args: { p_blocks: Json; p_from: string; p_pt: string; p_to: string }
+        Returns: number
+      }
       grant_ai_credits: {
         Args: { p_credits: number; p_reason?: string; p_user_id: string }
         Returns: number
@@ -7556,6 +8414,10 @@ export type Database = {
       }
       jsonb_array_or_empty: { Args: { p_value: Json }; Returns: Json }
       jsonb_object_or_empty: { Args: { p_value: Json }; Returns: Json }
+      keep_overlap: {
+        Args: { p_booking_id: string; p_busy_id: string }
+        Returns: undefined
+      }
       log_account_event: {
         Args: { p_action: string; p_details?: Json }
         Returns: undefined
@@ -7579,6 +8441,64 @@ export type Database = {
         }[]
       }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      mark_no_show: {
+        Args: { p_id: string }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      open_slots: {
+        Args: {
+          p_from: string
+          p_ignore?: string
+          p_length: number
+          p_pt: string
+          p_to: string
+        }
+        Returns: {
+          slot_date: string
+          slot_start: string
+        }[]
+      }
       parq_question_ids: { Args: never; Returns: string[] }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -7620,6 +8540,21 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      preview_series: {
+        Args: {
+          p_count: number
+          p_every_weeks: number
+          p_length: number
+          p_start: string
+          p_until: string
+        }
+        Returns: {
+          after_offset_change: boolean
+          conflict: boolean
+          n: number
+          occ_start: string
+        }[]
+      }
       program_summaries: {
         Args: never
         Returns: {
@@ -7646,6 +8581,60 @@ export type Database = {
       progress_photo_path_uuid: {
         Args: { p_name: string; p_part: number }
         Returns: string
+      }
+      pt_day_windows: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          win_date: string
+          win_end: string
+          win_start: string
+        }[]
+      }
+      pt_tz: { Args: { p_pt: string }; Returns: string }
+      rate_booking: {
+        Args: { p_comment?: string; p_id: string; p_rating: number }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       record_body_metric: {
         Args: {
@@ -7708,14 +8697,103 @@ export type Database = {
         Args: { p_generation_id: string; p_reason?: string }
         Returns: undefined
       }
+      reschedule_booking: {
+        Args: { p_id: string; p_new_start: string; p_scope?: string }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       resend_invite: {
         Args: { p_client_id: string; p_email?: string }
         Returns: undefined
       }
       revoke_invite: { Args: { p_client_id: string }; Returns: undefined }
+      rules_for: {
+        Args: { p_pt: string }
+        Returns: {
+          buffer_min: number
+          cutoff_hours: number
+          lengths_min: number[]
+          price_cents: number | null
+          pt_user_id: string
+          updated_at: string
+          window_weeks: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_availability: {
+        Args: { p_exceptions: Json; p_hours: Json; p_rules: Json }
+        Returns: {
+          out_booking_id: string
+          out_starts_at: string
+        }[]
+      }
       save_program: {
         Args: { p_payload: Json; p_program_id: string }
         Returns: undefined
+      }
+      save_reminder_settings: {
+        Args: { p: Json }
+        Returns: {
+          client_24h: boolean
+          client_2h: boolean
+          client_change: boolean
+          pt_agenda: boolean
+          pt_book: boolean
+          pt_late: boolean
+          pt_user_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reminder_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_exercises: {
         Args: {
@@ -7742,6 +8820,86 @@ export type Database = {
           slug: string
           total_count: number
         }[]
+      }
+      series_occurrences: {
+        Args: {
+          p_count: number
+          p_every_weeks: number
+          p_start: string
+          p_tz: string
+          p_until: string
+        }
+        Returns: {
+          after_offset_change: boolean
+          n: number
+          occ_start: string
+        }[]
+      }
+      set_booking_amount: {
+        Args: { p_cents: number; p_id: string }
+        Returns: {
+          amount_cents: number | null
+          cancel_counted: boolean
+          cancel_late: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          class_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by_user_id: string | null
+          currency: string
+          ends_at: string
+          google_calendar_id: string | null
+          gym_id: string | null
+          ical_uid: string | null
+          id: string
+          length_min: number | null
+          location_name: string | null
+          no_show_marked_at: string | null
+          notes: string | null
+          originating_timezone: string
+          parent_booking_id: string | null
+          pt_user_id: string
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          receipt_no: number | null
+          recurrence_rule: string | null
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
+          schedule_id: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_busy_calendars: {
+        Args: { p_ids: string[] }
+        Returns: {
+          busy_calendar_ids: string[]
+          busy_refreshed_at: string | null
+          calendars: Json
+          connected_at: string
+          error_at: string | null
+          forge_calendar_id: string | null
+          google_email: string | null
+          last_synced_at: string | null
+          pt_user_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "google_calendar_links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_client_state: {
         Args: { p_client_id: string; p_state: string }

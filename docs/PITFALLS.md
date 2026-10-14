@@ -886,6 +886,21 @@ pre-existing, cross-cutting limitation of every milestone's web-target
 verification, not specific to M4d; M4d's console is the first screen where it
 actually mattered enough to write down.
 
+### V6. `react-native-web` drops `accessibilityState` — use `aria-*` props
+
+`react-native-web` 0.21 maps `aria-checked`, `aria-selected`, `aria-disabled`
+and friends to the DOM, and silently ignores `accessibilityState`. A custom
+`Pressable` checkbox with `accessibilityState={{ checked }}` renders
+`role="checkbox"` with no `aria-checked` at all: a screen reader on web hears
+an unchecked box, and a walk that asserts the state reads `null`. M5c's
+Calendar sync checklist hit this (the tick had saved; only the DOM didn't
+know). `Toggle` is unaffected because it wraps `Switch`, which renders a real
+checkbox input.
+
+**Rule:** a hand-built control that has a state passes the matching `aria-*`
+prop as well as (or instead of) `accessibilityState`. React Native reads the
+`aria-*` props on native too.
+
 ## Design
 
 ### D1. The prototype is the spec wherever it is explicit

@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/photo-orphans",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/google-sync",
+      "schedule": "0 5 * * *"
     }
   ]
 }

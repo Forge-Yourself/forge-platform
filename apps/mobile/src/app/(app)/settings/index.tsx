@@ -451,6 +451,20 @@ export default function Settings() {
           </SectionCard>
         </View>
 
+        {auth.user?.role === 'pt' ? (
+          <View style={{ gap: theme.space[2] }}>
+            <SectionLabel>{t('schedule.title')}</SectionLabel>
+            <SectionCard>
+              <ListRow
+                title={t('settings.reminders')}
+                subtitle={t('settings.remindersSub')}
+                onPress={() => router.push('/(app)/settings/reminders')}
+                isLast
+              />
+            </SectionCard>
+          </View>
+        ) : null}
+
         {offline.available || queued > 0 ? (
           <View style={{ gap: theme.space[2] }}>
             <SectionLabel>{t('settings.offline.heading')}</SectionLabel>

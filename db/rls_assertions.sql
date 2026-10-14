@@ -1628,4 +1628,858 @@ SELECT public.invite_client('rls-someone-else@forge-test.local', 'Someone', '{}'
 SELECT pg_temp.expect('ordinary invites still work — the guard is not a blanket refusal', 1,
   format('SELECT count(*) FROM public.clients WHERE id = %L AND state = ''invited''', :'other_invite'));
 RESET ROLE;
+-- =============================================================================
+-- 0020 — M5a booking core.
+--
+-- Times below are built from CURRENT_DATE + 8 (well inside the 4-week client
+-- window, never "today", so NOW() can't eat the morning) in Asia/Beirut, the
+-- users.timezone default. Hours are published for all seven days so no case
+-- depends on which weekday the harness happens to run.
+-- =============================================================================
+
+CREATE FUNCTION pg_temp.expect_error(label TEXT, sql TEXT, msg TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  BEGIN
+    EXECUTE sql;
+    RAISE EXCEPTION 'FAIL % — statement did not raise', label;
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM LIKE 'FAIL %' THEN
+      RAISE;
+    END IF;
+    IF SQLERRM <> msg THEN
+      RAISE EXCEPTION 'FAIL % — expected "%", got "%"', label, msg, SQLERRM;
+    END IF;
+    RAISE NOTICE 'pass  %', label;
+  END;
+END;
+$$;
+
+\set cb_row  '5a000000-0000-4000-8000-0000000000c1'
+\set bk1     '5a000000-0000-4000-8000-0000000000b1'
+\set bk2     '5a000000-0000-4000-8000-0000000000b2'
+\set bk3     '5a000000-0000-4000-8000-0000000000b3'
+\set bks     '5a000000-0000-4000-8000-0000000000b4'
+\set bks2    '5a000000-0000-4000-8000-0000000000b5'
+\set bkd     '5a000000-0000-4000-8000-0000000000b6'
+\set bklate  '5a000000-0000-4000-8000-0000000000b7'
+\set bklate2 '5a000000-0000-4000-8000-0000000000b8'
+\set bkedge  '5a000000-0000-4000-8000-0000000000b9'
+\set bkpast  '5a000000-0000-4000-8000-0000000000ba'
+\set bknow   '5a000000-0000-4000-8000-0000000000bb'
+
+-- client_b becomes a real client of pt_a (client_a's role was flipped to 'pt'
+-- by the M1 block, so it can't stand in for a client-role account here).
+INSERT INTO public.clients (id, pt_user_id, client_user_id, state)
+VALUES (:'cb_row', :'pt_a', :'client_b', 'active');
+-- Earlier blocks pause and reactivate client_row; don't depend on where they left it.
+UPDATE public.clients SET state = 'active' WHERE id = :'client_row';
+
+SELECT (CURRENT_DATE + 8) AS d \gset
+SELECT ((:'d'::date + time '06:00') AT TIME ZONE 'Asia/Beirut') AS t0600,
+       ((:'d'::date + time '07:00') AT TIME ZONE 'Asia/Beirut') AS t0700,
+       ((:'d'::date + time '07:15') AT TIME ZONE 'Asia/Beirut') AS t0715,
+       ((:'d'::date + time '07:30') AT TIME ZONE 'Asia/Beirut') AS t0730,
+       ((:'d'::date + time '08:30') AT TIME ZONE 'Asia/Beirut') AS t0830,
+       ((:'d'::date + time '09:45') AT TIME ZONE 'Asia/Beirut') AS t0945,
+       ((:'d'::date + time '13:00') AT TIME ZONE 'Asia/Beirut') AS t1300 \gset
+
+-- ── Availability ────────────────────────────────────────────────────────────
+SELECT jsonb_agg(r) AS hours_json FROM (
+  SELECT jsonb_build_object('dow', d, 'start', s, 'end', e) AS r
+    FROM generate_series(0, 6) d, (VALUES ('06:00', '12:00'), ('15:00', '20:00')) v(s, e)
+) x \gset
+\set rules_json '{"lengths":[45,60,90],"buffer":15,"window":4,"cutoff":12}'
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('a client cannot publish availability',
+  format('SELECT * FROM public.save_availability(%L::jsonb, ''[]''::jsonb, %L::jsonb)', :'hours_json', :'rules_json'));
+SELECT pg_temp.expect_rls_block('a client cannot write schedules directly',
+  format('INSERT INTO public.schedules (user_id, day_of_week, start_time, end_time) VALUES (%L, 1, ''06:00'', ''07:00'')', :'client_b'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_error('overlapping ranges on one day are refused',
+  $q$SELECT * FROM public.save_availability('[{"dow":1,"start":"06:00","end":"12:00"},{"dow":1,"start":"11:00","end":"14:00"}]'::jsonb, '[]'::jsonb, '{"lengths":[60],"buffer":15,"window":4,"cutoff":12}'::jsonb)$q$,
+  'overlapping_hours');
+SELECT pg_temp.expect_error('a range that ends before it starts is refused',
+  $q$SELECT * FROM public.save_availability('[{"dow":1,"start":"12:00","end":"06:00"}]'::jsonb, '[]'::jsonb, '{"lengths":[60],"buffer":15,"window":4,"cutoff":12}'::jsonb)$q$,
+  'bad_range');
+SELECT pg_temp.expect_raises('a 30-day booking window is refused by the CHECK',
+  format('SELECT * FROM public.save_availability(%L::jsonb, ''[]''::jsonb, ''{"lengths":[60],"buffer":15,"window":30,"cutoff":12}''::jsonb)', :'hours_json'));
+SELECT count(*) FROM public.save_availability(:'hours_json'::jsonb, '[]'::jsonb, :'rules_json'::jsonb);
+SELECT pg_temp.expect('the PT published 14 weekly ranges', 14,
+  format('SELECT count(*) FROM public.schedules WHERE user_id = %L', :'pt_a'));
+SELECT pg_temp.expect('the PT reads two windows on day D', 2,
+  format('SELECT count(*) FROM public.pt_day_windows(%L::date, %L::date)', :'d', :'d'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect('a client cannot read raw hours', 0,
+  format('SELECT count(*) FROM public.schedules WHERE user_id = %L', :'pt_a'));
+SELECT pg_temp.expect('a client reads their PT''s policy through the RPC', 12,
+  format('SELECT cutoff_hours::bigint FROM public.booking_policy(%L::uuid)', :'pt_a'));
+SELECT pg_temp.expect_raises('a client cannot read the PT''s day windows',
+  format('SELECT count(*) FROM public.pt_day_windows(%L::date, %L::date)', :'d', :'d'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT reads no hours', 0,
+  format('SELECT count(*) FROM public.schedules WHERE user_id = %L', :'pt_a'));
+SELECT pg_temp.expect_raises('another PT cannot read pt_a''s policy',
+  format('SELECT * FROM public.booking_policy(%L::uuid)', :'pt_a'));
+SELECT pg_temp.expect_raises('another PT cannot list pt_a''s open slots',
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint)', :'pt_a', :'d', :'d'));
+RESET ROLE;
+
+-- ── Open slots: packing and buffer (spec D3) ────────────────────────────────
+-- 06:00-12:00 at 60 + 15: 06:00 07:15 08:30 09:45 11:00. 15:00-20:00: 15:00 16:15 17:30 18:45.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect('nine packed 60-minute slots on day D', 9,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint)', :'pt_a', :'d', :'d'));
+SELECT pg_temp.expect('07:15 is a slot (06:00 + 60 + 15 buffer)', 1,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'d', :'d', :'t0715'));
+SELECT pg_temp.expect('07:00 is not a slot', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'d', :'d', :'t0700'));
+SELECT pg_temp.expect_error('a length the PT does not offer is refused',
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 30::smallint)', :'pt_a', :'d', :'d'),
+  'length_not_offered');
+RESET ROLE;
+
+-- ── Client booking ──────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT count(*) FROM public.create_booking(:'bk1'::uuid, :'cb_row'::uuid, :'t0715'::timestamptz, 60::smallint);
+SELECT count(*) FROM public.create_booking(:'bk1'::uuid, :'cb_row'::uuid, :'t0715'::timestamptz, 60::smallint);
+SELECT pg_temp.expect('a replayed create is one booking, not two (Review Focus 1)', 1,
+  format('SELECT count(*) FROM public.bookings WHERE client_id = %L', :'cb_row'));
+SELECT pg_temp.expect('the client''s booking is scheduled, 60 min, created by them', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND status = ''scheduled'' AND length_min = 60
+            AND created_by_user_id = %L AND ends_at = starts_at + interval ''60 minutes''', :'bk1', :'client_b'));
+SELECT pg_temp.expect('a booked slot leaves the list', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'d', :'d', :'t0715'));
+SELECT pg_temp.expect('06:00 still fits before it (ends 07:00, buffer to 07:15)', 1,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'d', :'d', :'t0600'));
+SELECT pg_temp.expect('the next slot starts after its buffer, at 08:30', 1,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'d', :'d', :'t0830'));
+SELECT pg_temp.expect_error('a client cannot take a time inside another booking''s buffer',
+  format('SELECT count(*) FROM public.create_booking(gen_random_uuid(), %L::uuid, %L::timestamptz, 60::smallint)', :'cb_row', :'t0730'),
+  'slot_taken');
+SELECT pg_temp.expect_error('a client cannot book outside published hours',
+  format('SELECT count(*) FROM public.create_booking(gen_random_uuid(), %L::uuid, %L::timestamptz, 60::smallint)', :'cb_row', :'t1300'),
+  'outside_hours');
+SELECT pg_temp.expect_error('a client cannot book beyond the window',
+  format('SELECT count(*) FROM public.create_booking(gen_random_uuid(), %L::uuid, %L::timestamptz, 60::smallint)',
+         :'cb_row', (:'t0715'::timestamptz + interval '40 days')),
+  'outside_window');
+SELECT pg_temp.expect_error('nobody books in the past',
+  format('SELECT count(*) FROM public.create_booking(gen_random_uuid(), %L::uuid, NOW() - interval ''1 hour'', 60::smallint)', :'cb_row'),
+  'in_past');
+SELECT pg_temp.expect_error('a client cannot create a series',
+  format('SELECT count(*) FROM public.create_booking(gen_random_uuid(), %L::uuid, %L::timestamptz, 60::smallint, 1::smallint, 4::smallint)', :'cb_row', :'t0600'),
+  'not authorized');
+SELECT pg_temp.expect_rls_block('a client cannot INSERT a booking directly',
+  format('INSERT INTO public.bookings (pt_user_id, client_id, starts_at, ends_at) VALUES (%L, %L, %L, %L)',
+         :'pt_a', :'cb_row', :'t0600', :'t0700'));
+RESET ROLE;
+
+-- Visibility.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('another client of the same PT cannot see the booking', 0,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L', :'bk1'));
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT cannot see the booking', 0,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L', :'bk1'));
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('an admin sees the booking', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L', :'bk1'));
+RESET ROLE;
+
+-- ── PT booking, overlap, self ───────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT sees the client''s booking', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L', :'bk1'));
+SELECT pg_temp.expect_error('the exclusion constraint refuses an overlapping PT booking (spec D7)',
+  format('SELECT count(*) FROM public.create_booking(%L::uuid, %L::uuid, %L::timestamptz, 60::smallint)', :'bk2', :'client_row', :'t0730'),
+  'slot_taken');
+SELECT count(*) FROM public.create_booking(:'bk3'::uuid, :'self_row'::uuid, :'t1300'::timestamptz, 60::smallint);
+SELECT pg_temp.expect('a PT may book their own training outside published hours', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND client_id = %L', :'bk3', :'self_row'));
+RESET ROLE;
+
+-- ── Series and DST (spec D5, D6) ────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('a weekly x4 preview lists four occurrences, none in conflict', 4,
+  format('SELECT count(*) FROM public.preview_series(%L::timestamptz, 60::smallint, 1::smallint, 4::smallint, NULL) WHERE NOT conflict', :'t0945'));
+SELECT count(*) FROM public.create_booking(:'bks'::uuid, :'client_row'::uuid, :'t0945'::timestamptz, 60::smallint, 1::smallint, 4::smallint);
+SELECT pg_temp.expect('the series is four rows, children pointing at the first', 3,
+  format('SELECT count(*) FROM public.bookings WHERE parent_booking_id = %L', :'bks'));
+SELECT pg_temp.expect('every row of the series carries its rule', 4,
+  format('SELECT count(*) FROM public.bookings WHERE (id = %L OR parent_booking_id = %L) AND recurrence_rule = ''FREQ=WEEKLY;INTERVAL=1;COUNT=4''', :'bks', :'bks'));
+SELECT pg_temp.expect('the preview flags the collision with the series', 2,
+  format('SELECT count(*) FROM public.preview_series(%L::timestamptz, 60::smallint, 1::smallint, 2::smallint, NULL) WHERE conflict', :'t0945'));
+SELECT pg_temp.expect_error('a colliding series is refused whole (Review Focus 3)',
+  format('SELECT count(*) FROM public.create_booking(%L::uuid, %L::uuid, %L::timestamptz, 60::smallint, 1::smallint, 2::smallint)', :'bks2', :'self_row', :'t0945'),
+  'slot_taken');
+SELECT pg_temp.expect('nothing of the refused series was inserted', 0,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L OR parent_booking_id = %L', :'bks2', :'bks2'));
+SELECT pg_temp.expect_error('27 occurrences is too long',
+  format('SELECT count(*) FROM public.preview_series(%L::timestamptz, 60::smallint, 1::smallint, 27::smallint, NULL)', :'t0945'),
+  'series_too_long');
+SELECT pg_temp.expect_error('a series needs a count or an end date, not both',
+  format('SELECT count(*) FROM public.preview_series(%L::timestamptz, 60::smallint, 1::smallint, 4::smallint, %L::date)', :'t0945', :'d'),
+  'bad_repeat');
+
+-- Beirut clocks go back on Sun 2027-10-31. A Thursday 10:30 series stays 10:30.
+SELECT pg_temp.expect('both occurrences across the change are 10:30 local', 2,
+  $q$SELECT count(*) FROM public.preview_series(('2027-10-28 10:30'::timestamp AT TIME ZONE 'Asia/Beirut'), 60::smallint, 1::smallint, 2::smallint, NULL)
+      WHERE to_char(occ_start AT TIME ZONE 'Asia/Beirut', 'HH24:MI') = '10:30'$q$);
+SELECT pg_temp.expect('only the occurrence after the change is flagged, and its UTC moved an hour', 1,
+  $q$SELECT count(*) FROM public.preview_series(('2027-10-28 10:30'::timestamp AT TIME ZONE 'Asia/Beirut'), 60::smallint, 1::smallint, 2::smallint, NULL)
+      WHERE after_offset_change AND n = 2 AND occ_start = '2027-11-04 08:30+00'::timestamptz$q$);
+SELECT count(*) FROM public.create_booking(:'bkd'::uuid, :'client_row'::uuid, ('2027-10-28 10:30'::timestamp AT TIME ZONE 'Asia/Beirut'), 60::smallint, 1::smallint, 2::smallint);
+SELECT pg_temp.expect('a stored series across DST keeps 10:30 local on both rows', 2,
+  format('SELECT count(*) FROM public.bookings WHERE (id = %L OR parent_booking_id = %L)
+            AND to_char(starts_at AT TIME ZONE originating_timezone, ''HH24:MI'') = ''10:30''', :'bkd', :'bkd'));
+RESET ROLE;
+
+-- ── Availability changes flag bookings (spec §7) ────────────────────────────
+-- Day D off: bk1 (07:15), the series' first row (09:45) and bk3 (13:00) are all on D.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('a day off returns the three bookings left on it', 3,
+  format('SELECT count(*) FROM public.save_availability(%L::jsonb, %L::jsonb, %L::jsonb)',
+         :'hours_json', jsonb_build_array(jsonb_build_object('date', :'d', 'kind', 'off')), :'rules_json'));
+SELECT pg_temp.expect('the bookings stay put', 3,
+  format('SELECT count(*) FROM public.bookings WHERE status = ''scheduled'' AND id IN (%L, %L, %L)', :'bk1', :'bks', :'bk3'));
+SELECT pg_temp.expect('a day off has no open slots', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint)', :'pt_a', :'d', :'d'));
+SELECT count(*) FROM public.save_availability(:'hours_json'::jsonb,
+  jsonb_build_array(jsonb_build_object('date', :'d', 'kind', 'extra', 'ranges', '[{"start":"21:00","end":"22:00"}]'::jsonb)), :'rules_json'::jsonb);
+SELECT pg_temp.expect('an extra range adds a window to the weekly two', 3,
+  format('SELECT count(*) FROM public.pt_day_windows(%L::date, %L::date)', :'d', :'d'));
+SELECT count(*) FROM public.save_availability(:'hours_json'::jsonb, '[]'::jsonb, :'rules_json'::jsonb);
+RESET ROLE;
+
+-- ── Reschedule (spec D10) ───────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT count(*) FROM public.reschedule_booking(:'bk1'::uuid, :'t0600'::timestamptz, 'one');
+SELECT pg_temp.expect('the client moved their booking into a slot it was itself blocking', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND starts_at = %L', :'bk1', :'t0600'));
+SELECT pg_temp.expect_error('a client cannot move a whole series',
+  format('SELECT count(*) FROM public.reschedule_booking(%L::uuid, %L::timestamptz, ''following'')', :'bk1', :'t0715'),
+  'not authorized');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT id AS bks_second FROM public.bookings WHERE parent_booking_id = :'bks' ORDER BY starts_at LIMIT 1 \gset
+SELECT count(*) FROM public.reschedule_booking(:'bks_second'::uuid,
+  ((SELECT starts_at FROM public.bookings WHERE id = :'bks_second') + interval '1 hour'), 'following');
+SELECT pg_temp.expect('"this and following" moved the last three to 10:45 local', 3,
+  format('SELECT count(*) FROM public.bookings WHERE parent_booking_id = %L
+            AND to_char(starts_at AT TIME ZONE originating_timezone, ''HH24:MI'') = ''10:45''', :'bks'));
+SELECT pg_temp.expect('and left the first at 09:45', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND starts_at = %L', :'bks', :'t0945'));
+RESET ROLE;
+
+-- ── Cancellation and the cutoff (spec D8) ───────────────────────────────────
+-- Inserted as the table owner: create_booking refuses nothing here, but these
+-- need times relative to NOW() that the hours fixture doesn't cover.
+INSERT INTO public.bookings (id, pt_user_id, client_id, status, starts_at, ends_at, length_min, created_by_user_id) VALUES
+  (:'bklate',  :'pt_a', :'cb_row', 'scheduled', NOW() + interval '2 hours',  NOW() + interval '3 hours',  60, :'pt_a'),
+  (:'bklate2', :'pt_a', :'cb_row', 'scheduled', NOW() + interval '4 hours',  NOW() + interval '5 hours',  60, :'pt_a'),
+  (:'bkedge',  :'pt_a', :'cb_row', 'scheduled', NOW() + interval '12 hours', NOW() + interval '13 hours', 60, :'pt_a'),
+  (:'bkpast',  :'pt_a', :'cb_row', 'scheduled', NOW() - interval '3 hours',  NOW() - interval '2 hours',  60, :'pt_a'),
+  (:'bknow',   :'pt_a', :'cb_row', 'scheduled', NOW() - interval '5 minutes', NOW() + interval '55 minutes', 60, :'pt_a');
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_error('a client cannot cancel inside the cutoff',
+  format('SELECT count(*) FROM public.cancel_booking(%L::uuid)', :'bklate'), 'inside_cutoff');
+SELECT pg_temp.expect_error('exactly at the cutoff is already too late (Review Focus 2)',
+  format('SELECT count(*) FROM public.cancel_booking(%L::uuid)', :'bkedge'), 'inside_cutoff');
+SELECT pg_temp.expect_error('nor reschedule inside it',
+  format('SELECT count(*) FROM public.reschedule_booking(%L::uuid, %L::timestamptz, ''one'')', :'bklate', :'t0715'), 'inside_cutoff');
+SELECT count(*) FROM public.cancel_booking(:'bk1'::uuid);
+SELECT count(*) FROM public.cancel_booking(:'bk1'::uuid);
+SELECT pg_temp.expect('an early client cancel is free and idempotent', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND status = ''cancelled'' AND cancelled_by = ''client''
+            AND NOT cancel_late AND NOT cancel_counted', :'bk1'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT count(*) FROM public.cancel_booking(:'bklate'::uuid, 'one', FALSE, 'Client is ill');
+SELECT pg_temp.expect('a waived late cancel is late, not counted', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND cancel_late AND NOT cancel_counted
+            AND cancelled_by = ''pt'' AND cancel_reason = ''Client is ill''', :'bklate'));
+SELECT count(*) FROM public.cancel_booking(:'bklate2'::uuid);
+SELECT pg_temp.expect('a late cancel counts by default', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND cancel_late AND cancel_counted', :'bklate2'));
+SELECT count(*) FROM public.cancel_booking(:'bks'::uuid, 'following');
+SELECT pg_temp.expect('cancelling a series from its first row cancels all four', 4,
+  format('SELECT count(*) FROM public.bookings WHERE (id = %L OR parent_booking_id = %L) AND status = ''cancelled''', :'bks', :'bks'));
+SELECT pg_temp.expect('only the row the PT cancelled could be late', 0,
+  format('SELECT count(*) FROM public.bookings WHERE parent_booking_id = %L AND cancel_late', :'bks'));
+RESET ROLE;
+
+-- ── No-show (spec D9) ───────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('a client cannot mark a no-show',
+  format('SELECT public.mark_no_show(%L::uuid)', :'bkpast'));
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_error('no-show is locked for 15 minutes after the start',
+  format('SELECT public.mark_no_show(%L::uuid)', :'bknow'), 'too_early_for_no_show');
+SELECT public.mark_no_show(:'bkpast'::uuid);
+SELECT pg_temp.expect('the PT marks a no-show', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND status = ''no_show'' AND no_show_marked_at IS NOT NULL', :'bkpast'));
+RESET ROLE;
+
+-- ── A session fulfils its booking (correction to D11) ───────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT (public.start_workout_session(:'cb_row'::uuid, NULL)).id AS bk_sess \gset
+SELECT pg_temp.expect('starting a session links the booking now in progress', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND booking_id = %L', :'bk_sess', :'bknow'));
+SELECT pg_temp.expect_error('a booking with a session cannot be marked no-show',
+  format('SELECT public.mark_no_show(%L::uuid)', :'bknow'), 'session_started');
+SELECT public.complete_workout_session(:'bk_sess'::uuid, NULL, NULL);
+SELECT pg_temp.expect('completing the session completes the booking', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND status = ''completed''', :'bknow'));
+RESET ROLE;
+-- audit_logs has RLS on and no policies: read it as the table owner.
+SELECT pg_temp.expect('booking_complete is audited', 1,
+  format('SELECT count(*) FROM public.audit_logs WHERE action = ''booking_complete'' AND entity_id = %L', :'bknow'));
+
+-- ── A paused client cannot book (Review Focus 5) ────────────────────────────
+UPDATE public.clients SET state = 'paused' WHERE id = :'cb_row';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('a paused client cannot list slots',
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint)', :'pt_a', :'d', :'d'));
+SELECT pg_temp.expect_error('a paused client cannot book',
+  format('SELECT count(*) FROM public.create_booking(gen_random_uuid(), %L::uuid, %L::timestamptz, 60::smallint)', :'cb_row', :'t0600'),
+  'client_not_bookable');
+SELECT pg_temp.expect('a paused client still reads their own bookings', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L', :'bk1'));
+RESET ROLE;
+UPDATE public.clients SET state = 'active' WHERE id = :'cb_row';
+
+-- =============================================================================
+-- 0021 — M5b check-in, rating, receipt, reminders.
+--
+-- The M5a block left two live bookings around NOW() (bknow completed, bkpast
+-- no-show); the exclusion constraint would refuse fixtures near them, and
+-- every assertion on them has run, so they are cancelled first.
+-- Timeline (pt_a): bkc6 −110…−50 min · bkc1 −40…+10 · bkc3 +15…+75 · bkc2 +5 h.
+-- bkc5 −3 h…−2 h is the offline replay.
+-- =============================================================================
+
+\set bkc1 '5b000000-0000-4000-8000-0000000000c1'
+\set bkc2 '5b000000-0000-4000-8000-0000000000c2'
+\set bkc3 '5b000000-0000-4000-8000-0000000000c3'
+\set bkc5 '5b000000-0000-4000-8000-0000000000c5'
+\set bkc6 '5b000000-0000-4000-8000-0000000000c6'
+\set bkc7 '5b000000-0000-4000-8000-0000000000c7'
+
+UPDATE public.bookings SET status = 'cancelled' WHERE id IN (:'bknow', :'bkpast');
+-- No session may be in progress for either client, or start_workout_session resumes it.
+UPDATE public.workout_sessions SET status = 'completed', completed_at = NOW()
+ WHERE client_id IN (:'cb_row', :'client_row') AND status = 'in_progress';
+
+INSERT INTO public.bookings (id, pt_user_id, client_id, status, starts_at, ends_at, length_min, created_by_user_id) VALUES
+  (:'bkc1', :'pt_a', :'cb_row',     'scheduled', NOW() - interval '40 minutes',  NOW() + interval '10 minutes', 60, :'pt_a'),
+  (:'bkc2', :'pt_a', :'cb_row',     'scheduled', NOW() + interval '5 hours',     NOW() + interval '6 hours',    60, :'pt_a'),
+  (:'bkc3', :'pt_a', :'client_row', 'scheduled', NOW() + interval '15 minutes',  NOW() + interval '75 minutes', 60, :'pt_a'),
+  (:'bkc5', :'pt_a', :'cb_row',     'scheduled', NOW() - interval '3 hours',     NOW() - interval '2 hours',    60, :'pt_a'),
+  (:'bkc6', :'pt_a', :'cb_row',     'scheduled', NOW() - interval '110 minutes', NOW() - interval '50 minutes', 60, :'pt_a');
+
+-- ── The code (D1): the vector code.test.ts also pins ────────────────────────
+SELECT pg_temp.expect('checkin_code matches the shared vector at 29000000', 1,
+  $q$SELECT (public.checkin_code(decode('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f', 'hex'),
+            '5b000000-0000-4000-8000-0000000000c1', 29000000) = '104142')::int::bigint$q$);
+SELECT pg_temp.expect('… at 29000001', 1,
+  $q$SELECT (public.checkin_code(decode('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f', 'hex'),
+            '5b000000-0000-4000-8000-0000000000c1', 29000001) = '861886')::int::bigint$q$);
+SELECT pg_temp.expect('… at 29000002', 1,
+  $q$SELECT (public.checkin_code(decode('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f', 'hex'),
+            '5b000000-0000-4000-8000-0000000000c1', 29000002) = '701179')::int::bigint$q$);
+
+-- ── Keys (D2) ───────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_rls_block('a client cannot read check-in secrets',
+  'SELECT count(*) FROM public.booking_checkin_keys');
+SELECT pg_temp.expect_raises('a client cannot mint keys',
+  'SELECT count(*) FROM public.checkin_keys(NOW() - interval ''1 hour'', NOW() + interval ''6 hours'')');
+SELECT pg_temp.expect_raises('a client cannot compute a code',
+  $q$SELECT public.checkin_code('\x00'::bytea, gen_random_uuid(), 1)$q$);
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_rls_block('nor can the PT read the table directly',
+  'SELECT count(*) FROM public.booking_checkin_keys');
+SELECT pg_temp.expect('the PT gets keys for their three live bookings in range', 3,
+  'SELECT count(*) FROM public.checkin_keys(NOW() - interval ''1 hour'', NOW() + interval ''6 hours'')');
+SELECT out_secret_hex AS key1 FROM public.checkin_keys(NOW() - interval '1 hour', NOW() + interval '6 hours') WHERE out_booking_id = :'bkc1' \gset
+SELECT pg_temp.expect('a second call returns the same secret', 1,
+  format('SELECT count(*) FROM public.checkin_keys(NOW() - interval ''1 hour'', NOW() + interval ''6 hours'') WHERE out_booking_id = %L AND out_secret_hex = %L',
+         :'bkc1', :'key1'));
+SELECT count(*) FROM public.checkin_keys(NOW() - interval '4 hours', NOW() - interval '1 hour');
+SELECT pg_temp.expect_error('a key range over 14 days is refused',
+  'SELECT count(*) FROM public.checkin_keys(NOW(), NOW() + interval ''15 days'')', 'range_too_long');
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT gets none of pt_a''s keys', 0,
+  format('SELECT count(*) FROM public.checkin_keys(NOW() - interval ''1 hour'', NOW() + interval ''6 hours'') WHERE out_booking_id = %L', :'bkc1'));
+RESET ROLE;
+
+-- Codes as the owner (the harness stands in for the PT's phone).
+SELECT floor(EXTRACT(EPOCH FROM NOW()) / 60)::bigint AS w \gset
+SELECT public.checkin_code(k.secret, k.booking_id, :'w'::bigint)     AS c1_now,
+       public.checkin_code(k.secret, k.booking_id, :'w'::bigint - 2) AS c1_old
+  FROM public.booking_checkin_keys k WHERE k.booking_id = :'bkc1' \gset
+SELECT public.checkin_code(k.secret, k.booking_id, :'w'::bigint) AS c2_now FROM public.booking_checkin_keys k WHERE k.booking_id = :'bkc2' \gset
+SELECT public.checkin_code(k.secret, k.booking_id, :'w'::bigint) AS c3_now FROM public.booking_checkin_keys k WHERE k.booking_id = :'bkc3' \gset
+SELECT floor(EXTRACT(EPOCH FROM NOW() - interval '150 minutes') / 60)::bigint AS w5 \gset
+SELECT public.checkin_code(k.secret, k.booking_id, :'w5'::bigint) AS c5 FROM public.booking_checkin_keys k WHERE k.booking_id = :'bkc5' \gset
+
+-- ── Client check-in (D4, D5) ────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_error('a code two minutes old has expired (Review Focus 1)',
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s)', :'bkc1', :'c1_old', :'w'::bigint - 2), 'code_expired');
+SELECT pg_temp.expect_error('wrong digits are refused',
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s)', :'bkc1',
+         CASE WHEN :'c1_now' = '000000' THEN '000001' ELSE '000000' END, :'w'), 'bad_code');
+SELECT pg_temp.expect_error('another client''s code names no one (Review Focus 4)',
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s)', :'bkc3', :'c3_now', :'w'), 'wrong_booking');
+SELECT pg_temp.expect_error('a booking five hours out is not open for check-in',
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s)', :'bkc2', :'c2_now', :'w'), 'outside_check_in');
+SELECT pg_temp.expect('a fresh QR checks the client in', 1,
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s) WHERE out_outcome = ''checked_in'' AND out_status = ''checked_in''',
+         :'bkc1', :'c1_now', :'w'));
+SELECT pg_temp.expect('scanning again at the door changes nothing (Review Focus 2)', 1,
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s) WHERE out_outcome = ''already''', :'bkc1', :'c1_now', :'w'));
+SELECT pg_temp.expect('typed digits find the same booking', 1,
+  format('SELECT count(*) FROM public.check_in(NULL, %L) WHERE out_booking_id = %L AND out_outcome = ''already''', :'c1_now', :'bkc1'));
+SELECT pg_temp.expect('one check-in row, by QR, by the client', 1,
+  format('SELECT count(*) FROM public.check_ins WHERE booking_id = %L AND check_in_method = ''qr_scan'' AND checked_in_by_user_id = %L AND checked_out_at IS NULL',
+         :'bkc1', :'client_b'));
+SELECT pg_temp.expect_rls_block('a client cannot write check_ins directly',
+  format('UPDATE public.check_ins SET checked_out_at = NOW() WHERE booking_id = %L', :'bkc1'));
+RESET ROLE;
+SELECT pg_temp.expect('check_in is audited', 1,
+  format('SELECT count(*) FROM public.audit_logs WHERE action = ''check_in'' AND entity_id = %L', :'bkc1'));
+
+-- The end-of-session scan, eleven minutes after check-in.
+UPDATE public.check_ins SET checked_in_at = NOW() - interval '11 minutes' WHERE booking_id = :'bkc1';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect('a scan ten minutes on checks the client out', 1,
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s) WHERE out_outcome = ''checked_out'' AND out_status = ''completed'' AND out_checked_out_at IS NOT NULL',
+         :'bkc1', :'c1_now', :'w'));
+SELECT pg_temp.expect('checking out completes the booking and numbers its receipt', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND status = ''completed'' AND receipt_no IS NOT NULL', :'bkc1'));
+SELECT pg_temp.expect('a later scan of a completed booking is a no-op', 1,
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s) WHERE out_outcome = ''already''', :'bkc1', :'c1_now', :'w'));
+SELECT pg_temp.expect_error('typed digits with nothing open say so',
+  format('SELECT count(*) FROM public.check_in(NULL, %L)', :'c1_now'), 'no_booking_now');
+SELECT pg_temp.expect_error('typed junk is a bad code',
+  'SELECT count(*) FROM public.check_in(NULL, ''12ab56'')', 'bad_code');
+-- Review Focus 3: scanned offline 2.5 h ago, replayed now, twice.
+SELECT pg_temp.expect('an offline scan verifies against its own time', 1,
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s, NOW() - interval ''150 minutes'') WHERE out_outcome = ''checked_in''',
+         :'bkc5', :'c5', :'w5'));
+SELECT pg_temp.expect('replaying it again is one check-in', 1,
+  format('SELECT count(*) FROM public.check_in(%L::uuid, %L, %s, NOW() - interval ''150 minutes'') WHERE out_outcome = ''already''',
+         :'bkc5', :'c5', :'w5'));
+SELECT pg_temp.expect('and it records the scan time, not the replay time', 1,
+  format('SELECT count(*) FROM public.check_ins WHERE booking_id = %L AND checked_in_at = NOW() - interval ''150 minutes''', :'bkc5'));
+SELECT pg_temp.expect_error('a client cannot check themselves out by RPC',
+  format('SELECT public.check_out(%L::uuid)', :'bkc5'), 'not authorized');
+RESET ROLE;
+SELECT pg_temp.expect('check_out is audited', 1,
+  format('SELECT count(*) FROM public.audit_logs WHERE action = ''check_out'' AND entity_id = %L', :'bkc1'));
+
+-- ── PT by hand, then a session checks out (D6) ─────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT checks a client in by hand, no code', 1,
+  format('SELECT count(*) FROM public.check_in(%L::uuid) WHERE out_outcome = ''checked_in''', :'bkc3'));
+SELECT pg_temp.expect('as a manual check-in', 1,
+  format('SELECT count(*) FROM public.check_ins WHERE booking_id = %L AND check_in_method = ''manual''', :'bkc3'));
+SELECT pg_temp.expect_error('a checked-in client cannot be marked a no-show',
+  format('SELECT public.mark_no_show(%L::uuid)', :'bkc3'), 'booking_closed');
+SELECT (public.start_workout_session(:'client_row'::uuid, NULL)).id AS ci_sess \gset
+SELECT pg_temp.expect('a session links the checked-in booking', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND booking_id = %L', :'ci_sess', :'bkc3'));
+SELECT public.complete_workout_session(:'ci_sess'::uuid, NULL, NULL);
+SELECT pg_temp.expect('completing it completes the booking', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND status = ''completed''', :'bkc3'));
+SELECT pg_temp.expect('and checks the client out', 1,
+  format('SELECT count(*) FROM public.check_ins WHERE booking_id = %L AND checked_out_at IS NOT NULL', :'bkc3'));
+SELECT pg_temp.expect_error('check_out on a booking nobody checked into',
+  format('SELECT public.check_out(%L::uuid)', :'bkc2'), 'not_checked_in');
+SELECT (public.check_out(:'bkc5'::uuid)).status AS bkc5_status \gset
+SELECT pg_temp.expect('the PT checks a client out with no session', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND status = ''completed''', :'bkc5'));
+-- Review Focus 5: a session with no scan at all.
+SELECT (public.start_workout_session(:'cb_row'::uuid, NULL, NULL, NOW() - interval '100 minutes')).id AS ns_sess \gset
+SELECT pg_temp.expect('a session started inside a booking links it, no scan needed', 1,
+  format('SELECT count(*) FROM public.workout_sessions WHERE id = %L AND booking_id = %L', :'ns_sess', :'bkc6'));
+SELECT public.complete_workout_session(:'ns_sess'::uuid, NULL, NULL, NOW() - interval '55 minutes');
+SELECT pg_temp.expect('that booking completes with a receipt number and no check-in row', 1,
+  format('SELECT count(*) FROM public.bookings b WHERE b.id = %L AND b.status = ''completed'' AND b.receipt_no IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM public.check_ins c WHERE c.booking_id = b.id)', :'bkc6'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect('the client reads their own check-in', 1,
+  format('SELECT count(*) FROM public.check_ins WHERE booking_id = %L', :'bkc3'));
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect('another client of the PT does not', 0,
+  format('SELECT count(*) FROM public.check_ins WHERE booking_id = %L', :'bkc3'));
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('nor does another PT', 0,
+  format('SELECT count(*) FROM public.check_ins WHERE booking_id = %L', :'bkc3'));
+RESET ROLE;
+
+-- ── Receipts (D9) ───────────────────────────────────────────────────────────
+SELECT receipt_no AS rn6 FROM public.bookings WHERE id = :'bkc6' \gset
+UPDATE public.bookings SET status = 'completed', updated_at = NOW() WHERE id = :'bkc6';
+SELECT pg_temp.expect('a receipt number is assigned once', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND receipt_no = %s', :'bkc6', :'rn6'));
+SELECT pg_temp.expect('three completed bookings, three distinct receipt numbers', 3,
+  format('SELECT count(DISTINCT receipt_no) FROM public.bookings WHERE id IN (%L, %L, %L)', :'bkc1', :'bkc3', :'bkc6'));
+
+-- ── Rating (D7) ─────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_error('the PT cannot rate their own session',
+  format('SELECT public.rate_booking(%L::uuid, 5::smallint)', :'bkc6'), 'not authorized');
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect_error('another client cannot rate it',
+  format('SELECT public.rate_booking(%L::uuid, 5::smallint)', :'bkc6'), 'not authorized');
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_error('an upcoming booking cannot be rated',
+  format('SELECT public.rate_booking(%L::uuid, 5::smallint)', :'bkc2'), 'not_ratable');
+SELECT pg_temp.expect_error('six is not a rating',
+  format('SELECT public.rate_booking(%L::uuid, 6::smallint)', :'bkc6'), 'bad_rating');
+SELECT public.rate_booking(:'bkc6'::uuid, 5::smallint);
+SELECT public.rate_booking(:'bkc6'::uuid, 4::smallint, '  Great pacing  ');
+SELECT public.rate_booking(:'bkc6'::uuid, 4::smallint);
+SELECT pg_temp.expect('the client rates, then adds a comment that a bare re-rate keeps', 1,
+  format('SELECT count(*) FROM public.bookings WHERE id = %L AND rating = 4 AND rating_comment = ''Great pacing'' AND rated_at IS NOT NULL', :'bkc6'));
+SELECT pg_temp.expect_rls_block('a client cannot write a rating directly',
+  format('UPDATE public.bookings SET rating = 1 WHERE id = %L', :'bkc6'));
+RESET ROLE;
+
+-- ── Amount (D8) ─────────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT count(*) FROM public.save_availability(:'hours_json'::jsonb, '[]'::jsonb,
+  '{"lengths":[45,60,90],"buffer":15,"window":4,"cutoff":12,"price":4500}'::jsonb);
+SELECT pg_temp.expect('the PT''s default price is saved', 4500,
+  format('SELECT price_cents::bigint FROM public.booking_rules WHERE pt_user_id = %L', :'pt_a'));
+SELECT count(*) FROM public.save_availability(:'hours_json'::jsonb, '[]'::jsonb, :'rules_json'::jsonb);
+SELECT pg_temp.expect('a save without "price" keeps it', 4500,
+  format('SELECT price_cents::bigint FROM public.booking_rules WHERE pt_user_id = %L', :'pt_a'));
+SELECT pg_temp.expect('booking_policy still works on the new row shape', 12,
+  format('SELECT cutoff_hours::bigint FROM public.booking_policy(%L::uuid)', :'pt_a'));
+SELECT count(*) FROM public.create_booking(:'bkc7'::uuid, :'client_row'::uuid, (:'t0700'::timestamptz + interval '1 day'), 60::smallint);
+SELECT pg_temp.expect('a new booking takes the default price', 4500,
+  format('SELECT amount_cents::bigint FROM public.bookings WHERE id = %L', :'bkc7'));
+SELECT count(*) FROM public.create_booking(gen_random_uuid(), :'self_row'::uuid, (:'t0700'::timestamptz + interval '2 days'), 60::smallint);
+SELECT pg_temp.expect('the PT''s own training never does', 0,
+  format('SELECT count(*) FROM public.bookings WHERE client_id = %L AND amount_cents IS NOT NULL', :'self_row'));
+SELECT (public.set_booking_amount(:'bkc7'::uuid, 5000)).amount_cents AS amt \gset
+SELECT pg_temp.expect('the PT changes one booking''s amount', 5000,
+  format('SELECT amount_cents::bigint FROM public.bookings WHERE id = %L', :'bkc7'));
+SELECT pg_temp.expect_error('not on a cancelled booking',
+  format('SELECT public.set_booking_amount(%L::uuid, 100)', :'bklate'), 'booking_closed');
+SELECT pg_temp.expect_error('not a negative amount',
+  format('SELECT public.set_booking_amount(%L::uuid, -1)', :'bkc7'), 'bad_amount');
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_a');
+SELECT pg_temp.expect_error('a client cannot set an amount',
+  format('SELECT public.set_booking_amount(%L::uuid, 1)', :'bkc7'), 'not authorized');
+SELECT pg_temp.expect('but reads it on their booking', 5000,
+  format('SELECT amount_cents::bigint FROM public.bookings WHERE id = %L', :'bkc7'));
+RESET ROLE;
+
+-- ── Reminders (D13) ─────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_error('a client cannot save reminder settings',
+  'SELECT public.save_reminder_settings(''{"client_2h":true}''::jsonb)', 'not authorized');
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.save_reminder_settings('{"client_2h":true}'::jsonb);
+SELECT public.save_reminder_settings('{"pt_late":false}'::jsonb);
+SELECT pg_temp.expect('a patch keeps the other toggles', 1,
+  format('SELECT count(*) FROM public.reminder_settings WHERE pt_user_id = %L AND client_2h AND NOT pt_late AND client_24h AND client_change AND pt_agenda AND pt_book', :'pt_a'));
+SELECT pg_temp.expect_rls_block('nor can the PT write the table directly',
+  format('UPDATE public.reminder_settings SET client_24h = FALSE WHERE pt_user_id = %L', :'pt_a'));
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT reads none of them', 0,
+  format('SELECT count(*) FROM public.reminder_settings WHERE pt_user_id = %L', :'pt_a'));
+RESET ROLE;
+
+-- =============================================================================
+-- 0022 — M5c Google Calendar: connection, busy blocks, sync queue, overlaps.
+--
+-- Day E = CURRENT_DATE + 12 (no M5a/M5b fixture lands on it or the two days
+-- after). pt_a's hours are 06:00-12:00 and 15:00-20:00 every day, 60 + 15.
+-- =============================================================================
+
+\set bkq '5c000000-0000-4000-8000-0000000000a1'
+\set bko '5c000000-0000-4000-8000-0000000000a2'
+\set bkm '5c000000-0000-4000-8000-0000000000a3'
+
+SELECT (CURRENT_DATE + 12) AS e, (CURRENT_DATE + 13) AS e1 \gset
+SELECT ((:'e'::date + time '07:15') AT TIME ZONE 'Asia/Beirut') AS e0715,
+       ((:'e'::date + time '15:00') AT TIME ZONE 'Asia/Beirut') AS e1500,
+       ((:'e'::date + time '16:15') AT TIME ZONE 'Asia/Beirut') AS e1615,
+       ((:'e'::date + time '17:00') AT TIME ZONE 'Asia/Beirut') AS e1700,
+       ((:'e'::date + 2 + time '07:00') AT TIME ZONE 'Asia/Beirut') AS f0700,
+       ((:'e'::date + 2 + time '07:30') AT TIME ZONE 'Asia/Beirut') AS f0730,
+       ((:'e'::date + 2 + time '08:00') AT TIME ZONE 'Asia/Beirut') AS f0800,
+       ((:'e'::date + 2 + time '08:30') AT TIME ZONE 'Asia/Beirut') AS f0830 \gset
+
+-- ── Nothing Google is readable or callable by a client (D4, D19) ───────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_rls_block('a client cannot read Google tokens',
+  'SELECT count(*) FROM public.google_calendar_tokens');
+SELECT pg_temp.expect_rls_block('a client cannot read OAuth states',
+  'SELECT count(*) FROM public.google_oauth_states');
+SELECT pg_temp.expect_raises('a client cannot replace busy blocks',
+  format('SELECT public.google_replace_busy(%L::uuid, NOW(), NOW() + interval ''1 day'', ''[]''::jsonb)', :'pt_a'));
+SELECT pg_temp.expect_raises('a client cannot enqueue a sync',
+  format('SELECT public.google_enqueue_all(%L::uuid)', :'pt_a'));
+SELECT pg_temp.expect_raises('a client cannot read the sync batch',
+  format('SELECT count(*) FROM public.google_queue_batch(%L::uuid, 50)', :'pt_a'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect_rls_block('nor can the PT read their own tokens',
+  'SELECT count(*) FROM public.google_calendar_tokens');
+SELECT pg_temp.expect_raises('nor replace their own busy blocks',
+  format('SELECT public.google_replace_busy(%L::uuid, NOW(), NOW() + interval ''1 day'', ''[]''::jsonb)', :'pt_a'));
+SELECT pg_temp.expect_error('ticking calendars needs a connection',
+  'SELECT public.set_busy_calendars(''{primary@x}'')', 'not_connected');
+-- No link yet: a booking queues nothing (D7).
+SELECT count(*) FROM public.create_booking(:'bkq'::uuid, :'cb_row'::uuid, :'e0715'::timestamptz, 60::smallint);
+SELECT pg_temp.expect('without a connection a booking queues nothing', 0,
+  format('SELECT count(*) FROM public.google_sync_queue WHERE booking_id = %L', :'bkq'));
+SELECT count(*) FROM public.cancel_booking(:'bkq'::uuid);
+RESET ROLE;
+
+-- The callback writes the link as the service role.
+SET LOCAL ROLE service_role;
+INSERT INTO public.google_calendar_links (pt_user_id, google_email, status, forge_calendar_id, calendars, busy_calendar_ids)
+VALUES (:'pt_a', 'pa@x', 'connected', 'forgecal@group',
+        '[{"id":"pa@x","summary":"Personal","primary":true},{"id":"team@x","summary":"Team","primary":false}]',
+        '{pa@x}');
+INSERT INTO public.google_calendar_tokens (pt_user_id, refresh_token) VALUES (:'pt_a', 'v1.sealed');
+RESET ROLE;
+
+-- ── Calendars to check (D10) ────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT reads their connection', 1,
+  format('SELECT count(*) FROM public.google_calendar_links WHERE pt_user_id = %L', :'pt_a'));
+SELECT pg_temp.expect('ticking a second calendar keeps both', 2,
+  'SELECT cardinality(busy_calendar_ids)::bigint FROM public.set_busy_calendars(''{pa@x,team@x}'')');
+SELECT pg_temp.expect_error('a calendar Google did not list is refused',
+  'SELECT public.set_busy_calendars(''{nope@x}'')', 'unknown_calendar');
+SELECT pg_temp.expect_rls_block('the PT cannot write the connection directly',
+  format('UPDATE public.google_calendar_links SET status = ''connected'' WHERE pt_user_id = %L', :'pt_a'));
+-- With a link, a booking write queues it once however often it changes.
+SELECT count(*) FROM public.create_booking(:'bkm'::uuid, :'cb_row'::uuid, :'e0715'::timestamptz + interval '75 minutes', 60::smallint);
+SELECT pg_temp.expect('a new booking is queued', 1,
+  format('SELECT count(*) FROM public.google_sync_queue WHERE booking_id = %L', :'bkm'));
+SELECT count(*) FROM public.cancel_booking(:'bkm'::uuid);
+SELECT pg_temp.expect('a cancel re-queues the same row', 1,
+  format('SELECT count(*) FROM public.google_sync_queue WHERE booking_id = %L', :'bkm'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('a client cannot tick calendars',
+  'SELECT public.set_busy_calendars(''{pa@x}'')');
+SELECT pg_temp.expect('a client reads no connection', 0,
+  'SELECT count(*) FROM public.google_calendar_links');
+SELECT pg_temp.expect('a client reads no queue', 0,
+  'SELECT count(*) FROM public.google_sync_queue');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT reads no connection', 0,
+  format('SELECT count(*) FROM public.google_calendar_links WHERE pt_user_id = %L', :'pt_a'));
+RESET ROLE;
+
+-- ── Busy blocks (D9) ────────────────────────────────────────────────────────
+SET LOCAL ROLE service_role;
+SELECT pg_temp.expect('two blocks stored, one timed and one all-day', 2,
+  format($q$SELECT public.google_replace_busy(%L::uuid, %L::date::timestamptz, (%L::date + 3)::timestamptz,
+    jsonb_build_array(
+      jsonb_build_object('calendar_id','pa@x','event_id','e1','title','Dentist','start',%L::timestamptz,'end',%L::timestamptz),
+      jsonb_build_object('calendar_id','team@x','event_id','e2','title','Holiday','start_date',(%L::date + 1)::text,'end_date',(%L::date + 2)::text)))::bigint$q$,
+    :'pt_a', :'e', :'e', :'e1615', :'e1700', :'e', :'e'));
+SELECT id AS busy1 FROM public.google_busy_blocks WHERE pt_user_id = :'pt_a' AND event_id = 'e1' \gset
+SELECT pg_temp.expect('an all-day block starts at local midnight in the PT''s zone', 1,
+  format($q$SELECT count(*) FROM public.google_busy_blocks WHERE event_id = 'e2'
+    AND starts_at = ((%L::date + 1)::timestamp AT TIME ZONE 'Asia/Beirut')
+    AND ends_at   = ((%L::date + 2)::timestamp AT TIME ZONE 'Asia/Beirut')$q$, :'e', :'e'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect('a client reads no busy blocks', 0,
+  'SELECT count(*) FROM public.google_busy_blocks');
+SELECT pg_temp.expect('16:15 is not offered over a Google event', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'e', :'e', :'e1615'));
+SELECT pg_temp.expect('17:00, where the event ends, is', 1,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'e', :'e', :'e1700'));
+SELECT pg_temp.expect('15:00, before it, still is', 1,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'e', :'e', :'e1500'));
+SELECT pg_temp.expect('an all-day event closes the whole day', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint)', :'pt_a', :'e1', :'e1'));
+SELECT pg_temp.expect_error('a client cannot book over a Google event either',
+  format('SELECT count(*) FROM public.create_booking(gen_random_uuid(), %L::uuid, %L::timestamptz, 60::smallint)', :'cb_row', :'e1615'),
+  'outside_hours');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT reads their busy blocks with titles', 1,
+  format('SELECT count(*) FROM public.google_busy_blocks WHERE pt_user_id = %L AND title = ''Dentist''', :'pt_a'));
+SELECT pg_temp.expect('the PT''s own form is not offered 16:15 either', 0,
+  format('SELECT count(*) FROM public.open_slots(%L::uuid, %L::date, %L::date, 60::smallint) WHERE slot_start = %L',
+         :'pt_a', :'e', :'e', :'e1615'));
+RESET ROLE;
+
+-- An overlap: a booking made before the Google event appeared.
+INSERT INTO public.bookings (id, pt_user_id, client_id, status, starts_at, ends_at, length_min, created_by_user_id)
+VALUES (:'bko', :'pt_a', :'cb_row', 'scheduled', :'f0700', :'f0800', 60, :'pt_a');
+
+SET LOCAL ROLE service_role;
+SELECT pg_temp.expect('a refresh keeps the timed block and adds the new one', 2,
+  format($q$SELECT public.google_replace_busy(%L::uuid, %L::date::timestamptz, (%L::date + 3)::timestamptz,
+    jsonb_build_array(
+      jsonb_build_object('calendar_id','pa@x','event_id','e1','title','Dentist','start',%L::timestamptz,'end',%L::timestamptz),
+      jsonb_build_object('calendar_id','pa@x','event_id','e3','title','Physio','start',%L::timestamptz,'end',%L::timestamptz)))::bigint$q$,
+    :'pt_a', :'e', :'e', :'e1615', :'e1700', :'f0730', :'f0830'));
+SELECT pg_temp.expect('the refreshed block keeps its id', 1,
+  format('SELECT count(*) FROM public.google_busy_blocks WHERE id = %L', :'busy1'));
+SELECT pg_temp.expect('the dropped all-day block is gone', 0,
+  'SELECT count(*) FROM public.google_busy_blocks WHERE event_id = ''e2''');
+SELECT id AS busy3 FROM public.google_busy_blocks WHERE pt_user_id = :'pt_a' AND event_id = 'e3' \gset
+RESET ROLE;
+
+-- ── Overlaps (D12) ──────────────────────────────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT pg_temp.expect('the PT sees one overlap', 1,
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')', :'e0715', :'e0715'));
+SELECT pg_temp.expect('it is 07:30-08:00 on the booking', 1,
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')
+           WHERE out_booking_id = %L AND out_title = ''Physio'' AND out_overlap_start = %L AND out_overlap_end = %L',
+         :'e0715', :'e0715', :'bko', :'f0730', :'f0800'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_b');
+SELECT pg_temp.expect('another PT sees none of it', 0,
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')', :'e0715', :'e0715'));
+SELECT pg_temp.expect_error('nor can they keep it',
+  format('SELECT public.keep_overlap(%L::uuid, %L::uuid)', :'bko', :'busy3'), 'not authorized');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'client_b');
+SELECT pg_temp.expect_raises('a client cannot list overlaps',
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')', :'e0715', :'e0715'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'pt_a');
+SELECT public.keep_overlap(:'bko'::uuid, :'busy3'::uuid);
+SELECT public.keep_overlap(:'bko'::uuid, :'busy3'::uuid);
+SELECT pg_temp.expect('Keep both clears it, twice is fine', 0,
+  format('SELECT count(*) FROM public.calendar_overlaps(%L::timestamptz, %L::timestamptz + interval ''3 days'')', :'e0715', :'e0715'));
+RESET ROLE;
+
+-- ── The sync worker's reads (D6, D7) ────────────────────────────────────────
+INSERT INTO public.bookings (id, pt_user_id, client_id, status, starts_at, ends_at, length_min, created_by_user_id)
+SELECT gen_random_uuid(), :'pt_a', :'self_row', 'scheduled', :'f0700'::timestamptz + interval '1 day', :'f0800'::timestamptz + interval '1 day', 60, :'pt_a';
+
+SET LOCAL ROLE service_role;
+DELETE FROM public.google_sync_queue;
+SELECT public.google_enqueue_all(:'pt_a') AS enq \gset
+SELECT pg_temp.expect('enqueue_all queues every pt_a booking in the horizon', :'enq',
+  format($q$SELECT count(*) FROM public.bookings WHERE pt_user_id = %L
+    AND starts_at >= NOW() - interval '1 day' AND starts_at < NOW() + interval '12 weeks'$q$, :'pt_a'));
+SELECT pg_temp.expect('the batch titles a client by first name', 1,
+  format('SELECT count(*) FROM public.google_queue_batch(%L::uuid, 500) WHERE out_booking_id = %L AND out_title = ''Forge · Client''', :'pt_a', :'bko'));
+SELECT pg_temp.expect('and the PT''s own training as Me', 1,
+  format('SELECT count(*) FROM public.google_queue_batch(%L::uuid, 500) WHERE out_starts_at = %L::timestamptz + interval ''1 day'' AND out_title = ''Forge · Me''', :'pt_a', :'f0700'));
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(:'admin_a');
+SELECT pg_temp.expect('an admin reads the connection', 1,
+  format('SELECT count(*) FROM public.google_calendar_links WHERE pt_user_id = %L', :'pt_a'));
+SELECT pg_temp.expect_rls_block('but never the tokens',
+  'SELECT count(*) FROM public.google_calendar_tokens');
+SELECT pg_temp.expect('nor the busy titles', 0,
+  format('SELECT count(*) FROM public.google_busy_blocks WHERE pt_user_id = %L', :'pt_a'));
+RESET ROLE;
+
 ROLLBACK;

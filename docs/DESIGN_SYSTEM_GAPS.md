@@ -139,6 +139,30 @@ backdrop and that the fill is visible as a shape at all.
 - **Session status pill** — the right-hand pill in the session header (prototype `session`): OFFLINE with no signal, LIVE while the mirror channel is joined. `apps/mobile/src/ui/LiveBadge.tsx`. (M4b)
 - **Sync queue** — prototype `sync`: status banner with Retry now, the local-first guarantee, one row per session with Queued / Sending / Didn't sync, Retry / Discard on a refused one. Local to `apps/mobile/src/app/(app)/sync-queue.tsx`. (M4b)
 
+## Built (M5a)
+
+- **Bottom sheet** — the design's sheets (late cancel, no-show, edit scope, range editor) on RN `Modal`; the scrim dismisses. `apps/mobile/src/ui/BottomSheet.tsx`. (M5a)
+- **Calendar block** — one booking on a schedule: leading state bar, person, state word (never colour alone), time · what, optional note; ME is hatched. `apps/mobile/src/ui/CalendarBlock.tsx`. (M5a)
+- **Open gap row** — a dashed open stretch of published hours that starts a booking at its start. `apps/mobile/src/ui/OpenGapRow.tsx`. (M5a)
+- **Month grid** — Monday-first month with up to three state dots per day; the schedule's Month view and the Exceptions tab. `apps/mobile/src/ui/MonthGrid.tsx`. (M5a)
+- **Time range pill** — "06:00 – 12:00" as a tappable pill; a break is the same shape, muted and inert. `apps/mobile/src/ui/TimeRangePill.tsx`. (M5a)
+- **Day strip** — seven equal cells with open-slot counts, so an empty day shows before tapping. `apps/mobile/src/ui/DayStrip.tsx`. (M5a)
+- **Slot grid** — four-up open times; the nearest ones are outlined after "slot just taken". `apps/mobile/src/ui/SlotGrid.tsx`. (M5a)
+- Booking states use existing colour roles (`lib/schedule/stateStyle.ts`) — no new palette entries; `Toggle` already existed, so the design's 'toggle not in DS' note was stale.
+
+## Built (M5b)
+
+- **QR code** (`lib/checkin/QrCode.tsx`): one SVG path over a white square, ECC M, 4-module quiet zone; always dark-on-white in every theme.
+- **Check-in step strip**: four bars with labels — done green, current ember (green when the last one is current), upcoming hairline. Inline in the QR screen; extract if a second screen needs it.
+- **Rating targets**: five equal 56 px numbered buttons, accent fill when chosen, "Not great / Excellent" under the ends. Inline in the rate screen.
+- **Icon `qr`** added to `ui/Icon.tsx`.
+
+## Built (M5c)
+
+- **Overlap axis** (`schedule/overlaps.tsx`): one time axis with 30-minute ticks, the booking bar (ember soft, ember edge), the Google bar (hatched like ME, grey edge) and a dashed amber band over the overlap. Geometry is `overlapGeometry()` in `packages/shared/src/calendar` (vitest). The axis always reads left to right, like a clock.
+- **Calendar checklist row**: 22 px rounded checkbox, ember fill and check when on, 56 px row; `role=checkbox` with `aria-checked` (react-native-web ignores `accessibilityState`). Inline in Calendar sync.
+- **Calendar glyph**: 56 px tile with an ember top band and the date. Inline in Calendar sync.
+
 ## Outstanding
 
 - **Conflict resolution** — prototype `conflict` (two timestamped values, tap to pick, "Keep both as a note"). M4b has no field-level conflicts to resolve: sets are keyed by client ULID and a server refusal parks the write in the sync queue. The artboard waits until a write can genuinely collide. The `sync` artboard's "1 change needs your decision" row waits with it.
