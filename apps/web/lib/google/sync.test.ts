@@ -129,12 +129,36 @@ describe('syncPt', () => {
     expect(store.link).toMatchObject({ status: 'connected', errorAt: null });
   });
 
-  it('a 401 mid-sync is also a revocation', async () => {
+  it('a 401 mid-sync, still refused with a refreshed token, is also a revocation', async () => {
     const store = new MemoryStore(link(), freshTokens());
     store.queue = [queued(ID_A)];
-    const { f } = fakeFetch([on('PUT', '/events/', () => json(401, {})), ...happyGoogle()]);
+    const { f, calls } = fakeFetch([
+      on('POST', '/token', () => json(200, { access_token: 'access-2', expires_in: 3600 })),
+      on('PUT', '/events/', () => json(401, {})),
+      ...happyGoogle(),
+    ]);
     expect((await syncPt(deps(store, f), PT)).status).toBe('revoked');
+    expect(calls.filter((c) => c.url.includes('oauth2.googleapis.com/token'))).toHaveLength(1);
     expect(store.queue).toHaveLength(1);
+  });
+
+  it('a cached access token Google dropped early is refreshed and the sync retried', async () => {
+    const store = new MemoryStore(link(), freshTokens());
+    store.queue = [queued(ID_A)];
+    let seenToken = '';
+    const { f } = fakeFetch([
+      on('POST', '/token', () => json(200, { access_token: 'access-2', expires_in: 3600 })),
+      on('PUT', '/events/', () => (seenToken === 'access-1' ? json(401, {}) : json(200, {}))),
+      ...happyGoogle(),
+    ]);
+    const traced = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const auth = new Headers(init?.headers).get('Authorization');
+      if (auth) seenToken = auth.replace('Bearer ', '');
+      return f(input, init);
+    }) as typeof fetch;
+    expect((await syncPt(deps(store, traced), PT)).status).toBe('synced');
+    expect(store.queue).toHaveLength(0);
+    expect(store.link!.status).toBe('connected');
   });
 
   it('Google down: unreachable, nothing dequeued, no error state', async () => {

@@ -72,11 +72,16 @@ export type SyncOutcome = {
   error?: string;
 };
 
-async function accessTokenFor(deps: SyncDeps, pt: string, tokens: StoredTokens): Promise<string> {
-  const { now } = deps;
-  if (tokens.access && tokens.accessExpiresAt && Date.parse(tokens.accessExpiresAt) - now.getTime() > 60_000) {
+/** The stored access token while it has more than a minute left, else null. */
+function cachedAccess(deps: SyncDeps, tokens: StoredTokens): string | null {
+  if (tokens.access && tokens.accessExpiresAt && Date.parse(tokens.accessExpiresAt) - deps.now.getTime() > 60_000) {
     return open(tokens.access, deps.tokenKey);
   }
+  return null;
+}
+
+async function refreshedAccess(deps: SyncDeps, pt: string, tokens: StoredTokens): Promise<string> {
+  const { now } = deps;
   const fresh = await refreshAccess(
     deps.f,
     { clientId: deps.clientId, clientSecret: deps.clientSecret, refreshToken: open(tokens.refresh, deps.tokenKey) },
@@ -133,9 +138,12 @@ async function refreshBusy(deps: SyncDeps, api: CalendarApi, pt: string, link: L
   const blocks: BusyInput[] = [];
   for (const id of ids) blocks.push(...busyFromEvents(id, await api.listEvents(id, from, to)));
   await deps.store.replaceBusy(pt, from, to, blocks);
+  // The ticks are rewritten only when one actually went away: `link` was read
+  // at the start of this sync, and writing it back unconditionally would undo
+  // a tick the PT changed while it ran (set_busy_calendars).
   await deps.store.patchLink(pt, {
     calendars: calendars.filter((c) => c.id !== forgeCalendarId),
-    busyCalendarIds: ids,
+    ...(ids.length !== link.busyCalendarIds.length ? { busyCalendarIds: ids } : {}),
     busyRefreshedAt: deps.now.toISOString(),
   });
 }
@@ -148,12 +156,26 @@ export async function syncPt(deps: SyncDeps, pt: string, opts: { forceBusy?: boo
 
   let pushed = 0;
   let failed = 0;
-  try {
-    const api = calendarApi(deps.f, await accessTokenFor(deps, pt, tokens));
+  const run = async (accessToken: string) => {
+    const api = calendarApi(deps.f, accessToken);
     const calendarId = await ensureForgeCalendar(deps, api, pt, link);
-    ({ pushed, failed } = await pushQueue(deps, api, pt, calendarId));
+    const out = await pushQueue(deps, api, pt, calendarId);
+    pushed += out.pushed;
+    failed += out.failed;
     const stale = !link.busyRefreshedAt || now.getTime() - Date.parse(link.busyRefreshedAt) > BUSY_STALE_MS;
     if (opts.forceBusy || stale) await refreshBusy(deps, api, pt, link, calendarId);
+  };
+  try {
+    const cached = cachedAccess(deps, tokens);
+    try {
+      await run(cached ?? (await refreshedAccess(deps, pt, tokens)));
+    } catch (e) {
+      // Google can drop an access token before its expiry. Only the refresh
+      // token says whether the grant itself is gone, so a 401 on a cached
+      // token is retried once with a fresh one before sync is called stopped.
+      if (!(cached && e instanceof GoogleAuthRevoked)) throw e;
+      await run(await refreshedAccess(deps, pt, tokens));
+    }
     await store.patchLink(pt, { status: 'connected', errorAt: null, lastSyncedAt: now.toISOString() });
     return { status: 'synced', pushed, failed };
   } catch (e) {

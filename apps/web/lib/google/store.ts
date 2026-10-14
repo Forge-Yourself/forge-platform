@@ -69,12 +69,14 @@ export function googleStore(db: Service = createServiceClient()) {
     },
 
     async queueBatch(pt, limit) {
+      // queued_at, so a booking re-queued mid-sync isn't dequeued by this pass.
+      // Read BEFORE the batch: a re-queue landing between the two reads then
+      // leaves a newer queued_at than the one recorded here, so the row stays
+      // and is pushed again. Read after, it would be dequeued with the older
+      // payload already sent.
+      const at = check(await db.from('google_sync_queue').select('booking_id, queued_at').eq('pt_user_id', pt));
       const rows = check(await db.rpc('google_queue_batch', { p_pt: pt, p_limit: limit })) ?? [];
       if (rows.length === 0) return [];
-      // queued_at, so a booking re-queued mid-sync isn't dequeued by this pass.
-      const at = check(
-        await db.from('google_sync_queue').select('booking_id, queued_at').in('booking_id', rows.map((r) => r.out_booking_id)),
-      );
       const queuedAt = new Map((at ?? []).map((r) => [r.booking_id, r.queued_at]));
       return rows.map(
         (r): QueuedBooking => ({
@@ -114,6 +116,13 @@ export function googleStore(db: Service = createServiceClient()) {
       // Old, abandoned attempts go first; a state is useful for minutes.
       check(await db.from('google_oauth_states').delete().lt('created_at', new Date(Date.now() - STATE_TTL_MS).toISOString()));
       check(await db.from('google_oauth_states').insert({ state, pt_user_id: pt, return_to: returnTo, code_verifier: verifier }));
+    },
+
+    /** Reads a fresh state without using it up: the callback only needs where to send the browser. */
+    async peekState(state: string): Promise<{ pt: string; returnTo: string } | null> {
+      const row = check(await db.from('google_oauth_states').select('*').eq('state', state).maybeSingle());
+      if (!row || Date.now() - Date.parse(row.created_at) > STATE_TTL_MS) return null;
+      return { pt: row.pt_user_id, returnTo: row.return_to };
     },
 
     /** One use only: the row is deleted whether or not it's still fresh. */

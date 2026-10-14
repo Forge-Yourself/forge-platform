@@ -60,7 +60,7 @@ export async function fetchLink(ptUserId: string): Promise<Result<CalendarLink |
 
 /** Bookings waiting to reach Google: the "N bookings made since then" on Sync stopped. */
 export async function fetchQueueCount(ptUserId: string): Promise<number> {
-  const { count } = await supabase.from('google_sync_queue').select('booking_id', { count: 'exact', head: true }).eq('pt_user_id', ptUserId);
+  const { count } = await supabase.from('google_sync_queue').select('booking_id', { count: 'exact', head: true }).eq('pt_user_id', ptUserId).lt('attempts', 5);
   return count ?? 0;
 }
 
@@ -130,8 +130,38 @@ export async function connectGoogle(opts: { selectAccount?: boolean } = {}): Pro
   const result = await WebBrowser.openAuthSessionAsync(url, returnTo);
   if (result.type === 'cancel' || result.type === 'dismiss') return 'cancelled';
   if (result.type !== 'success' || !result.url) return 'error';
-  return parseGcalResult(result.url) ?? 'error';
+  return (await finishGoogle(result.url)) ?? 'error';
 }
+
+/**
+ * The callback never redeems Google's code: it hands `gcal_code` and
+ * `gcal_state` back here, and apps/web redeems them only under this PT's own
+ * bearer token, so a consent link forwarded to someone else connects nothing.
+ * Returns null when the URL carries no Google result at all.
+ */
+export async function finishGoogle(url: string): Promise<GcalResult | null> {
+  if (!/[?&]gcal=finish(?:[&#]|$)/.test(url)) return parseGcalResult(url);
+  const param = (name: string) => {
+    const m = new RegExp(`[?&]${name}=([^&#]*)`).exec(url);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+  };
+  const state = param('gcal_state');
+  // The auth session's result and a deep link into this screen can both carry
+  // the same state; it's single-use, so both callers share one redemption.
+  const inFlight = finishing.get(state);
+  if (inFlight) return inFlight;
+  const run = (async (): Promise<GcalResult> => {
+    const res = await post('/api/google/finish', { state, code: param('gcal_code') });
+    if (!res) return 'unreachable';
+    if (res.status === 503) return 'not_configured';
+    const { result } = (await res.json().catch(() => ({}))) as { result?: string };
+    return parseGcalResult(`?gcal=${result ?? ''}`) ?? 'error';
+  })();
+  finishing.set(state, run);
+  return run;
+}
+
+const finishing = new Map<string, Promise<GcalResult>>();
 
 export function parseGcalResult(url: string): GcalResult | null {
   const m = /[?&]gcal=([a-z_]+)/.exec(url);

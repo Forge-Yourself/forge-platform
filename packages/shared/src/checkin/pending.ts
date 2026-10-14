@@ -3,9 +3,10 @@ import type { KvStore, RpcResult } from '../offline/types';
 
 /**
  * A client's check-in scans and ratings made with no signal (M5b spec D10).
- * Both RPCs are idempotent per booking, so the queue keeps at most one entry
- * per kind + key and a newer one replaces an older one (a rating with a
- * comment supersedes the bare rating queued a moment before).
+ * The queue keeps at most one entry per kind + key and a newer one replaces
+ * an older one (a rating with a comment supersedes the bare rating queued a
+ * moment before). Check-in scans are keyed by scan time, so a door scan and a
+ * later check-out scan of the same booking are two entries, drained in order.
  *
  * Separate from the M4b SyncEngine on purpose: these writes have no local rows
  * to reconcile and no ordering between them, and they are not behind the
